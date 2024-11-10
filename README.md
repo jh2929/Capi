@@ -6,7 +6,8 @@
 <div align="center">
 
 
-![image](https://github.com/user-attachments/assets/f008ac47-d2c1-475a-9dbf-5a0e85353206)
+![icon-512](https://github.com/user-attachments/assets/0d3db989-fefa-4381-bf0c-8bd5ebdabd7b)
+
 
 
 
