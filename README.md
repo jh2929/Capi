@@ -97,5 +97,9 @@ Si disfrutas usando InnerTune, considera hacer una donación. Tu apoyo nos ayuda
 © 2023 Open Source Projects  
 Desarrollado por [Arturo Cervantes](https://www.paypal.com/paypalme/ArturoCervantes254)
 
+## ⚠️Derechos de autor
+**_Derechos de autor (c)2024_**
 
-###### agradecimiento total y creditos a @z-huang y a los 48 contribuidores mas por la idea de la aplicacion
+Este programa es software libre: puede redistribuirlo y/o modificarlo según los términos de la Licencia Pública General GNU publicada por la Free Software Foundation, ya sea la versión 3 de la Licencia o (a su elección) cualquier versión posterior.
+Este programa se distribuye con la esperanza de que sea útil, pero SIN NINGUNA GARANTÍA; ni siquiera la garantía implícita de COMERCIABILIDAD o IDONEIDAD PARA UN PROPÓSITO PARTICULAR. Consulte la Licencia Pública General de GNU para obtener más detalles.
+El aviso de derechos de autor anterior, este aviso de permiso y su licencia se incluirán en todas las copias o partes sustanciales del Software.
