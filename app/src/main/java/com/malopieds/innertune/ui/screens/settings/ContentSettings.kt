@@ -10,20 +10,41 @@ import android.os.Build
 import android.os.LocaleList
 import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.ComponentActivity
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.with
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.ArrowDropDown
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.navigation.NavController
 import com.malopieds.innertube.utils.parseCookieString
 import com.malopieds.innertune.LocalPlayerAwareWindowInsets
@@ -57,6 +78,9 @@ import com.malopieds.innertune.ui.component.SwitchPreference
 import com.malopieds.innertune.ui.utils.backToMain
 import com.malopieds.innertune.utils.rememberEnumPreference
 import com.malopieds.innertune.utils.rememberPreference
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.net.Proxy
 import java.util.Locale
 
@@ -260,106 +284,190 @@ fun ContentSettings(
 }
 
 
-@Composable
-fun LanguageSelector() {
-    val context = LocalContext.current
-    // List of supported languages and their locale codes
-    val languages = listOf(
-        "Arabic" to "ar",
-        "Belarusian" to "be",
-        "Chinese Simplified" to "zh",
-        "Czech" to "cs",
-        "Dutch" to "nl",
-        "English" to "en",
-        "French" to "fr",
-        "German" to "de",
-        "Indonesian" to "id",
-        "Italian" to "it",
-        "Japanese" to "ja",
-        "Korean" to "ko",
-        "Portuguese, Brazilian" to "pt-BR",
-        "Russian" to "ru",
-        "Spanish" to "es",
-        "Turkish" to "tr",
-        "Ukrainian" to "uk",
-        "Vietnamese" to "vi"
-    )
+data class Language(
+    val name: String,
+    val code: String,
+    val nativeName: String,
+    val flag: String
+)
 
-    // State to hold the currently selected language
-    var selectedLanguage by remember { mutableStateOf(languages[0].second) }
-    var expanded by remember { mutableStateOf(false) } // Dropdown expanded state
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun LanguageSelector(
+    modifier: Modifier = Modifier,
+    onLanguageSelected: (String) -> Unit = {}
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val languages = remember {
+        listOf(
+            Language("Arabic", "ar", "العربية", "🇸🇦"),
+            Language("Belarusian", "be", "Беларуская", "🇧🇾"),
+            Language("Chinese Simplified", "zh", "简体中文", "🇨🇳"),
+            Language("Czech", "cs", "Čeština", "🇨🇿"),
+            Language("Dutch", "nl", "Nederlands", "🇳🇱"),
+            Language("English", "en", "English", "🇺🇸"),
+            Language("French", "fr", "Français", "🇫🇷"),
+            Language("German", "de", "Deutsch", "🇩🇪"),
+            Language("Indonesian", "id", "Bahasa Indonesia", "🇮🇩"),
+            Language("Italian", "it", "Italiano", "🇮🇹"),
+            Language("Japanese", "ja", "日本語", "🇯🇵"),
+            Language("Korean", "ko", "한국어", "🇰🇷"),
+            Language("Portuguese (Brazil)", "pt", "Português", "🇧🇷"),
+            Language("Russian", "ru", "Русский", "🇷🇺"),
+            Language("Spanish", "es", "Español", "🇪🇸"),
+            Language("Turkish", "tr", "Türkçe", "🇹🇷"),
+            Language("Ukrainian", "uk", "Українська", "🇺🇦"),
+            Language("Vietnamese", "vi", "Tiếng Việt", "🇻🇳")
+        )
+    }
+
+    var selectedLanguage by remember {
+        mutableStateOf(
+            languages.find { it.code == getCurrentLocale(context).language }
+                ?: languages.find { it.code == "en" }!!
+        )
+    }
+    var expanded by remember { mutableStateOf(false) }
 
     Box(
-
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-
-
-            // Dropdown button
-            FloatingActionButton(
-                modifier = Modifier
-                    .size(48.dp),
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Card contenedor del botón
+            Card(
                 onClick = { expanded = true },
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
+                modifier = Modifier.padding(8.dp)
             ) {
-               Icon(
-                   painter = painterResource(R.drawable.translate),
-                   contentDescription = null
-               )
+                Row(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .animateContentSize(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.translate),
+                        contentDescription = null
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = selectedLanguage.flag,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = selectedLanguage.nativeName,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        imageVector = if (expanded)
+                            Icons.Default.KeyboardArrowUp
+                        else
+                            Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
-
-Box(
-    contentAlignment = Alignment.Center
-
-)
-{
-
-
-        // Dropdown menu for language selection
-        DropdownMenu(
-
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .background(MaterialTheme.colorScheme.background, shape = RoundedCornerShape(16.dp))
-        ) {
-            languages.forEach { language ->
-                DropdownMenuItem(
-                    text = { Text(text = language.first) },
-                    onClick = {
-                        selectedLanguage = language.second
-                        expanded = false
-                        updateLanguage(context, selectedLanguage)
-                    },
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier
+                    .widthIn(max = 320.dp)
+                    .background(
+                        MaterialTheme.colorScheme.surface,
+                        MaterialTheme.shapes.extraLarge
+                    ),
+                offset = DpOffset(0.dp, 8.dp)
+            ) {
+                languages.forEach { language ->
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                text = language.nativeName,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        },
+                        supportingContent = {
+                            Text(
+                                text = language.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        },
+                        leadingContent = {
+                            Text(
+                                text = language.flag,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        },
+                        trailingContent = if (selectedLanguage == language) {
+                            {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        } else null,
+                        modifier = Modifier.clickable {
+                            selectedLanguage = language
+                            expanded = false
+                            scope.launch {
+                                updateLanguage(context, language.code)
+                                onLanguageSelected(language.code)
+                            }
+                        },
+                        colors = ListItemDefaults.colors(
+                            containerColor = if (selectedLanguage == language)
+                                MaterialTheme.colorScheme.surfaceVariant
+                            else
+                                MaterialTheme.colorScheme.surface
+                        )
+                    )
+                }
             }
         }
     }
 }
-}
-}
 
-
-fun updateLanguage(context: Context, languageCode: String) {
-    val locale: Locale = if (languageCode.contains("-")) {
-        // Handle languages with regions like pt-BR
-        val parts = languageCode.split("-")
-        Locale(parts[0], parts[1])
+fun getCurrentLocale(context: Context): Locale {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        context.resources.configuration.locales[0]
     } else {
-        Locale(languageCode)
+        @Suppress("DEPRECATION")
+        context.resources.configuration.locale
+    }
+}
+
+suspend fun updateLanguage(context: Context, languageCode: String) {
+    val locale = when (languageCode) {
+        "pt" -> Locale("pt", "BR")
+        else -> Locale(languageCode)
     }
 
+    Locale.setDefault(locale)
     val config = Configuration(context.resources.configuration)
-    config.setLocales(LocaleList(locale))
+    config.setLocale(locale)
 
-    // Update the configuration
+    context.createConfigurationContext(config)
     context.resources.updateConfiguration(config, context.resources.displayMetrics)
 
-    // Optionally, recreate the activity to apply the language change throughout the app
-    (context as? androidx.activity.ComponentActivity)?.recreate()
+    withContext(Dispatchers.Main) {
+        (context as? ComponentActivity)?.recreate()
+    }
 }
-
-

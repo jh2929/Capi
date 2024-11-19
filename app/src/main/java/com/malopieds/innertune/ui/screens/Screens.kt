@@ -17,6 +17,7 @@ sealed class Screens(
 
     data object Library : Screens(R.string.library, R.drawable.library_music, "library")
 
+
     companion object {
         val MainScreens = listOf(Home, Explore, Library)
     }

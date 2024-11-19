@@ -173,46 +173,6 @@ fun HomeScreen(
                 }
 
 
-//            if (!isInternetAvailable(context)) {
-//                showNoInternetDialog = true
-//            }
-//
-//            // Mostrar popup si no hay Internet
-//            if (showNoInternetDialog) {
-//                AlertDialog(
-//                    onDismissRequest = { showNoInternetDialog = false },
-//                    title = {
-//                        Row(verticalAlignment = Alignment.CenterVertically) {
-//                            Icon(
-//                                painter = painterResource(id = R.drawable.signal_cellular_nodata),
-//                                contentDescription = null,
-//                                modifier = Modifier.size(24.dp)
-//                            )
-//                            Spacer(modifier = Modifier.width(8.dp))
-//                            Text(stringResource(R.string.not_internet))
-//                        }
-//                    },
-//                    text = { Text(stringResource(R.string.internet_required)) },
-//                    confirmButton = {},
-//                    dismissButton = {
-//                        Box(
-//                            modifier = Modifier.fillMaxWidth(),
-//                            contentAlignment = Alignment.Center
-//                        ) {
-//                            Button(onClick = {
-//
-//                                navController.navigate("library")
-//                                showNoInternetDialog = false
-//                            }) {
-//                                Text(stringResource(R.string.downloadspage))
-//                            }
-//                        }
-//                    }
-//                )
-//
-//
-//            }
-
             Column(
                 modifier = Modifier.verticalScroll(scrollState),
             ) {

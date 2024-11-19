@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,9 +26,12 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,6 +69,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.URL
+
 
 fun getAppVersion(context: Context): String {
     return try {
@@ -386,6 +391,8 @@ fun SettingsScreen(
             onClick = { uriHandler.openUri("https://t.me/+NZXjVj6lETxkYTNh") }
         )
 
+        TranslatePreference(uriHandler = uriHandler)
+
         ChangelogButtonWithPopup()
 
 
@@ -425,55 +432,39 @@ fun SettingsScreen(
     )
 }
 
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangelogButtonWithPopup() {
-    var showPopup by remember { mutableStateOf(false) }
-
+    var showBottomSheet by remember { mutableStateOf(false) }
 
     PreferenceEntry(
         title = { Text(stringResource(R.string.Changelog)) },
         icon = { Icon(painterResource(R.drawable.schedule), null) },
-        onClick = { showPopup = true }
+        onClick = { showBottomSheet = true }
     )
 
-
-    if (showPopup) {
-        Popup(
-            alignment = Alignment.Center,
-            onDismissRequest = { showPopup = false }
+    if (showBottomSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBottomSheet = false },
+            sheetState = rememberModalBottomSheetState(),
+            containerColor = MaterialTheme.colorScheme.surface,
         ) {
             Box(
-                Modifier
-                    .fillMaxSize()
-                    .clickable { showPopup = false } // Cerrar popup al hacer clic fuera
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
             ) {
-                Box(
-                    Modifier
-                        .align(Alignment.Center)
-                        .padding(20.dp)
-                        .background(MaterialTheme.colorScheme.surface)
-                        .clip(RoundedCornerShape(16.dp))
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp)
-                    ) {
-                        // Contenido del Popup
-                        ChangelogScreen()
-
-                        Spacer(Modifier.height(20.dp))
-
-                        // Botón para cerrar el popup
-                        Button(onClick = { showPopup = false }) {
-                            Text(stringResource(R.string.closepopup))
-                        }
-                    }
+                    ChangelogScreen()
+                    Spacer(Modifier.height(20.dp))
                 }
             }
         }
     }
 }
-
 
 @Composable
 fun AutoChangelogCard(repoOwner: String, repoName: String) {
@@ -491,7 +482,6 @@ fun AutoChangelogCard(repoOwner: String, repoName: String) {
         }
     }
 
-    Spacer(Modifier.height(25.dp))
     ElevatedCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
         modifier = Modifier
@@ -517,7 +507,6 @@ fun AutoChangelogCard(repoOwner: String, repoName: String) {
                     text = error!!,
                     color = MaterialTheme.colorScheme.error
                 )
-
                 changes.isEmpty() -> Text(stringResource(R.string.no_changes))
                 else -> changes.forEach { change ->
                     Text(
@@ -555,3 +544,31 @@ fun ChangelogScreen() {
     AutoChangelogCard(repoOwner = "Arturo254", repoName = "OpenTune")
 }
 
+@Composable
+fun TranslatePreference(uriHandler: UriHandler) {
+    var showDialog by remember { mutableStateOf(false) }
+
+    PreferenceEntry(
+        title = { Text(stringResource(R.string.Translate)) },
+        icon = { Icon(painterResource(R.drawable.poeditor), null) },
+        onClick = { showDialog = true }
+    )
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(stringResource(R.string.Redirección)) },
+            text = { Text(stringResource(R.string.poeditor_redirect)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDialog = false
+                        uriHandler.openUri("https://poeditor.com/join/project/DwYVF87SRs")
+                    }
+                ) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+}

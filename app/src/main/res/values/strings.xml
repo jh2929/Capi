@@ -405,4 +405,8 @@
     <string name="open_supported_links">Open supported link by default</string>
     <string name="configure_supported_links">Configure supported links</string>
     <string name="intent_supported_links_not_found">Couldn\\\'t find supported links settings, please configure them manually</string>
+    <string name="profile">Profile</string>
+    <string name="Translate">Translate Opentune</string>
+    <string name="Redirección">Redirection</string>
+    <string name="poeditor_redirect">Do you want to be redirected to poeditor.com?</string>
 </resources>
