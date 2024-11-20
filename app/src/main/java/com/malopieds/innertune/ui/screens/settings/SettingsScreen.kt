@@ -507,6 +507,7 @@ fun AutoChangelogCard(repoOwner: String, repoName: String) {
                     text = error!!,
                     color = MaterialTheme.colorScheme.error
                 )
+
                 changes.isEmpty() -> Text(stringResource(R.string.no_changes))
                 else -> changes.forEach { change ->
                     Text(
