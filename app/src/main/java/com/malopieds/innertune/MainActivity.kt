@@ -897,9 +897,9 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
-        const val ACTION_SEARCH = "com.malopieds.innertune.action.SEARCH"
-        const val ACTION_EXPLORE = "com.malopieds.innertune.action.EXPLORE"
-        const val ACTION_LIBRARY = "com.malopieds.innertune.action.LIBRARY"
+        const val ACTION_SEARCH = "com.Arturo254.opentune.action.SEARCH"
+        const val ACTION_EXPLORE = "com.Arturo254.opentune.action.EXPLORE"
+        const val ACTION_LIBRARY = "com.Arturo254.opentune.action.LIBRARY"
     }
 }
 

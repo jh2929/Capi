@@ -1,9 +1,14 @@
 package com.malopieds.innertune.constants
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.malopieds.innertune.utils.rememberPreference
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
@@ -13,6 +18,7 @@ val PureBlackKey = booleanPreferencesKey("pureBlack")
 val DefaultOpenTabKey = stringPreferencesKey("defaultOpenTab")
 val GridItemsSizeKey = stringPreferencesKey("gridItemSize")
 val SliderStyleKey = stringPreferencesKey("sliderStyle")
+val AccountProfileImageUrlKey = stringPreferencesKey("account_profile_image_url")
 
 enum class SliderStyle {
     DEFAULT,
@@ -461,3 +467,15 @@ val CountryCodeToName =
         "YE" to "Yemen",
         "ZW" to "Zimbabwe",
     )
+
+@Composable
+fun rememberProfileImagePreference(
+    key: Preferences.Key<String> = AccountProfileImageUrlKey,
+    defaultValue: String = ""
+): Pair<String, (String) -> Unit> {
+    var profileImageUrl by rememberPreference(key, defaultValue)
+
+    return Pair(profileImageUrl) { newValue ->
+        profileImageUrl = newValue
+    }
+}

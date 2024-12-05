@@ -14,6 +14,7 @@ import com.malopieds.innertube.models.SongItem
 import com.malopieds.innertube.models.WatchEndpoint
 import com.malopieds.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
 import com.malopieds.innertube.models.YouTubeClient.Companion.ANDROID_MUSIC
+import com.malopieds.innertube.models.YouTubeClient.Companion.IOS
 import com.malopieds.innertube.models.YouTubeClient.Companion.TVHTML5
 import com.malopieds.innertube.models.YouTubeClient.Companion.WEB
 import com.malopieds.innertube.models.YouTubeClient.Companion.WEB_REMIX
@@ -882,7 +883,15 @@ object YouTube {
         playlistId: String? = null,
     ): Result<PlayerResponse> =
         runCatching {
-            val playerResponse = innerTube.player(ANDROID_MUSIC, videoId, playlistId).body<PlayerResponse>()
+            var playerResponse: PlayerResponse
+            if (this.cookie != null) { // if logged in: try ANDROID_MUSIC client first because IOS client does not play age restricted songs
+                playerResponse = innerTube.player(ANDROID_MUSIC, videoId, playlistId).body<PlayerResponse>()
+                if (playerResponse.playabilityStatus.status == "OK") {
+                    return@runCatching playerResponse
+                }
+            }
+
+            playerResponse = innerTube.player(IOS, videoId, playlistId).body<PlayerResponse>()
             if (playerResponse.playabilityStatus.status == "OK") {
                 return@runCatching playerResponse
             }

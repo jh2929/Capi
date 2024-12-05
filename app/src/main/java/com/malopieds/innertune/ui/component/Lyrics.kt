@@ -331,26 +331,7 @@ fun Lyrics(
                     )
                 }
 
-//                if (showLyrics) {
-//                    Box(
-//                        modifier = Modifier
 //
-//                            .padding(8.dp)
-//                            .size(32.dp)
-//                            .background(Color.Black.copy(alpha = 0.5f), shape = CircleShape)
-//                            .clickable { showLyrics = false }
-//                    ) {
-//                        Icon(
-//                            painter = painterResource(R.drawable.close),
-//                            contentDescription = "Close Lyrics",
-//                            tint = Color.White,
-//                            modifier = Modifier
-//                                .align(Alignment.Center)
-//                                .size(24.dp)
-//                        )
-//                    }
-//                }
-                // Lyrics menu button
 
                 IconButton(
                     onClick = {
