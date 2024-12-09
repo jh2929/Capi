@@ -37,9 +37,7 @@
 
 [![GitHub](https://img.shields.io/badge/Pagina-Web-100000?style=for-the-badge&logo=web&logoColor=Blue)](https://innertunne.netlify.app/#downloadapk)
 
-### Tienda de apps
 
-[![Appteka](https://img.shields.io/badge/Appteka-58CC02?style=for-the-badge&logo=Appteka&logoColor=white)](https://appteka.store/app/3d2r188065)
 
 ## ✨ Características Destacadas
 
@@ -57,8 +55,9 @@
 - 🌍 Soporte multiidioma
 - 🚗 Compatibilidad con Android Auto
 - 💎 Diseño Material 3
+- 🔗 Descarga la portada del album
 
-## 📦 Cómo Compilar la Aplicación
+## 📦 Cómo Compilar la Aplicación ?
 
 ### Requisitos previos:
 - Gradle
@@ -90,7 +89,7 @@ cervantesarturo254@gmail.com
 
 ## 💖 Apoya el Proyecto
 
-Si disfrutas usando InnerTune, considera hacer una donación. Tu apoyo nos ayudará a seguir mejorando la aplicación, corrigiendo errores y añadiendo nuevas funcionalidades.
+Si disfrutas usando OpenTune, considera hacer una donación. Tu apoyo nos ayudará a seguir mejorando la aplicación, corrigiendo errores y añadiendo nuevas funcionalidades.
 
 ### ¡Conviértete en Sponsor! ❤️😊
 
