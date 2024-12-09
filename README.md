@@ -1,106 +1,112 @@
-<div align="center">
-<h1>OpenTune</h1> 
-</div>
-
 
 <div align="center">
-
-
-![icon-512](https://github.com/user-attachments/assets/0d3db989-fefa-4381-bf0c-8bd5ebdabd7b)
-
-
-
-
-
+  <h1>OpenTune</h1>
+  <p>Un cliente elegante de YouTube Music con Material Design 3 para Android</p>
+  <img src="https://github.com/user-attachments/assets/0d3db989-fefa-4381-bf0c-8bd5ebdabd7b" alt="Icono de OpenTune" width="200"/>
 </div>
+
+<p align="center">
+  <a href="https://github.com/Arturo254/OpenTune/releases">
+    <img src="https://img.shields.io/github/v/release/Arturo254/InnerTune?style=for-the-badge&logo=github&color=blue" alt="Última versión"/>
+  </a>
+  <a href="https://github.com/Arturo254/OpenTune/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/Arturo254/OpenTune?style=for-the-badge&logo=gnu&color=green" alt="Licencia"/>
+  </a>
+</p>
+
+<div align="center">
  
-
+  _**Tecnologías:**_
   
-  #### Un cliente elegante de YouTube Music con Material Design 3 para Android
-
+  </div>
   
-  [![Última versión](https://img.shields.io/github/v/release/Arturo254/InnerTune?style=for-the-badge&logo=github&color=blue)](https://github.com/Arturo254/InnerTune/releases)
-  [![Licencia](https://img.shields.io/github/license/Arturo254/InnerTune?style=for-the-badge&logo=gnu&color=green)](https://github.com/z-huang/InnerTune/blob/main/LICENSE)
-</div>
-
-![image](https://github.com/user-attachments/assets/336e6533-75a3-4857-872a-a8d021b0ed24)
 
 
+<p align="center">
+  <a href="https://kotlinlang.org/">
+    <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin"/>
+  </a>
+  <a href="https://flutter.dev/">
+    <img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter"/>
+  </a>
+  <a href="https://developer.android.com/jetpack/compose">
+    <img src="https://img.shields.io/badge/Jetpack%20Compose-03DAC5?style=for-the-badge&logo=jetpack&logoColor=black" alt="Jetpack Compose"/>
+  </a>
+  <a href="https://www.python.org/">
+    <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
+  </a>
+  <a href="https://www.tensorflow.org/">
+    <img src="https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white" alt="TensorFlow"/>
+  </a>
+</p>
 
-## Descargas:
 
-### GitHub:
+## Características
 
-[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Arturo254/InnerTune/releases/latest)
+- 🎵 Reproducción de música de YouTube y YouTube Music sin anuncios.
+- 🔊 Reproducción en segundo plano.
+- 🔍 Búsqueda avanzada de canciones, videos, álbumes y listas de reproducción.
+- 🔑 Inicio de sesión integrado.
+- 📚 Gestión completa de tu biblioteca musical.
+- ⬇️ Descarga y almacenamiento en caché para reproducción offline.
+- 🗣️ Letras sincronizadas.
+- ⏩ Omisión inteligente de silencios.
+- 🔊 Normalización de audio.
+- ⏱️ Ajuste de tempo y tono.
+- 🌗 Tema dinámico.
+- 🌍 Soporte multiidioma.
+- 🚗 Compatibilidad con Android Auto.
+- 💎 Diseño Material 3.
+- 🔗 Descarga de portada de álbum.
 
-### Pagina Web:
-
-[![GitHub](https://img.shields.io/badge/Pagina-Web-100000?style=for-the-badge&logo=web&logoColor=Blue)](https://innertunne.netlify.app/#downloadapk)
-
-
-
-## ✨ Características Destacadas
-
-- 🎵 Reproduce música de YouTube y YouTube Music sin anuncios
-- 🔊 Reproducción en segundo plano
-- 🔍 Búsqueda avanzada de canciones, vídeos, álbumes y playlists
-- 🔑 Soporte para inicio de sesión
-- 📚 Gestión completa de tu biblioteca musical
-- ⬇️ Descarga y almacenamiento en caché para reproducción offline
-- 🗣️ Letras sincronizadas
-- ⏩ Omisión inteligente de silencios
-- 🔊 Normalización de audio
-- ⏱️ Ajuste de tempo y tono
-- 🌗 Tema dinámico
-- 🌍 Soporte multiidioma
-- 🚗 Compatibilidad con Android Auto
-- 💎 Diseño Material 3
-- 🔗 Descarga la portada del album
-
-## 📦 Cómo Compilar la Aplicación ?
+## Cómo compilar la aplicación
 
 ### Requisitos previos:
+
 - Gradle
 - Kotlin
 - Android Studio
 
 ### Compilación por línea de comandos:
-#### Release :
+
+**Release:**
 ```bash
 ./gradlew assembleRelease
 ```
-#### Debug :
+
+**Debug:**
 ```bash
 ./gradlew assembleDebug
 ```
-#### Compilación completa :
+
+**Compilación completa:**
 ```bash
 ./gradlew build
-
 ```
 
+## Contribuye con traducciones
 
-## 🌐 Contribuye con Traducciones
+Si deseas traducir la aplicación a tu idioma o contribuir con otros idiomas, contáctame a través de Gmail:  
+[cervantesarturo254@gmail.com](mailto:cervantesarturo254@gmail.com)
 
-Si quieres Traducir la aplicacion a tu idioma o deseas traducir a algun otro idioma contame por Gmail:
+## Apoya el proyecto
 
-cervantesarturo254@gmail.com
+Si disfrutas utilizando OpenTune, considera hacer una donación para ayudarnos a mejorar la aplicación, corregir errores y agregar nuevas funciones.
 
+### ¡Conviértete en Sponsor! ❤️😊  
+[Paypal - Arturo Cervantes](https://www.paypal.com/paypalme/ArturoCervantes254)
 
-## 💖 Apoya el Proyecto
-
-Si disfrutas usando OpenTune, considera hacer una donación. Tu apoyo nos ayudará a seguir mejorando la aplicación, corrigiendo errores y añadiendo nuevas funcionalidades.
-
-### ¡Conviértete en Sponsor! ❤️😊
+---
 
 © 2023 Open Source Projects  
 Desarrollado por [Arturo Cervantes](https://www.paypal.com/paypalme/ArturoCervantes254)
 
-## ⚠️Derechos de autor
-**_Derechos de autor (c)2024_**
+## Derechos de autor
 
-Este programa es software libre: puede redistribuirlo y/o modificarlo según los términos de la Licencia Pública General GNU publicada por la Free Software Foundation, ya sea la versión 3 de la Licencia o (a su elección) cualquier versión posterior.
+**_Derechos de autor (c) 2024_**
 
-Este programa se distribuye con la esperanza de que sea útil, pero SIN NINGUNA GARANTÍA; ni siquiera la garantía implícita de COMERCIABILIDAD o IDONEIDAD PARA UN PROPÓSITO PARTICULAR. Consulte la Licencia Pública General de GNU para obtener más detalles.
+Este programa es software libre: puedes redistribuirlo y/o modificarlo bajo los términos de la Licencia Pública General GNU publicada por la Free Software Foundation, ya sea la versión 3 de la Licencia o (a tu elección) cualquier versión posterior.
+
+Este programa se distribuye con la esperanza de que sea útil, pero **SIN NINGUNA GARANTÍA**, ni siquiera la garantía implícita de COMERCIABILIDAD o IDONEIDAD PARA UN PROPÓSITO PARTICULAR. Consulta la Licencia Pública General de GNU para obtener más detalles.
 
 El aviso de derechos de autor anterior, este aviso de permiso y su licencia se incluirán en todas las copias o partes sustanciales del Software.
