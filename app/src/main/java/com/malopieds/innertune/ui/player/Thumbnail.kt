@@ -23,7 +23,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -39,7 +38,6 @@ import com.malopieds.innertune.constants.ThumbnailCornerRadius
 import com.malopieds.innertune.ui.component.Lyrics
 import com.malopieds.innertune.utils.rememberPreference
 import kotlin.math.roundToInt
-import com.google.accompanist.coil.rememberCoilPainter
 
 @Composable
 fun Thumbnail(
@@ -116,7 +114,6 @@ fun Thumbnail(
                             .offset { IntOffset(offsetX.roundToInt(), 0) }
                             .fillMaxWidth()
                             .aspectRatio(1f)
-
                             .clip(RoundedCornerShape(ThumbnailCornerRadius * 2))
                             .pointerInput(Unit) {
                                 detectTapGestures(

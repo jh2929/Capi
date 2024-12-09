@@ -2,6 +2,7 @@
 
 package com.malopieds.innertune.ui.component
 
+//import com.malopieds.innertune.ui.screens.playlist.loadImageUri
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -33,7 +34,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable

@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,11 +23,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -69,7 +73,6 @@ import com.malopieds.innertune.db.entities.PlaylistSongMap
 import com.malopieds.innertune.models.MediaMetadata
 import com.malopieds.innertune.playback.ExoDownloadService
 import com.malopieds.innertune.playback.queues.YouTubeQueue
-import com.malopieds.innertune.ui.component.BigSeekBar
 import com.malopieds.innertune.ui.component.BottomSheetState
 import com.malopieds.innertune.ui.component.DownloadGridMenu
 import com.malopieds.innertune.ui.component.GridMenu
@@ -235,29 +238,84 @@ fun PlayerMenu(
         )
     }
     if (isQueueTrigger != true) {
+        // State to track if audio is muted
+        var isMuted by remember { mutableStateOf(false) }
+
+        // Store the volume before muting to restore later
+        var previousVolume by remember { mutableFloatStateOf(playerVolume.value) }
+
         Row(
-            horizontalArrangement = Arrangement.spacedBy(24.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(top = 24.dp, bottom = 6.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
+            // Mute/Unmute Icon with Toggle Functionality
             Icon(
-                painter = painterResource(R.drawable.volume_up),
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
+                painter = painterResource(
+                    // Dynamic icon based on mute state
+                    id = if (isMuted) R.drawable.volume_off
+                    else R.drawable.volume_up
+                ),
+                contentDescription = stringResource(
+                    if (isMuted) R.string.unmute
+                    else R.string.mute
+                ),
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .clickable {
+                        isMuted = !isMuted
+                        if (isMuted) {
+                            // Store current volume before muting
+                            previousVolume = playerVolume.value
+                            // Set volume to 0
+                            playerConnection.service.playerVolume.value = 0f
+                        } else {
+                            // Restore previous volume when unmuting
+                            playerConnection.service.playerVolume.value = previousVolume
+                        }
+                    }
+                    .padding(4.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            BigSeekBar(
-                progressProvider = playerVolume::value,
-                onProgressChange = { playerConnection.service.playerVolume.value = it },
-                modifier = Modifier.weight(1f),
+            // Enhanced Seek Bar with More Precise Control
+            Slider(
+                value = if (isMuted) 0f else playerVolume.value,
+                onValueChange = { newVolume ->
+                    // Disable slider when muted
+                    if (!isMuted) {
+                        // Update volume and ensure muted state is off
+                        playerConnection.service.playerVolume.value = newVolume
+                        previousVolume = newVolume
+                    }
+                },
+                valueRange = 0f..1f,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(32.dp),
+                colors = SliderDefaults.colors(
+                    thumbColor = MaterialTheme.colorScheme.primary,
+                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            )
+
+            // Volume Percentage Text
+            Text(
+                text = if (isMuted) "0%" else "${(playerVolume.value * 100).toInt()}%",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.width(40.dp)
             )
         }
     }
-
     GridMenu(
         contentPadding =
             PaddingValues(

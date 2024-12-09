@@ -1,13 +1,21 @@
 package com.malopieds.innertune.ui.screens
 
+import android.content.ContentValues
+import android.content.Context
+import android.graphics.Bitmap
+import android.os.Environment
+import android.provider.MediaStore
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -43,6 +51,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -55,6 +64,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastForEachIndexed
+import androidx.core.graphics.drawable.toBitmap
 import androidx.core.net.toUri
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.media3.exoplayer.offline.Download
@@ -62,6 +72,8 @@ import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.imageLoader
+import coil.request.ImageRequest
 import com.malopieds.innertune.LocalDatabase
 import com.malopieds.innertune.LocalDownloadUtil
 import com.malopieds.innertune.LocalPlayerAwareWindowInsets
@@ -93,6 +105,11 @@ import com.malopieds.innertune.ui.menu.YouTubeAlbumMenu
 import com.malopieds.innertune.ui.utils.ItemWrapper
 import com.malopieds.innertune.ui.utils.backToMain
 import com.malopieds.innertune.viewmodels.AlbumViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -156,14 +173,50 @@ fun AlbumScreen(
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        AsyncImage(
-                            model = albumWithSongs.album.thumbnailUrl,
-                            contentDescription = null,
-                            modifier =
-                                Modifier
-                                    .size(AlbumThumbnailSize)
-                                    .clip(RoundedCornerShape(ThumbnailCornerRadius)),
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(AlbumThumbnailSize)
+                                .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                        ) {
+                            // Mostrar la imagen del álbum
+                            AsyncImage(
+                                model = albumWithSongs.album.thumbnailUrl,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+
+                            // Botón de descarga superpuesto
+                            IconButton(
+                                onClick = {
+                                    // Lanza una coroutine para guardar la imagen
+                                    CoroutineScope(Dispatchers.IO).launch {
+                                        albumWithSongs.album.thumbnailUrl?.let {
+                                            saveAlbumImageToGallery(
+                                                context,
+                                                it,
+                                                albumWithSongs.album.title
+                                            )
+                                        }
+                                    }
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd) // Ubicar el botón en la esquina inferior derecha
+                                    .padding(8.dp) // Margen desde el borde
+                                    .size(40.dp) // Hacerlo más pequeño
+                                    .clip(RoundedCornerShape(24.dp)) // Bordes redondeados
+                                    .background(
+                                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f) // Fondo semitransparente
+                                    )
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.download),
+                                    contentDescription = "Guardar imagen en galería",
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer // Color del ícono
+                                )
+                            }
+                        }
+
 
                         Spacer(Modifier.width(16.dp))
 
@@ -598,4 +651,59 @@ fun AlbumScreen(
             }
         },
     )
+}
+
+suspend fun saveAlbumImageToGallery(context: Context, imageUrl: String, albumTitle: String) {
+    try {
+        // Cargar la imagen usando Coil
+        val request = ImageRequest.Builder(context)
+            .data(imageUrl)
+            .build()
+
+        val drawable = context.imageLoader.execute(request).drawable
+
+        if (drawable != null) {
+            val bitmap = drawable.toBitmap()
+
+            // Usar el título del álbum para el nombre del archivo
+            val displayName = "${albumTitle.replace(" " , "_")}.png"
+            val mimeType = "image/png" // Tipo MIME para PNG
+
+
+            val contentValues = ContentValues().apply {
+                put(MediaStore.Images.Media.DISPLAY_NAME, displayName)
+                put(MediaStore.Images.Media.MIME_TYPE, mimeType)
+                put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+            }
+
+            val contentResolver = context.contentResolver
+            val uri = contentResolver.insert(
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                contentValues
+            )
+
+            uri?.let {
+                contentResolver.openOutputStream(it)?.use { outputStream ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                }
+
+                // Mostrar un mensaje de éxito
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        context,
+                        "✓",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    } catch (e: IOException) {
+        withContext(Dispatchers.Main) {
+            Toast.makeText(
+                context,
+                "X",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
 }
