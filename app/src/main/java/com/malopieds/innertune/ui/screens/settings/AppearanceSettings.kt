@@ -1,19 +1,23 @@
 package com.malopieds.innertune.ui.screens.settings
 
+import android.annotation.SuppressLint
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,7 +34,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -322,6 +328,85 @@ fun AppearanceSettings(
             },
         )
 
+        var thumbnailCornerRadius by remember {
+            mutableStateOf(AppConfig.ThumbnailCornerRadiusV2)
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Personalizar Radio de Esquinas del Thumbnail",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                    .clickable { /* No-op */ }
+                    .pointerInput(Unit) {
+                        detectTapGestures { offset ->
+                            // Calcula el valor según el clic
+                            val clickedPosition = offset.x / size.width
+                            thumbnailCornerRadius = (clickedPosition * 50).coerceIn(0f, 50f)
+                            AppConfig.ThumbnailCornerRadiusV2 = thumbnailCornerRadius
+                        }
+                    }
+            ) {
+                // Progreso actual
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(thumbnailCornerRadius / 50f) // Progreso proporcional
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(100.dp))
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
+
+            Text(
+                text = "Radio de esquinas: ${String.format("%.1f", thumbnailCornerRadius)}",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        if (thumbnailCornerRadius > 0) {
+                            thumbnailCornerRadius = (thumbnailCornerRadius - 5).coerceAtLeast(0f)
+                            AppConfig.ThumbnailCornerRadiusV2 = thumbnailCornerRadius
+                        }
+                    }
+                ) {
+                    Text("-5")
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        if (thumbnailCornerRadius < 50) {
+                            thumbnailCornerRadius = (thumbnailCornerRadius + 5).coerceAtMost(50f)
+                            AppConfig.ThumbnailCornerRadiusV2 = thumbnailCornerRadius
+                        }
+                    }
+                ) {
+                    Text("+5")
+                }
+            }
+        }
+
+
         SwitchPreference(
             title = { Text(stringResource(R.string.enable_swipe_thumbnail)) },
             icon = { Icon(painterResource(R.drawable.swipe), null) },
@@ -392,18 +477,7 @@ fun AppearanceSettings(
             },
         )
 
-//        EnumListPreference(
-//            title = { Text(stringResource(R.string.grid_cell_size)) },
-//            icon = { Icon(painterResource(R.drawable.grid_view), null) },
-//            selectedValue = gridItemSize,
-//            onValueSelected = onGridItemSizeChange,
-//            valueText = {
-//                when (it) {
-//                    GridItemSize.SMALL -> stringResource(R.string.small)
-//                    GridItemSize.BIG -> stringResource(R.string.big)
-//                }
-//            },
-//        )
+
     }
 
     TopAppBar(
@@ -420,6 +494,10 @@ fun AppearanceSettings(
             }
         },
     )
+}
+
+object AppConfig {
+    var ThumbnailCornerRadiusV2: Float = 16f // Valor predeterminado
 }
 
 enum class DarkMode {
@@ -531,4 +609,6 @@ fun DialogWithImage(
         }
     }
 }
+
+
 

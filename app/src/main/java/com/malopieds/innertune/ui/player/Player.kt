@@ -143,6 +143,7 @@ import com.malopieds.innertune.ui.component.ResizableIconButton
 import com.malopieds.innertune.ui.component.rememberBottomSheetState
 import com.malopieds.innertune.ui.menu.AddToPlaylistDialog
 import com.malopieds.innertune.ui.menu.PlayerMenu
+import com.malopieds.innertune.ui.screens.settings.AppConfig
 import com.malopieds.innertune.ui.screens.settings.DarkMode
 import com.malopieds.innertune.ui.screens.settings.PlayerTextAlignment
 import com.malopieds.innertune.ui.theme.extractGradientColors
@@ -481,7 +482,7 @@ fun BottomSheetPlayer(
                                 modifier =
                                     Modifier
                                         .fillMaxSize()
-                                        .clip(RoundedCornerShape(ThumbnailCornerRadius)),
+                                        .clip(RoundedCornerShape(AppConfig.ThumbnailCornerRadiusV2 * 2))
                             )
                         }
                     },
@@ -1091,11 +1092,14 @@ fun BottomSheetPlayer(
                     modifier = Modifier
                         .fillMaxSize()
                         .blur(200.dp)
-                        .alpha(0.8f)
-                        .background(if (useBlackBackground) Color.Black.copy(alpha = 0.5f) else Color.Transparent)
-
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = .2f))
                 )
             }
+
             else if (playerBackground == PlayerBackgroundStyle.BLURMOV) {
                 val infiniteTransition = rememberInfiniteTransition(label = "")
 
@@ -1122,6 +1126,11 @@ fun BottomSheetPlayer(
                         .background(if (useBlackBackground) Color.Black.copy(alpha = 0.5f) else Color.Transparent)
                         .rotate(rotation)
 
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = .2f))
                 )
             }
 

@@ -1,5 +1,6 @@
 package com.malopieds.innertune.ui.player
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -36,6 +37,7 @@ import com.malopieds.innertune.constants.ShowLyricsKey
 import com.malopieds.innertune.constants.SwipeThumbnailKey
 import com.malopieds.innertune.constants.ThumbnailCornerRadius
 import com.malopieds.innertune.ui.component.Lyrics
+import com.malopieds.innertune.ui.screens.settings.AppConfig
 import com.malopieds.innertune.utils.rememberPreference
 import kotlin.math.roundToInt
 
@@ -109,26 +111,25 @@ fun Thumbnail(
                     model = mediaMetadata?.thumbnailUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier =
-                        Modifier
-                            .offset { IntOffset(offsetX.roundToInt(), 0) }
-                            .fillMaxWidth()
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(ThumbnailCornerRadius * 2))
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onTap = {
-                                        showLyrics = !showLyrics
-                                    },
-                                    onDoubleTap = { offset ->
-                                        if (offset.x < size.width / 2) {
-                                            playerConnection.player.seekBack()
-                                        } else {
-                                            playerConnection.player.seekForward()
-                                        }
-                                    },
-                                )
-                            },
+                    modifier = Modifier
+                        .offset { IntOffset(offsetX.roundToInt(), 0) }
+                        .fillMaxWidth()
+                        .aspectRatio(1f)
+                        .clip(RoundedCornerShape(AppConfig.ThumbnailCornerRadiusV2 * 2))
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = {
+                                    showLyrics = !showLyrics
+                                },
+                                onDoubleTap = { offset ->
+                                    if (offset.x < size.width / 2) {
+                                        playerConnection.player.seekBack()
+                                    } else {
+                                        playerConnection.player.seekForward()
+                                    }
+                                },
+                            )
+                        },
                 )
             }
         }
@@ -162,4 +163,12 @@ fun Thumbnail(
             }
         }
     }
+}
+
+class AppPreferences(context: Context) {
+    private val prefs = context.getSharedPreferences("AppSettings", Context.MODE_PRIVATE)
+
+    var thumbnailCornerRadiusV2: Float
+        get() = prefs.getFloat("THUMBNAIL_CORNER_RADIUS", 16f)
+        set(value) = prefs.edit().putFloat("THUMBNAIL_CORNER_RADIUS", value).apply()
 }
