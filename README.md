@@ -41,6 +41,10 @@
 </p>
 
 
+[![OpenTune](https://private-user-images.githubusercontent.com/125956566/395609000-8e21cdf1-06be-47be-9e6d-e862c95738e6.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3MzQxNDc1NjEsIm5iZiI6MTczNDE0NzI2MSwicGF0aCI6Ii8xMjU5NTY1NjYvMzk1NjA5MDAwLThlMjFjZGYxLTA2YmUtNDdiZS05ZTZkLWU4NjJjOTU3MzhlNi5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjQxMjE0JTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI0MTIxNFQwMzM0MjFaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT0wMjYzMGJmZGYxZjE5MTc1M2MwMGZmMjZhYzI3OWM3YjFjYTJkNGJjYjJlNGU5ODUzNjRhYzIwYmRiM2E3MWVmJlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.WJAxg5-o8ZcVqInCrjIJwPiVUY4tqi6E0Fps2xgGOpU)](https://www.openapk.net/opentune/com.Arturo254.opentune/)<br>
+<sub>[Descargar OpenTune](https://www.openapk.net/opentune/com.Arturo254.opentune/)</sub>
+
+
 ## Características
 
 - 🎵 Reproducción de música de YouTube y YouTube Music sin anuncios.
