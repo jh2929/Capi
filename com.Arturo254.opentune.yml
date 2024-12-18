@@ -1,0 +1,70 @@
+Package: com.Arturo254.opentune
+Name: OpenTune
+Summary: Un cliente de YouTube Music con Material Design 3, para Android
+Description: |
+  OpenTune
+  Un cliente elegante de YouTube Music con Material Design 3 para Android
+
+  Icono de OpenTune
+  Última versión Licencia
+
+  Tecnologías:
+  
+  Kotlin Flutter Jetpack Compose Python TensorFlow
+
+  Características
+  🎵 Reproducción de música de YouTube y YouTube Music sin anuncios.
+  🔊 Reproducción en segundo plano.
+  🔍 Búsqueda avanzada de canciones, videos, álbumes y listas de reproducción.
+  🔑 Inicio de sesión integrado.
+  📚 Gestión completa de tu biblioteca musical.
+  ⬇️ Descarga y almacenamiento en caché para reproducción offline.
+  🗣️ Letras sincronizadas.
+  ⏩ Omisión inteligente de silencios.
+  🔊 Normalización de audio.
+  ⏱️ Ajuste de tempo y tono.
+  🌗 Tema dinámico.
+  🌍 Soporte multiidioma.
+  🚗 Compatibilidad con Android Auto.
+  💎 Diseño Material 3.
+  🔗 Descarga de portada de álbum.
+
+  Cómo compilar la aplicación
+  Requisitos previos:
+  - Gradle
+  - Kotlin
+  - Android Studio
+  
+  Compilación por línea de comandos:
+  - Release: ./gradlew assembleRelease
+  - Debug: ./gradlew assembleDebug
+  - Compilación completa: ./gradlew build
+
+  Contribuye con traducciones
+  Si deseas traducir la aplicación a tu idioma o contribuir con otros idiomas, contáctame a través de Gmail: cervantesarturo254@gmail.com
+
+  Apoya el proyecto
+  Si disfrutas utilizando OpenTune, considera hacer una donación para ayudarnos a mejorar la aplicación, corregir errores y agregar nuevas funciones.
+  ¡Conviértete en Sponsor! ❤️😊
+  Paypal - Arturo Cervantes
+
+  © 2023 Open Source Projects
+  Desarrollado por Arturo Cervantes
+  
+  Derechos de autor (c) 2024
+
+  Este programa es software libre: puedes redistribuirlo y/o modificarlo bajo los términos de la Licencia Pública General GNU publicada por la Free Software Foundation, ya sea la versión 3 de la Licencia o (a tu elección) cualquier versión posterior.
+
+  Este programa se distribuye con la esperanza de que sea útil, pero SIN NINGUNA GARANTÍA, ni siquiera la garantía implícita de COMERCIABILIDAD o IDONEIDAD PARA UN PROPÓSITO PARTICULAR. Consulta la Licencia Pública General de GNU para obtener más detalles.
+
+  El aviso de derechos de autor anterior, este aviso de permiso y su licencia se incluirán en todas las copias o partes sustanciales del Software.
+
+License: GPL-3.0
+SourceCode: https://github.com/Arturo254/OpenTune
+IssueTracker: https://github.com/Arturo254/OpenTune/issues
+AutoUpdateMode: Version tag
+Builds:
+  - versionName: "1.9.1"
+    commit: e88d0f50b9e612ca7f13c677f39fd3bfb990935f
+    subdir: .
+    gradle: true

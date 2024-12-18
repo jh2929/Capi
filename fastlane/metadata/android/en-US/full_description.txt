@@ -1,17 +1,19 @@
-A fork of InnerTune, Material 3 YouTube Music client for Android
+A stylish YouTube Music client with Material Design 3 for Android
 
 <br><b>Features:</b>
 
-- Play songs from YT/YT Music without ads
-- Background playback
-- Search songs, videos, albums, and playlists from YouTube Music
-- Library management
-- Cache and download songs for offline playback
-- Synchronized lyrics
-- Skip silence
-- Audio normalization
-- Dynamic theme
-- Localization
-- Android Auto support
-- Personalized quick picks
-- Material 3
+- 🎵 Ad-free YouTube music and YouTube Music playback.
+- 🔊 Background playback.
+- 🔍 Advanced search for songs, videos, albums, and playlists.
+- 🔑 Integrated login.
+- 📚 Full management of your music library.
+- ⬇️ Downloading and caching for offline playback.
+- 🗣️ Synchronized lyrics.
+- ⏩ Smart silence skipping.
+- 🔊 Audio normalization.
+- ⏱️ Tempo and pitch adjustment.
+- 🌗 Dynamic theme.
+- 🌍 Multi-language support.
+- 🚗 Android Auto support.
+- 💎 Material Design 3.
+- 🔗 Album art download
