@@ -412,4 +412,6 @@
     <string name="volume_control">volume control</string>
     <string name="unmute">Unmute</string>
     <string name="mute">Mute</string>
+    <string name="customize_thumbnail_corner_radius">Customize Thumbnail Corner Radius\n</string>
+    <string name="corner_radius_label">Corner radius: %1$s</string>
 </resources>

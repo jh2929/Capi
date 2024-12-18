@@ -400,4 +400,6 @@
     <string name="Translate">Traducir Opentune</string>
     <string name="Redirección">Redirección</string>
     <string name="poeditor_redirect">¿Quieres ser redirigido a poeditor.com?</string>
+    <string name="customize_thumbnail_corner_radius">"Personalizar Radio de Esquinas del Thumbnail "</string>
+    <string name="corner_radius_label">"Radio de esquinas: %1$s "</string>
 </resources>

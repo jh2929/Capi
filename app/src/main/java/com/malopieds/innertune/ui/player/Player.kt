@@ -476,13 +476,14 @@ fun BottomSheetPlayer(
 
                             modifier = Modifier.size(ListThumbnailSize),
                         ) {
+                            val cornerRadius by remember { mutableFloatStateOf(16f) } // Valor por defecto
                             AsyncImage(
                                 model = song.thumbnailUrl,
                                 contentDescription = null,
                                 modifier =
                                     Modifier
                                         .fillMaxSize()
-                                        .clip(RoundedCornerShape(AppConfig.ThumbnailCornerRadiusV2 * 2))
+                                        .clip(RoundedCornerShape(cornerRadius * 2))
                             )
                         }
                     },

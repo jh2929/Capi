@@ -402,4 +402,6 @@ Lyrics -->
     <string name="no_changes">"Нет изменений"</string>
     <string name="changelogs">"Список изменений"</string>
     <string name="closepopup">"Закрыть"</string>
+    <string name="customize_thumbnail_corner_radius">"Настроить радиус углов миниатюры "</string>
+    <string name="corner_radius_label">"Радиус углов: %1$s      "</string>
 </resources>

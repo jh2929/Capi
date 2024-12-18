@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -27,6 +29,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -107,6 +110,14 @@ fun Thumbnail(
                             )
                         },
             ) {
+                var cornerRadius by remember { mutableFloatStateOf(16f) } // Valor por defecto
+                val context = LocalContext.current
+
+// Recuperar el valor de DataStore de manera segura
+                LaunchedEffect(Unit) {
+                    cornerRadius = AppConfig.getThumbnailCornerRadius(context)
+                }
+
                 AsyncImage(
                     model = mediaMetadata?.thumbnailUrl,
                     contentDescription = null,
@@ -115,7 +126,7 @@ fun Thumbnail(
                         .offset { IntOffset(offsetX.roundToInt(), 0) }
                         .fillMaxWidth()
                         .aspectRatio(1f)
-                        .clip(RoundedCornerShape(AppConfig.ThumbnailCornerRadiusV2 * 2))
+                        .clip(RoundedCornerShape(cornerRadius * 2))
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = {

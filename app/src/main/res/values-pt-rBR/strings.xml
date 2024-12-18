@@ -385,4 +385,6 @@
     <string name="Translate">Traduzir Opentune</string>
     <string name="Redirección">Redirecionamento</string>
     <string name="poeditor_redirect">Deseja ser redirecionado para o site poeditor.com?</string>
+    <string name="customize_thumbnail_corner_radius">"Personalizar o Raio das Bordas da Miniatura "</string>
+    <string name="corner_radius_label">"Raio das bordas: %1$s "</string>
 </resources>

@@ -86,6 +86,8 @@ import androidx.core.content.PermissionChecker
 import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.core.view.WindowCompat
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -155,6 +157,7 @@ import java.net.URL
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
+import java.util.prefs.Preferences
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.days
 
@@ -189,6 +192,8 @@ class MainActivity : ComponentActivity() {
 
     private var latestVersionName by mutableStateOf(BuildConfig.VERSION_NAME)
     val latestVersion by mutableLongStateOf(BuildConfig.VERSION_CODE.toLong())
+    val Context.dataStore by preferencesDataStore(name = "app_config")
+
 
 
     private fun scheduleUpdateChecker() {

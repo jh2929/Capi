@@ -1,6 +1,7 @@
 package com.malopieds.innertune.ui.screens.settings
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
@@ -32,6 +33,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -43,6 +46,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,12 +59,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.navigation.NavController
 import com.malopieds.innertune.LocalPlayerAwareWindowInsets
 import com.malopieds.innertune.R
@@ -87,6 +97,11 @@ import com.malopieds.innertune.ui.component.SwitchPreference
 import com.malopieds.innertune.ui.utils.backToMain
 import com.malopieds.innertune.utils.rememberEnumPreference
 import com.malopieds.innertune.utils.rememberPreference
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import me.saket.squiggles.SquigglySlider
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -327,85 +342,11 @@ fun AppearanceSettings(
                 showSliderOptionDialog = true
             },
         )
+        Spacer(modifier = Modifier.width(8.dp))
+        ThumbnailCornerRadiusSelector()
 
-        var thumbnailCornerRadius by remember {
-            mutableStateOf(AppConfig.ThumbnailCornerRadiusV2)
-        }
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Personalizar Radio de Esquinas del Thumbnail",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
-                    .clickable { /* No-op */ }
-                    .pointerInput(Unit) {
-                        detectTapGestures { offset ->
-                            // Calcula el valor según el clic
-                            val clickedPosition = offset.x / size.width
-                            thumbnailCornerRadius = (clickedPosition * 50).coerceIn(0f, 50f)
-                            AppConfig.ThumbnailCornerRadiusV2 = thumbnailCornerRadius
-                        }
-                    }
-            ) {
-                // Progreso actual
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(thumbnailCornerRadius / 50f) // Progreso proporcional
-                        .fillMaxHeight()
-                        .clip(RoundedCornerShape(100.dp))
-                        .background(MaterialTheme.colorScheme.primary)
-                )
-            }
-
-            Text(
-                text = "Radio de esquinas: ${String.format("%.1f", thumbnailCornerRadius)}",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedButton(
-                    onClick = {
-                        if (thumbnailCornerRadius > 0) {
-                            thumbnailCornerRadius = (thumbnailCornerRadius - 5).coerceAtLeast(0f)
-                            AppConfig.ThumbnailCornerRadiusV2 = thumbnailCornerRadius
-                        }
-                    }
-                ) {
-                    Text("-5")
-                }
-
-                OutlinedButton(
-                    onClick = {
-                        if (thumbnailCornerRadius < 50) {
-                            thumbnailCornerRadius = (thumbnailCornerRadius + 5).coerceAtMost(50f)
-                            AppConfig.ThumbnailCornerRadiusV2 = thumbnailCornerRadius
-                        }
-                    }
-                ) {
-                    Text("+5")
-                }
-            }
-        }
-
+        Spacer(modifier = Modifier.width(8.dp))
 
         SwitchPreference(
             title = { Text(stringResource(R.string.enable_swipe_thumbnail)) },
@@ -496,9 +437,165 @@ fun AppearanceSettings(
     )
 }
 
+// Extensión de contexto para DataStore
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
+
 object AppConfig {
-    var ThumbnailCornerRadiusV2: Float = 16f // Valor predeterminado
+    private val THUMBNAIL_CORNER_RADIUS_KEY = floatPreferencesKey("thumbnail_corner_radius")
+
+    // Guardar el valor de thumbnail corner radius
+    suspend fun saveThumbnailCornerRadius(context: Context, radius: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[THUMBNAIL_CORNER_RADIUS_KEY] = radius
+        }
+    }
+
+    // Obtener el valor de thumbnail corner radius, o un valor por defecto si no está presente
+    suspend fun getThumbnailCornerRadius(context: Context, defaultValue: Float = 16f): Float {
+        return context.dataStore.data
+            .map { preferences ->
+                preferences[THUMBNAIL_CORNER_RADIUS_KEY] ?: defaultValue
+            }.first()
+    }
 }
+
+
+@Composable
+fun ThumbnailCornerRadiusSelector() {
+    val context = LocalContext.current
+    var thumbnailCornerRadius by remember { mutableStateOf(16f) }
+    var isExpanded by remember { mutableStateOf(false) } // Estado para controlar si se despliega
+
+    // Cargar el valor guardado al iniciar
+    LaunchedEffect(Unit) {
+        thumbnailCornerRadius = AppConfig.getThumbnailCornerRadius(context)
+    }
+
+    // Contenedor principal con Card
+    ElevatedCard(
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 6.dp
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        shape = RoundedCornerShape(16.dp)
+
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Título con clic para expandir, ahora con un ícono
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .padding(bottom = 16.dp)
+                    .clip(RoundedCornerShape(70.dp))
+                    .clickable {
+                        // Cambiar el estado de expansión al hacer clic
+                        isExpanded = !isExpanded
+                    }
+            ) {
+                // Ícono al inicio del título con painterResource
+                Icon(
+                    painter = painterResource(id = R.drawable.line_curve),
+                    contentDescription = null,
+                    modifier = Modifier.padding(end = 9.dp)
+                )
+                Text(
+                    text = stringResource(id = R.string.customize_thumbnail_corner_radius),
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+
+            // Mostrar el contenido solo si 'isExpanded' es verdadero
+            if (isExpanded) {
+                // Barra de ajuste del radio del borde
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                        .clickable { /* No-op */ }
+                        .pointerInput(Unit) {
+                            detectTapGestures { offset ->
+                                // Calcula el valor según el clic
+                                val clickedPosition = offset.x / size.width
+                                thumbnailCornerRadius = (clickedPosition * 50).coerceIn(0f, 50f)
+
+                                // Guardar el valor
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    AppConfig.saveThumbnailCornerRadius(context, thumbnailCornerRadius)
+                                }
+                            }
+                        }
+                ) {
+                    // Progreso actual
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(thumbnailCornerRadius / 50f) // Progreso proporcional
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(100.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
+
+                // Mostrar el valor del radio del borde
+                Text(
+                    text = stringResource(
+                        id = R.string.corner_radius_label,
+                        String.format("%.1f", thumbnailCornerRadius)
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+
+                // Controles para aumentar y disminuir el valor
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            if (thumbnailCornerRadius > 0) {
+                                thumbnailCornerRadius = (thumbnailCornerRadius - 5).coerceAtLeast(0f)
+
+                                // Guardar el valor
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    AppConfig.saveThumbnailCornerRadius(context, thumbnailCornerRadius)
+                                }
+                            }
+                        }
+                    ) {
+                        Text("-5")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            if (thumbnailCornerRadius < 50) {
+                                thumbnailCornerRadius = (thumbnailCornerRadius + 5).coerceAtMost(50f)
+
+                                // Guardar el valor
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    AppConfig.saveThumbnailCornerRadius(context, thumbnailCornerRadius)
+                                }
+                            }
+                        }
+                    ) {
+                        Text("+5")
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 enum class DarkMode {
     ON,
