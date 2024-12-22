@@ -54,6 +54,10 @@ android {
         buildConfig = true
         compose = true
     }
+
+    
+
+
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17

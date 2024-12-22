@@ -414,4 +414,9 @@
     <string name="mute">Mute</string>
     <string name="customize_thumbnail_corner_radius">Customize Thumbnail Corner Radius\n</string>
     <string name="corner_radius_label">Corner radius: %1$s</string>
+    <string name="more_options">more options</string>
+    <string name="back">back</string>
+    <string name="cancel">cancel</string>
+    <string name="logout_confirmation_title">Log out</string>
+    <string name="logout_confirmation_message">Are you sure you want to log out?</string>
 </resources>

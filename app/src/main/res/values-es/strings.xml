@@ -402,4 +402,6 @@
     <string name="poeditor_redirect">¿Quieres ser redirigido a poeditor.com?</string>
     <string name="customize_thumbnail_corner_radius">"Personalizar Radio de Esquinas del Thumbnail "</string>
     <string name="corner_radius_label">"Radio de esquinas: %1$s "</string>
+    <string name="logout_confirmation_title">Cerrar sesión</string>
+    <string name="logout_confirmation_message">¿Estás seguro que deseas cerrar sesión?</string>
 </resources>

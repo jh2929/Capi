@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.navigation.NavController
+import com.malopieds.innertube.YouTube.visitorData
 import com.malopieds.innertube.utils.parseCookieString
 import com.malopieds.innertune.LocalPlayerAwareWindowInsets
 import com.malopieds.innertune.NotificationPermissionPreference
@@ -69,12 +70,14 @@ import com.malopieds.innertune.constants.QuickPicks
 import com.malopieds.innertune.constants.QuickPicksKey
 import com.malopieds.innertune.constants.SYSTEM_DEFAULT
 import com.malopieds.innertune.constants.TopSize
+import com.malopieds.innertune.constants.VisitorDataKey
 import com.malopieds.innertune.ui.component.EditTextPreference
 import com.malopieds.innertune.ui.component.IconButton
 import com.malopieds.innertune.ui.component.ListPreference
 import com.malopieds.innertune.ui.component.PreferenceEntry
 import com.malopieds.innertune.ui.component.PreferenceGroupTitle
 import com.malopieds.innertune.ui.component.SwitchPreference
+import com.malopieds.innertune.ui.screens.clearLoginData
 import com.malopieds.innertune.ui.utils.backToMain
 import com.malopieds.innertune.utils.rememberEnumPreference
 import com.malopieds.innertune.utils.rememberPreference
@@ -91,10 +94,10 @@ fun ContentSettings(
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
     val context = LocalContext.current
-    val accountName by rememberPreference(AccountNameKey, "")
-    val accountEmail by rememberPreference(AccountEmailKey, "")
-    val accountChannelHandle by rememberPreference(AccountChannelHandleKey, "")
-    val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
+    var accountName by rememberPreference(AccountNameKey, "")
+    var accountEmail by rememberPreference(AccountEmailKey, "")
+    var accountChannelHandle by rememberPreference(AccountChannelHandleKey, "")
+    var innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
     val isLoggedIn =
         remember(innerTubeCookie) {
             "SAPISID" in parseCookieString(innerTubeCookie)
@@ -117,18 +120,70 @@ fun ContentSettings(
     ) {
         Spacer(Modifier.windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top)))
 
+// Variables necesarias
+        var showLogoutDialog by remember { mutableStateOf(false) }
+        val isLoggedIn = remember(accountName, innerTubeCookie) {
+            accountName.isNotEmpty() && innerTubeCookie.isNotEmpty()
+        }
+
+// PreferenceEntry principal
         PreferenceEntry(
             title = { Text(if (isLoggedIn) accountName else stringResource(R.string.login)) },
-            description =
-                if (isLoggedIn) {
-                    accountEmail.takeIf { it.isNotEmpty() }
-                        ?: accountChannelHandle.takeIf { it.isNotEmpty() }
-                } else {
-                    null
-                },
+            description = if (isLoggedIn) {
+                accountEmail.takeIf { it.isNotEmpty() }
+                    ?: accountChannelHandle.takeIf { it.isNotEmpty() }
+            } else {
+                null
+            },
             icon = { Icon(painterResource(R.drawable.person), null) },
-            onClick = { navController.navigate("login") },
+            onClick = {
+                if (!isLoggedIn) {
+                    navController.navigate("login")
+                }
+            },
+            modifier = Modifier
         )
+
+// PreferenceEntry para cerrar sesión (solo visible si está logueado)
+        if (isLoggedIn) {
+            PreferenceEntry(
+                title = { Text(stringResource(R.string.logout)) },
+                icon = { Icon(painterResource(R.drawable.logout), null) },
+                onClick = { showLogoutDialog = true },
+                modifier = Modifier
+            )
+        }
+
+// Diálogo de confirmación de cierre de sesión
+        if (showLogoutDialog) {
+            AlertDialog(
+                onDismissRequest = { showLogoutDialog = false },
+                title = { Text(stringResource(R.string.logout_confirmation_title)) },
+                text = { Text(stringResource(R.string.logout_confirmation_message)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            clearLoginData(
+                                setVisitorData = { visitorData = it },
+                                setInnerTubeCookie = { innerTubeCookie = it },
+                                setAccountName = { accountName = it },
+                                setAccountEmail = { accountEmail = it },
+                                setAccountChannelHandle = { accountChannelHandle = it }
+                            )
+                            showLogoutDialog = false
+                        }
+                    ) {
+                        Text(stringResource(R.string.logout))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showLogoutDialog = false }) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            )
+        }
+
         ListPreference(
             title = { Text(stringResource(R.string.content_language)) },
             icon = { Icon(painterResource(R.drawable.language), null) },

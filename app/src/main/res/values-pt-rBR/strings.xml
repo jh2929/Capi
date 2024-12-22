@@ -387,4 +387,6 @@
     <string name="poeditor_redirect">Deseja ser redirecionado para o site poeditor.com?</string>
     <string name="customize_thumbnail_corner_radius">"Personalizar o Raio das Bordas da Miniatura "</string>
     <string name="corner_radius_label">"Raio das bordas: %1$s "</string>
+    <string name="logout_confirmation_title">Fazer logout</string>
+    <string name="logout_confirmation_message">Tem certeza de que deseja fazer logout?</string>
 </resources>
