@@ -70,6 +70,13 @@
 | ![Link Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/link.svg)            | Descarga de portada de álbum                                  |
 
 
+
+# Documentacion y guia:
+
+
+
+
+
 # Guía de Compilación y Contribuciones
 
 ## Requisitos Previos
