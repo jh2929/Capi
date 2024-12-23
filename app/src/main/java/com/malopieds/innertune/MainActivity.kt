@@ -905,7 +905,9 @@ class MainActivity : ComponentActivity() {
         const val ACTION_SEARCH = "com.Arturo254.opentune.action.SEARCH"
         const val ACTION_EXPLORE = "com.Arturo254.opentune.action.EXPLORE"
         const val ACTION_LIBRARY = "com.Arturo254.opentune.action.LIBRARY"
+        const val ACTION_SETTINGS = "com.Arturo254.opentune.action.SETTINGS"
     }
+
 }
 
 val LocalDatabase = staticCompositionLocalOf<MusicDatabase> { error("No database provided") }

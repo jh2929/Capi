@@ -129,7 +129,8 @@ fun ContentSettings(
 // PreferenceEntry principal
         PreferenceEntry(
             title = { Text(if (isLoggedIn) accountName else stringResource(R.string.login)) },
-            description = if (isLoggedIn) {
+            description =
+            if (isLoggedIn) {
                 accountEmail.takeIf { it.isNotEmpty() }
                     ?: accountChannelHandle.takeIf { it.isNotEmpty() }
             } else {
