@@ -1,4 +1,7 @@
 
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+
+
 <div align="center">
   <h1>OpenTune</h1>
   <p>Un cliente elegante de YouTube Music con Material Design 3 para Android</p>
@@ -45,21 +48,24 @@
 
 ## Características
 
-- 🎵 Reproducción de música de YouTube y YouTube Music sin anuncios.
-- 🔊 Reproducción en segundo plano.
-- 🔍 Búsqueda avanzada de canciones, videos, álbumes y listas de reproducción.
-- 🔑 Inicio de sesión integrado.
-- 📚 Gestión completa de tu biblioteca musical.
-- ⬇️ Descarga y almacenamiento en caché para reproducción offline.
-- 🗣️ Letras sincronizadas.
-- ⏩ Omisión inteligente de silencios.
-- 🔊 Normalización de audio.
-- ⏱️ Ajuste de tempo y tono.
-- 🌗 Tema dinámico.
-- 🌍 Soporte multiidioma.
-- 🚗 Compatibilidad con Android Auto.
-- 💎 Diseño Material 3.
-- 🔗 Descarga de portada de álbum.
+| Icono                                        | Característica                                                |
+|----------------------------------------------|---------------------------------------------------------------|
+| ![Music Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/music.svg)    | Reproducción de música de YouTube y YouTube Music sin anuncios |
+| ![Volume Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/volume-2.svg)   | Reproducción en segundo plano                                 |
+| ![Search Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/search.svg)       | Búsqueda avanzada de canciones, videos, álbumes y listas de reproducción |
+| ![Key Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/key.svg)              | Inicio de sesión integrado                                    |
+| ![Book Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/book-open.svg)      | Gestión completa de tu biblioteca musical                     |
+| ![Cloud Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/download-cloud.svg) | Descarga y almacenamiento en caché para reproducción offline  |
+| ![Comment Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/message-square.svg) | Letras sincronizadas                                          |
+| ![Forward Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/fast-forward.svg) | Omisión inteligente de silencios                              |
+| ![Volume Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/volume-x.svg)    | Normalización de audio                                        |
+| ![Clock Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/clock.svg)          | Ajuste de tempo y tono                                        |
+| ![Moon Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/moon.svg)            | Tema dinámico                                                 |
+| ![Globe Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/globe.svg)          | Soporte multiidioma                                           |
+| ![Car Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/coffee.svg)              | Compatibilidad con Android Auto                               |
+| ![Gem Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/box.svg)             | Diseño Material 3                                             |
+| ![Link Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/link.svg)            | Descarga de portada de álbum                                  |
+
 
 ## Cómo compilar la aplicación
 
