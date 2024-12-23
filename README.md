@@ -70,49 +70,62 @@
 | ![Link Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/link.svg)            | Descarga de portada de álbum                                  |
 
 
-## Cómo compilar la aplicación
+# Guía de Compilación y Contribuciones
 
-### Requisitos previos:
+## Requisitos Previos
 
-- Gradle
-- Kotlin
-- Android Studio
+Asegúrate de tener instalados los siguientes elementos para compilar la aplicación correctamente:
 
-### Compilación por línea de comandos:
+- **Gradle** - Sistema de automatización de construcción.
+- **Kotlin** - Lenguaje de programación para Android.
+- **Android Studio** - Entorno de desarrollo integrado para aplicaciones Android.
 
-**Release:**
+---
+
+## Compilación por Línea de Comandos
+
+### Compilación de Release
+Para compilar la versión de producción de la aplicación, utiliza el siguiente comando:
+
 ```bash
 ./gradlew assembleRelease
 ```
 
-**Debug:**
+### Compilación de Debug
+Si necesitas compilar la versión de depuración, usa este comando:
+
 ```bash
 ./gradlew assembleDebug
 ```
 
-**Compilación completa:**
+### Compilación Completa
+Este comando compilará la aplicación completamente (incluyendo test y dependencias):
+
 ```bash
 ./gradlew build
 ```
 
-## Contribuye con traducciones
+---
 
-Si deseas traducir la aplicación a tu idioma o contribuir con otros idiomas, contáctame a través de Gmail:  
+## Contribuye con Traducciones
+
+Si deseas traducir la aplicación a tu idioma o mejorar las traducciones existentes, no dudes en ponerte en contacto conmigo a través de correo electrónico:  
 [cervantesarturo254@gmail.com](mailto:cervantesarturo254@gmail.com)
-
-## Apoya el proyecto
-
-Si disfrutas utilizando OpenTune, considera hacer una donación para ayudarnos a mejorar la aplicación, corregir errores y agregar nuevas funciones.
-
-### ¡Conviértete en Sponsor! ❤️😊  
-[Paypal - Arturo Cervantes](https://www.paypal.com/paypalme/ArturoCervantes254)
 
 ---
 
-© 2023 Open Source Projects  
-Desarrollado por [Arturo Cervantes](https://www.paypal.com/paypalme/ArturoCervantes254)
+## Apoya el Proyecto
 
-## Derechos de autor
+Si disfrutas utilizando **OpenTune** y quieres apoyar el desarrollo, considera hacer una donación. Tu contribución ayudará a mejorar la aplicación, corregir errores y añadir nuevas funcionalidades.
+
+### ¡Conviértete en Sponsor!
+
+Haz tu donación a través de **PayPal**:  
+[**Paypal - Arturo Cervantes**](https://www.paypal.com/paypalme/ArturoCervantes254)
+
+---
+
+## Derechos de Autor
 
 **_Derechos de autor (c) 2024_**
 
@@ -121,3 +134,8 @@ Este programa es software libre: puedes redistribuirlo y/o modificarlo bajo los 
 Este programa se distribuye con la esperanza de que sea útil, pero **SIN NINGUNA GARANTÍA**, ni siquiera la garantía implícita de COMERCIABILIDAD o IDONEIDAD PARA UN PROPÓSITO PARTICULAR. Consulta la Licencia Pública General de GNU para obtener más detalles.
 
 El aviso de derechos de autor anterior, este aviso de permiso y su licencia se incluirán en todas las copias o partes sustanciales del Software.
+
+---
+
+© 2023 Open Source Projects  
+Desarrollado por [Arturo Cervantes](https://www.paypal.com/paypalme/ArturoCervantes254)
