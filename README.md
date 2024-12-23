@@ -48,7 +48,10 @@
 
 ## Características
 
-| Icono                                        | Característica                                                |
+<div align="center">
+
+
+|    | Característica                                                |
 |----------------------------------------------|---------------------------------------------------------------|
 | ![Music Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/music.svg)    | Reproducción de música de YouTube y YouTube Music sin anuncios |
 | ![Volume Icon](https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/icons/volume-2.svg)   | Reproducción en segundo plano                                 |
