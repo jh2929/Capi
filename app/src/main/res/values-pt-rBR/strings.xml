@@ -389,4 +389,6 @@
     <string name="corner_radius_label">"Raio das bordas: %1$s "</string>
     <string name="logout_confirmation_title">Fazer logout</string>
     <string name="logout_confirmation_message">Tem certeza de que deseja fazer logout?</string>
+    <string name="barwar">Atenção Ao restaurar os backups, as músicas baixadas anteriormente não são baixadas. É ALTAMENTE RECOMENDÁVEL reproduzir as músicas restauradas para evitar erros de download.</string>
+    <string name="restore_confirmation_title">Restauração concluída</string>
 </resources>

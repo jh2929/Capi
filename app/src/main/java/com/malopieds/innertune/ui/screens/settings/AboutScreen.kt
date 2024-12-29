@@ -402,13 +402,6 @@ fun AboutScreen(
             onClick = { uriHandler.openUri("https://wa.me/525576847925") }
         )
         Spacer(Modifier.height(20.dp))
-
-        CardItem(
-            icon = R.drawable.tensorflow,
-            title = stringResource(R.string.IA_content),
-            subtitle = stringResource(R.string.IA_content_text),
-            onClick = { uriHandler.openUri("https://www.tensorflow.org/") }
-        )
         Spacer(Modifier.height(20.dp))
         Row(
             verticalAlignment = Alignment.Top,
@@ -432,21 +425,8 @@ fun AboutScreen(
 
         }
 
-
-
-
         UserCards(uriHandler)
-
-
-
-
-        // Contribution by:
-
-
-        ContributionCard(uriHandler)
-
-
-
+        Spacer(modifier = Modifier.width(12.dp))
 
     }
 
@@ -574,114 +554,3 @@ fun CardItem(
 
 
 
-@Composable
-fun ContributionCard(
-    uriHandler: UriHandler,
-    modifier: Modifier = Modifier
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    ElevatedCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(160.dp)
-            .padding(horizontal = 16.dp)
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) {
-                uriHandler.openUri("https://github.com/Arturo254/OpenTune/new/master")
-            },
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface
-        ),
-        elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = 2.dp,
-            pressedElevation = 6.dp,
-            hoveredElevation = 4.dp,
-            focusedElevation = 4.dp,
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Icon container with state-based colors
-            Surface(
-                modifier = Modifier.size(56.dp),
-                shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.extension),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .size(32.dp)
-                )
-            }
-
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = stringResource(R.string.contribution),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                Text(
-                    text = stringResource(R.string.contribution_text),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                // New: Progress indicator for contributions
-                LinearProgressIndicator(
-                    progress = 0.7f,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            }
-
-            // New: Action button
-            IconButton(
-                onClick = {
-                    uriHandler.openUri("https://github.com/Arturo254/OpenTune/new/master")
-                }
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.ArrowForward,
-                    contentDescription = "Contribute",
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
-    }
-}
-
-// Preview
-@Preview(showBackground = true)
-@Composable
-fun ContributionCardPreview() {
-    MaterialTheme {
-        ContributionCard(
-            uriHandler = object : UriHandler {
-                override fun openUri(uri: String) {}
-            }
-        )
-    }
-}

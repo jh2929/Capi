@@ -2,6 +2,7 @@ package com.malopieds.innertube.models.response
 
 import com.malopieds.innertube.models.ResponseContext
 import com.malopieds.innertube.models.Thumbnails
+import com.malopieds.innertube.utils.createUrl
 import kotlinx.serialization.Serializable
 
 /**
@@ -57,7 +58,13 @@ data class PlayerResponse(
             val audioChannels: Int?,
             val loudnessDb: Double?,
             val lastModified: Long?,
+            val signatureCipher: String?
         ) {
+            fun findUrl(): String {
+
+                return url?.let { createUrl(url = it) } ?: signatureCipher?.let { createUrl(cipher = it) }!!
+            }
+
             val isAudio: Boolean
                 get() = width == null
         }

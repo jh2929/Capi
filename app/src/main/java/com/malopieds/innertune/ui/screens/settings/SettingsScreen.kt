@@ -3,6 +3,8 @@ package com.malopieds.innertune.ui.screens.settings
 
 import android.content.Context
 import android.content.pm.PackageManager
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -252,12 +255,26 @@ fun SettingsScreen(
 
 
         )
-
     var currentImageIndex by remember { mutableIntStateOf((0..backgroundImages.lastIndex).random()) }
+    var previousImageIndex by remember { mutableIntStateOf(currentImageIndex) }
+    var isAnimating by remember { mutableStateOf(false) }
 
+    val alpha by animateFloatAsState(
+        targetValue = if (isAnimating) 0f else 1f,
+        animationSpec = tween(300),
+        finishedListener = {
+            if (isAnimating) {
+                previousImageIndex = currentImageIndex
+                isAnimating = false
+            }
+        }, label = ""
+    )
 
     fun changeBackgroundImage() {
-        currentImageIndex = (currentImageIndex + 1) % backgroundImages.size
+        if (!isAnimating) {
+            isAnimating = true
+            currentImageIndex = (currentImageIndex + 1) % backgroundImages.size
+        }
     }
 
     Column(
@@ -269,29 +286,38 @@ fun SettingsScreen(
         Box(
             modifier = Modifier
                 .height(220.dp)
-                .clip(RoundedCornerShape(25.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(color = Color.Transparent)
                 .clickable { changeBackgroundImage() }
-
-
         ) {
+            // Imagen anterior que se desvanece
             Image(
-                painter = painterResource(id = backgroundImages[currentImageIndex]),
-                contentDescription = "background",
+                painter = painterResource(id = backgroundImages[previousImageIndex]),
+                contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-                    .blur(0.5.dp)
+                    .blur(0.6.dp)
+                    .alpha(alpha)
+            )
 
+            // Nueva imagen que aparece
+            Image(
+                painter = painterResource(id = backgroundImages[currentImageIndex]),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(0.6.dp)
+                    .alpha(1f - alpha)
             )
 
             val accountName by rememberPreference(AccountNameKey, "")
-
             val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
-            val isLoggedIn =
-                remember(innerTubeCookie) {
-                    "SAPISID" in parseCookieString(innerTubeCookie)
-                }
+            val isLoggedIn = remember(innerTubeCookie) {
+                "SAPISID" in parseCookieString(innerTubeCookie)
+            }
+
             PreferenceEntry(
                 title = {
                     Column(
@@ -318,17 +344,14 @@ fun SettingsScreen(
                                 painter = painterResource(R.drawable.opentune_monochrome),
                                 contentDescription = null,
                                 tint = Color.White,
-
-                                )
+                            )
                             Text(
                                 text = "OpenTune",
                                 color = Color.White,
                                 fontSize = 26.sp,
                                 style = MaterialTheme.typography.titleSmall,
                                 fontFamily = FontFamily.Monospace
-
                             )
-
                         }
                     }
                 },
@@ -336,6 +359,7 @@ fun SettingsScreen(
                 onClick = { changeBackgroundImage() },
             )
         }
+
 
         Spacer(Modifier.height(25.dp))
 
@@ -388,6 +412,11 @@ fun SettingsScreen(
         PreferenceEntry(
             title = { Text(stringResource(R.string.Telegramchanel)) },
             icon = { Icon(painterResource(R.drawable.telegram), null) },
+            onClick = { uriHandler.openUri("https://t.me/+NZXjVj6lETxkYTNh") }
+        )
+        PreferenceEntry(
+            title = { Text(stringResource(R.string.contribution)) },
+            icon = { Icon(painterResource(R.drawable.apps), null) },
             onClick = { uriHandler.openUri("https://t.me/+NZXjVj6lETxkYTNh") }
         )
 

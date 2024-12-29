@@ -40,3 +40,4 @@
         android:targetPackage="com.Arturo254.opentune"
         android:action="com.Arturo254.opentune.action.SETTINGS" />
 </shortcuts>
+

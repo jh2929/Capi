@@ -404,4 +404,6 @@
     <string name="corner_radius_label">"Radio de esquinas: %1$s "</string>
     <string name="logout_confirmation_title">Cerrar sesión</string>
     <string name="logout_confirmation_message">¿Estás seguro que deseas cerrar sesión?</string>
+    <string name="barwar">Atencion al restraurar las copia de seguridad. no se descargan las canciones previamente descargadas. es ALTAMENTE RECOMENDABLE reproducir las canciones restauradas para poder evitar cualquier error de descarga</string>
+    <string name="restore_confirmation_title">Restauración Completada</string>
 </resources>

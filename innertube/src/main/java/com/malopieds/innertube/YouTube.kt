@@ -15,7 +15,6 @@ import com.malopieds.innertube.models.WatchEndpoint
 import com.malopieds.innertube.models.WatchEndpoint.WatchEndpointMusicSupportedConfigs.WatchEndpointMusicConfig.Companion.MUSIC_VIDEO_TYPE_ATV
 import com.malopieds.innertube.models.YouTubeClient.Companion.ANDROID_MUSIC
 import com.malopieds.innertube.models.YouTubeClient.Companion.IOS
-import com.malopieds.innertube.models.YouTubeClient.Companion.TVHTML5
 import com.malopieds.innertube.models.YouTubeClient.Companion.WEB
 import com.malopieds.innertube.models.YouTubeClient.Companion.WEB_REMIX
 import com.malopieds.innertube.models.YouTubeLocale
@@ -312,17 +311,6 @@ object YouTube {
                         ?.thumbnails
                         ?.lastOrNull()
                         ?.url!!,
-                    otherVersions =
-                    response.contents.twoColumnBrowseResultsRenderer.secondaryContents
-                        ?.sectionListRenderer
-                        ?.contents
-                        ?.getOrNull(
-                            1,
-                        )?.musicCarouselShelfRenderer
-                        ?.contents
-                        ?.mapNotNull { it.musicTwoRowItemRenderer }
-                        ?.mapNotNull(NewReleaseAlbumPage::fromMusicTwoRowItemRenderer)
-                        .orEmpty(),
                 ),
                 songs = if (withSongs) albumSongs(playlistId).getOrThrow() else emptyList(),
             )
@@ -878,33 +866,43 @@ object YouTube {
                 }
         }
 
+    private val PlayerResponse.isValid
+        get() =
+            playabilityStatus.status == "OK" &&
+                    streamingData?.adaptiveFormats?.any { it.url != null || it.signatureCipher != null } == true
+
     suspend fun player(
         videoId: String,
         playlistId: String? = null,
     ): Result<PlayerResponse> =
         runCatching {
             var playerResponse: PlayerResponse
-            if (this.cookie != null) { // if logged in: try ANDROID_MUSIC client first because IOS client does not play age restricted songs
+            if (this.cookie != null && false) { // if logged in: try ANDROID_MUSIC client first because IOS client does not play age restricted songs
                 playerResponse = innerTube.player(ANDROID_MUSIC, videoId, playlistId).body<PlayerResponse>()
                 if (playerResponse.playabilityStatus.status == "OK") {
+                    println("there")
                     return@runCatching playerResponse
                 }
             }
+//            try {
+//                val safePlayerResponse = innerTube.player(WEB_REMIX, videoId, playlistId).body<PlayerResponse>()
+//                if (safePlayerResponse.isValid) {
+//                    return@runCatching safePlayerResponse
+//                }
+//            } catch (e: Exception) {
+//                error(e)
+//            }
 
             playerResponse = innerTube.player(IOS, videoId, playlistId).body<PlayerResponse>()
             if (playerResponse.playabilityStatus.status == "OK") {
                 return@runCatching playerResponse
             }
-            val safePlayerResponse = innerTube.player(TVHTML5, videoId, playlistId).body<PlayerResponse>()
-            if (safePlayerResponse.playabilityStatus.status != "OK") {
-                return@runCatching playerResponse
-            }
             val audioStreams = innerTube.pipedStreams(videoId).body<PipedResponse>().audioStreams
-            safePlayerResponse.copy(
+            playerResponse.copy(
                 streamingData =
-                safePlayerResponse.streamingData?.copy(
+                playerResponse.streamingData?.copy(
                     adaptiveFormats =
-                    safePlayerResponse.streamingData.adaptiveFormats.mapNotNull { adaptiveFormat ->
+                    playerResponse.streamingData!!.adaptiveFormats.mapNotNull { adaptiveFormat ->
                         audioStreams.find { it.bitrate == adaptiveFormat.bitrate }?.let {
                             adaptiveFormat.copy(
                                 url = it.url,
@@ -931,6 +929,16 @@ object YouTube {
                         endpoint.params,
                         continuation,
                     ).body<NextResponse>()
+            val title =
+                response.contents.singleColumnMusicWatchNextResultsRenderer.tabbedRenderer.watchNextTabbedResultsRenderer.tabs[0]
+                    .tabRenderer.content
+                    ?.musicQueueRenderer
+                    ?.header
+                    ?.musicQueueHeaderRenderer
+                    ?.subtitle
+                    ?.runs
+                    ?.firstOrNull()
+                    ?.text
             val playlistPanelRenderer =
                 response.continuationContents?.playlistPanelContinuation
                     ?: response.contents.singleColumnMusicWatchNextResultsRenderer.tabbedRenderer.watchNextTabbedResultsRenderer.tabs[0]
@@ -949,7 +957,7 @@ object YouTube {
                 ?.let { watchPlaylistEndpoint ->
                     return@runCatching next(watchPlaylistEndpoint).getOrThrow().let { result ->
                         result.copy(
-                            title = playlistPanelRenderer.title,
+                            title = title,
                             items =
                             playlistPanelRenderer.contents.mapNotNull {
                                 it.playlistPanelVideoRenderer?.let { renderer ->

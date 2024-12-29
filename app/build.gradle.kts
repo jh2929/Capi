@@ -20,7 +20,7 @@ android {
         //noinspection OldTargetApi
         targetSdk = 34
         versionCode = 25
-        versionName = "1.9.2.Beta2"
+        versionName = "1.9.2.Beta3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -88,6 +88,7 @@ ksp {
 }
 
 dependencies {
+
     implementation(libs.guava)
     implementation(libs.coroutines.guava)
     implementation(libs.concurrent.futures)
@@ -126,8 +127,9 @@ dependencies {
 
     implementation(libs.room.runtime)
     implementation(libs.accompanist.coil)
-    implementation(libs.blurry)
     implementation(libs.work.runtime.ktx)
+
+    implementation(libs.markdownview.android)
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
 
@@ -151,4 +153,5 @@ dependencies {
     implementation(libs.glance.appwidget)
     implementation(libs.glance.appwidget.preview)
     implementation(libs.glance.preview)
+
 }

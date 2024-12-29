@@ -69,6 +69,7 @@ import com.malopieds.innertune.constants.ProxyUrlKey
 import com.malopieds.innertune.constants.QuickPicks
 import com.malopieds.innertune.constants.QuickPicksKey
 import com.malopieds.innertune.constants.SYSTEM_DEFAULT
+import com.malopieds.innertune.constants.SimilarContent
 import com.malopieds.innertune.constants.TopSize
 import com.malopieds.innertune.constants.VisitorDataKey
 import com.malopieds.innertune.ui.component.EditTextPreference
@@ -107,11 +108,12 @@ fun ContentSettings(
     val (hideExplicit, onHideExplicitChange) = rememberPreference(key = HideExplicitKey, defaultValue = false)
     val (proxyEnabled, onProxyEnabledChange) = rememberPreference(key = ProxyEnabledKey, defaultValue = false)
     val (proxyType, onProxyTypeChange) = rememberEnumPreference(key = ProxyTypeKey, defaultValue = Proxy.Type.HTTP)
-    val (proxyUrl, onProxyUrlChange) = rememberPreference(key = ProxyUrlKey, defaultValue = "host:port")
+    val (proxyUrl, onProxyUrlChange) = rememberPreference(key = ProxyUrlKey, defaultValue = "")
     val (lengthTop, onLengthTopChange) = rememberPreference(key = TopSize, defaultValue = "50")
     val (historyDuration, onHistoryDurationChange) = rememberPreference(key = HistoryDuration, defaultValue = 30f)
     val (defaultChip, onDefaultChipChange) = rememberEnumPreference(key = ChipSortTypeKey, defaultValue = LibraryFilter.LIBRARY)
     val (quickPicks, onQuickPicksChange) = rememberEnumPreference(key = QuickPicksKey, defaultValue = QuickPicks.QUICK_PICKS)
+    val (similarContentEnabled, similarContentEnabledChange) = rememberPreference(key = SimilarContent, defaultValue = true) // IA content
 
     Column(
         Modifier
@@ -210,16 +212,12 @@ fun ContentSettings(
             onValueSelected = onContentCountryChange,
         )
 
-        PreferenceGroupTitle(
-            title = stringResource(R.string.app_language),
-        )
-
-        SwitchPreference(
-            title = { Text(stringResource(R.string.hide_explicit)) },
-            icon = { Icon(painterResource(R.drawable.explicit), null) },
-            checked = hideExplicit,
-            onCheckedChange = onHideExplicitChange,
-        )
+//        SwitchPreference(
+//            title = { Text(stringResource(R.string.hide_explicit)) },
+//            icon = { Icon(painterResource(R.drawable.explicit), null) },
+//            checked = hideExplicit,
+//            onCheckedChange = onHideExplicitChange,
+//        )
 
         NotificationPermissionPreference()
 
@@ -315,11 +313,6 @@ fun ContentSettings(
             onValueSelected = onQuickPicksChange,
         )
 
-//        SliderPreference(
-//            title = { Text(stringResource(R.string.history_duration)) },
-//            value = historyDuration,
-//            onValueChange = onHistoryDurationChange,
-//        )
 
     }
 
