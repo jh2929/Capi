@@ -301,7 +301,7 @@
     <string name="help">Ayuda</string>
     <string name="help_text">Contacto con el Dev ❯</string>
     <string name="contributors">Colaboradores</string>
-    <string name="contribution">Contribuir ?</string>
+    <string name="contribution">"Contribuir "</string>
     <string name="contribution_text">Si quieres contribuir da click aqui</string>
     <string name="sort_by_last_updated">ordenar por última actualización</string>
     <string name="default_lib_chips">chips de biblioteca predeterminados</string>

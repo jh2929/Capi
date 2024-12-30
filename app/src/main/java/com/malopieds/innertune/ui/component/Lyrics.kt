@@ -266,30 +266,30 @@ fun Lyrics(
                         text = item.text,
                         fontSize = 20.sp,
                         color =
-                            if (index ==
-                                displayedCurrentLineIndex
-                            ) {
-                                currentLine
-                            } else {
-                                outLines
-                            },
+                        if (index == displayedCurrentLineIndex) {
+                            currentLine // Color brillante para la línea actual
+                        } else {
+                            outLines // Color con mayor contraste para otras líneas
+                        },
                         textAlign =
-                            when (lyricsTextPosition) {
-                                LyricsPosition.LEFT -> TextAlign.Left
-                                LyricsPosition.CENTER -> TextAlign.Center
-                                LyricsPosition.RIGHT -> TextAlign.Right
-                            },
-                        fontWeight = FontWeight.Bold,
+                        when (lyricsTextPosition) {
+                            LyricsPosition.LEFT -> TextAlign.Left
+                            LyricsPosition.CENTER -> TextAlign.Center
+                            LyricsPosition.RIGHT -> TextAlign.Right
+                        },
+                        fontWeight = if (index == displayedCurrentLineIndex) FontWeight.ExtraBold else FontWeight.Medium, // Grosor adicional para la línea actual
                         modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable(enabled = isSynced && changeLyrics) {
-                                    playerConnection.player.seekTo(item.time)
-                                    lastPreviewTime = 0L
-                                }.padding(horizontal = 24.dp, vertical = 8.dp)
-                                .alpha(if (!isSynced || index == displayedCurrentLineIndex) 1f else 0.5f),
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = isSynced && changeLyrics) {
+                                playerConnection.player.seekTo(item.time)
+                                lastPreviewTime = 0L
+                            }
+                            .padding(horizontal = 24.dp, vertical = 8.dp)
+                            .alpha(if (!isSynced || index == displayedCurrentLineIndex) 1f else 0.7f), // Menos transparencia para las otras líneas
                     )
                 }
+
             }
         }
 

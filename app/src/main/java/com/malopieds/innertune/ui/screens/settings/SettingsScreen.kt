@@ -580,7 +580,7 @@ fun TranslatePreference(uriHandler: UriHandler) {
 
     PreferenceEntry(
         title = { Text(stringResource(R.string.Translate)) },
-        icon = { Icon(painterResource(R.drawable.poeditor), null) },
+        icon = { Icon(painterResource(R.drawable.translate), null) },
         onClick = { showDialog = true }
     )
 

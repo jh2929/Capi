@@ -5,6 +5,11 @@ import android.media.audiofx.AudioEffect
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -161,8 +166,8 @@ fun PlayerMenu(
                         )
                     },
                     modifier =
-                        Modifier
-                            .clickable { showErrorPlaylistAddDialog = false },
+                    Modifier
+                        .clickable { showErrorPlaylistAddDialog = false },
                 )
             }
 
@@ -178,17 +183,17 @@ fun PlayerMenu(
                                 model = mediaMetadata.thumbnailUrl,
                                 contentDescription = null,
                                 modifier =
-                                    Modifier
-                                        .fillMaxSize()
-                                        .clip(RoundedCornerShape(ThumbnailCornerRadius)),
+                                Modifier
+                                    .fillMaxSize()
+                                    .clip(RoundedCornerShape(ThumbnailCornerRadius)),
                             )
                         }
                     },
                     subtitle =
-                        joinByBullet(
-                            mediaMetadata.artists.joinToString { it.name },
-                            makeTimeString(mediaMetadata.duration * 1000L),
-                        ),
+                    joinByBullet(
+                        mediaMetadata.artists.joinToString { it.name },
+                        makeTimeString(mediaMetadata.duration * 1000L),
+                    ),
                 )
             }
         }
@@ -206,15 +211,15 @@ fun PlayerMenu(
                 Box(
                     contentAlignment = Alignment.CenterStart,
                     modifier =
-                        Modifier
-                            .fillParentMaxWidth()
-                            .height(ListItemHeight)
-                            .clickable {
-                                navController.navigate("artist/${artist.id}")
-                                showSelectArtistDialog = false
-                                playerBottomSheetState.collapseSoft()
-                                onDismiss()
-                            }.padding(horizontal = 24.dp),
+                    Modifier
+                        .fillParentMaxWidth()
+                        .height(ListItemHeight)
+                        .clickable {
+                            navController.navigate("artist/${artist.id}")
+                            showSelectArtistDialog = false
+                            playerBottomSheetState.collapseSoft()
+                            onDismiss()
+                        }.padding(horizontal = 24.dp),
                 ) {
                     Text(
                         text = artist.name,
@@ -244,217 +249,237 @@ fun PlayerMenu(
         // Store the volume before muting to restore later
         var previousVolume by remember { mutableFloatStateOf(playerVolume.value) }
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(12.dp)
-                )
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+        AnimatedVisibility(
+            visible = true,
+            enter = fadeIn() + slideInVertically(),
+            exit = fadeOut() + slideOutVertically()
         ) {
-            // Mute/Unmute Icon with Toggle Functionality
-            Icon(
-                painter = painterResource(
-                    // Dynamic icon based on mute state
-                    id = if (isMuted) R.drawable.volume_off
-                    else R.drawable.volume_up
-                ),
-                contentDescription = stringResource(
-                    if (isMuted) R.string.unmute
-                    else R.string.mute
-                ),
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .clickable {
-                        isMuted = !isMuted
-                        if (isMuted) {
-                            // Store current volume before muting
-                            previousVolume = playerVolume.value
-                            // Set volume to 0
-                            playerConnection.service.playerVolume.value = 0f
+
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+
+            },
+            confirmButton = {
+
+            },
+            text = {
+                Column {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(100.dp)
+                            )
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        // Mute/Unmute Icon with Toggle Functionality
+                        Icon(
+                            painter = painterResource(
+                                // Dynamic icon based on mute state
+                                id = if (isMuted) R.drawable.volume_off
+                                else R.drawable.volume_up
+                            ),
+                            contentDescription = stringResource(
+                                if (isMuted) R.string.unmute
+                                else R.string.mute
+                            ),
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    isMuted = !isMuted
+                                    if (isMuted) {
+                                        // Store current volume before muting
+                                        previousVolume = playerVolume.value
+                                        // Set volume to 0
+                                        playerConnection.service.playerVolume.value = 0f
+                                    } else {
+                                        // Restore previous volume when unmuting
+                                        playerConnection.service.playerVolume.value = previousVolume
+                                    }
+                                }
+                                .padding(4.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        // Enhanced Seek Bar with More Precise Control
+                        Slider(
+                            value = if (isMuted) 0f else playerVolume.value,
+                            onValueChange = { newVolume ->
+                                // Disable slider when muted
+                                if (!isMuted) {
+                                    // Update volume and ensure muted state is off
+                                    playerConnection.service.playerVolume.value = newVolume
+                                    previousVolume = newVolume
+                                }
+                            },
+                            valueRange = 0f..1f,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(32.dp),
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        )
+
+                        // Volume Percentage Text
+                        Text(
+                            text = if (isMuted) "0%" else "${(playerVolume.value * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.width(40.dp)
+                        )
+                    }
+                    GridMenu(
+                        contentPadding =
+                        PaddingValues(
+                            start = 8.dp,
+                            top = 8.dp,
+                            end = 8.dp,
+                            bottom = 8.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding(),
+                        ),
+                    ) {
+                        GridMenuItem(
+                            icon = R.drawable.radio,
+                            title = R.string.start_radio,
+                        ) {
+                            playerConnection.playQueue(YouTubeQueue(WatchEndpoint(videoId = mediaMetadata.id), mediaMetadata))
+                            onDismiss()
+                        }
+                        GridMenuItem(
+                            icon = R.drawable.playlist_add,
+                            title = R.string.add_to_playlist,
+                        ) {
+                            showChoosePlaylistDialog = true
+                        }
+                        DownloadGridMenu(
+                            state = download?.state,
+                            onDownload = {
+                                database.transaction {
+                                    insert(mediaMetadata)
+                                }
+                                val downloadRequest =
+                                    DownloadRequest
+                                        .Builder(mediaMetadata.id, mediaMetadata.id.toUri())
+                                        .setCustomCacheKey(mediaMetadata.id)
+                                        .setData(mediaMetadata.title.toByteArray())
+                                        .build()
+                                DownloadService.sendAddDownload(
+                                    context,
+                                    ExoDownloadService::class.java,
+                                    downloadRequest,
+                                    false,
+                                )
+                            },
+                            onRemoveDownload = {
+                                DownloadService.sendRemoveDownload(
+                                    context,
+                                    ExoDownloadService::class.java,
+                                    mediaMetadata.id,
+                                    false,
+                                )
+                            },
+                        )
+                        if (librarySong?.song?.inLibrary != null) {
+                            GridMenuItem(
+                                icon = R.drawable.library_add_check,
+                                title = R.string.remove_from_library,
+                            ) {
+                                database.query {
+                                    inLibrary(mediaMetadata.id, null)
+                                }
+                            }
                         } else {
-                            // Restore previous volume when unmuting
-                            playerConnection.service.playerVolume.value = previousVolume
+                            GridMenuItem(
+                                icon = R.drawable.library_add,
+                                title = R.string.add_to_library,
+                            ) {
+                                database.transaction {
+                                    insert(mediaMetadata)
+                                    inLibrary(mediaMetadata.id, LocalDateTime.now())
+                                }
+                            }
+                        }
+                        if (artists.isNotEmpty()) {
+                            GridMenuItem(
+                                icon = R.drawable.artist,
+                                title = R.string.view_artist,
+                            ) {
+                                if (mediaMetadata.artists.size == 1) {
+                                    navController.navigate("artist/${mediaMetadata.artists[0].id}")
+                                    playerBottomSheetState.collapseSoft()
+                                    onDismiss()
+                                } else {
+                                    showSelectArtistDialog = true
+                                }
+                            }
+                        }
+                        if (mediaMetadata.album != null) {
+                            GridMenuItem(
+                                icon = R.drawable.album,
+                                title = R.string.view_album,
+                            ) {
+                                navController.navigate("album/${mediaMetadata.album.id}")
+                                playerBottomSheetState.collapseSoft()
+                                onDismiss()
+                            }
+                        }
+                        GridMenuItem(
+                            icon = R.drawable.share,
+                            title = R.string.share,
+                        ) {
+                            val intent =
+                                Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, "https://music.youtube.com/watch?v=${mediaMetadata.id}")
+                                }
+                            context.startActivity(Intent.createChooser(intent, null))
+                            onDismiss()
+                        }
+                        if (isQueueTrigger != true) {
+                            GridMenuItem(
+                                icon = R.drawable.info,
+                                title = R.string.details,
+                            ) {
+                                onShowDetailsDialog()
+                                onDismiss()
+                            }
+                            GridMenuItem(
+                                icon = R.drawable.equalizer,
+                                title = R.string.equalizer,
+                            ) {
+                                val intent =
+                                    Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL).apply {
+                                        putExtra(
+                                            AudioEffect.EXTRA_AUDIO_SESSION,
+                                            playerConnection.player.audioSessionId,
+                                        )
+                                        putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.packageName)
+                                        putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC)
+                                    }
+                                if (intent.resolveActivity(context.packageManager) != null) {
+                                    activityResultLauncher.launch(intent)
+                                }
+                                onDismiss()
+                            }
+                            GridMenuItem(
+                                icon = R.drawable.tune,
+                                title = R.string.advanced,
+                            ) {
+                                showPitchTempoDialog = true
+                            }
                         }
                     }
-                    .padding(4.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            // Enhanced Seek Bar with More Precise Control
-            Slider(
-                value = if (isMuted) 0f else playerVolume.value,
-                onValueChange = { newVolume ->
-                    // Disable slider when muted
-                    if (!isMuted) {
-                        // Update volume and ensure muted state is off
-                        playerConnection.service.playerVolume.value = newVolume
-                        previousVolume = newVolume
-                    }
-                },
-                valueRange = 0f..1f,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(32.dp),
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
-                )
-            )
-
-            // Volume Percentage Text
-            Text(
-                text = if (isMuted) "0%" else "${(playerVolume.value * 100).toInt()}%",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.width(40.dp)
-            )
-        }
-    }
-    GridMenu(
-        contentPadding =
-            PaddingValues(
-                start = 8.dp,
-                top = 8.dp,
-                end = 8.dp,
-                bottom = 8.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding(),
-            ),
-    ) {
-        GridMenuItem(
-            icon = R.drawable.radio,
-            title = R.string.start_radio,
-        ) {
-            playerConnection.playQueue(YouTubeQueue(WatchEndpoint(videoId = mediaMetadata.id), mediaMetadata))
-            onDismiss()
-        }
-        GridMenuItem(
-            icon = R.drawable.playlist_add,
-            title = R.string.add_to_playlist,
-        ) {
-            showChoosePlaylistDialog = true
-        }
-        DownloadGridMenu(
-            state = download?.state,
-            onDownload = {
-                database.transaction {
-                    insert(mediaMetadata)
                 }
-                val downloadRequest =
-                    DownloadRequest
-                        .Builder(mediaMetadata.id, mediaMetadata.id.toUri())
-                        .setCustomCacheKey(mediaMetadata.id)
-                        .setData(mediaMetadata.title.toByteArray())
-                        .build()
-                DownloadService.sendAddDownload(
-                    context,
-                    ExoDownloadService::class.java,
-                    downloadRequest,
-                    false,
-                )
-            },
-            onRemoveDownload = {
-                DownloadService.sendRemoveDownload(
-                    context,
-                    ExoDownloadService::class.java,
-                    mediaMetadata.id,
-                    false,
-                )
-            },
+            }
         )
-        if (librarySong?.song?.inLibrary != null) {
-            GridMenuItem(
-                icon = R.drawable.library_add_check,
-                title = R.string.remove_from_library,
-            ) {
-                database.query {
-                    inLibrary(mediaMetadata.id, null)
-                }
-            }
-        } else {
-            GridMenuItem(
-                icon = R.drawable.library_add,
-                title = R.string.add_to_library,
-            ) {
-                database.transaction {
-                    insert(mediaMetadata)
-                    inLibrary(mediaMetadata.id, LocalDateTime.now())
-                }
-            }
-        }
-        if (artists.isNotEmpty()) {
-            GridMenuItem(
-                icon = R.drawable.artist,
-                title = R.string.view_artist,
-            ) {
-                if (mediaMetadata.artists.size == 1) {
-                    navController.navigate("artist/${mediaMetadata.artists[0].id}")
-                    playerBottomSheetState.collapseSoft()
-                    onDismiss()
-                } else {
-                    showSelectArtistDialog = true
-                }
-            }
-        }
-        if (mediaMetadata.album != null) {
-            GridMenuItem(
-                icon = R.drawable.album,
-                title = R.string.view_album,
-            ) {
-                navController.navigate("album/${mediaMetadata.album.id}")
-                playerBottomSheetState.collapseSoft()
-                onDismiss()
-            }
-        }
-        GridMenuItem(
-            icon = R.drawable.share,
-            title = R.string.share,
-        ) {
-            val intent =
-                Intent().apply {
-                    action = Intent.ACTION_SEND
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, "https://music.youtube.com/watch?v=${mediaMetadata.id}")
-                }
-            context.startActivity(Intent.createChooser(intent, null))
-            onDismiss()
-        }
-        if (isQueueTrigger != true) {
-            GridMenuItem(
-                icon = R.drawable.info,
-                title = R.string.details,
-            ) {
-                onShowDetailsDialog()
-                onDismiss()
-            }
-            GridMenuItem(
-                icon = R.drawable.equalizer,
-                title = R.string.equalizer,
-            ) {
-                val intent =
-                    Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL).apply {
-                        putExtra(
-                            AudioEffect.EXTRA_AUDIO_SESSION,
-                            playerConnection.player.audioSessionId,
-                        )
-                        putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.packageName)
-                        putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC)
-                    }
-                if (intent.resolveActivity(context.packageManager) != null) {
-                    activityResultLauncher.launch(intent)
-                }
-                onDismiss()
-            }
-            GridMenuItem(
-                icon = R.drawable.tune,
-                title = R.string.advanced,
-            ) {
-                showPitchTempoDialog = true
-            }
         }
     }
 }
