@@ -5,7 +5,6 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -21,7 +20,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -75,8 +73,6 @@ fun BackupAndRestore(
             }
         }
 
-
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -91,7 +87,9 @@ fun BackupAndRestore(
             backupLauncher.launch("${context.getString(R.string.app_name)}_${LocalDateTime.now().format(formatter)}.backup")
         })
 
-        RestoreCard(barwarString = stringResource(R.string.barwar))
+        RestoreCard(onClick = {
+            restoreLauncher.launch(arrayOf("application/octet-stream"))
+        })
 
         when (val status = uploadStatus) {
             is UploadStatus.Uploading -> {
@@ -118,17 +116,8 @@ fun BackupAndRestore(
                 )
             }
             null -> { /* No status to show */ }
-
-
-
         }
-
     }
-
-
-
-
-
 
     TopAppBar(
         title = { Text(stringResource(R.string.backup_restore)) },
@@ -176,26 +165,12 @@ fun BackupCard(onClick: () -> Unit) {
 }
 
 @Composable
-fun RestoreCard(barwarString: String) {
-    var showDialog by remember { mutableStateOf(false) }
-
-    // Configurar el launcher con el callback
-    val restoreLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        // Si la restauración fue exitosa, mostrar el diálogo
-        if (uri != null) {
-            showDialog = true
-        }
-    }
-
+fun RestoreCard(onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(26.dp))
-            .clickable {
-                restoreLauncher.launch(arrayOf("application/octet-stream"))
-            },
+            .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
@@ -215,55 +190,6 @@ fun RestoreCard(barwarString: String) {
                 style = MaterialTheme.typography.bodyLarge
             )
         }
-    }
-
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            icon = {
-                Icon(
-                    painter = painterResource(R.drawable.restore),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(32.dp)
-                )
-            },
-            title = {
-                Text(
-                    stringResource(R.string.restore_confirmation_title),
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center
-                )
-            },
-            text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = barwarString,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    
-                    onClick = { showDialog = false },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text("OK")
-                }
-            },
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp,
-            shape = MaterialTheme.shapes.large
-        )
     }
 }
 
@@ -324,12 +250,8 @@ fun UploadSuccessCard(fileUrl: String, onCopyClick: () -> Unit) {
                 }
             }
         }
-
     }
-
 }
-
-
 
 suspend fun uploadBackupToCloud(context: Context, uri: Uri): String? {
     return withContext(Dispatchers.IO) {
@@ -383,4 +305,3 @@ sealed class UploadStatus {
     data class Success(val fileUrl: String) : UploadStatus()
     data object Failure : UploadStatus()
 }
-
