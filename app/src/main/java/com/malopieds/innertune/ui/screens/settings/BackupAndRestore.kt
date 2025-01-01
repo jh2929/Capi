@@ -91,6 +91,9 @@ fun BackupAndRestore(
             restoreLauncher.launch(arrayOf("application/octet-stream"))
         })
 
+        // New Card with Title and Text
+        InfoCard()
+
         when (val status = uploadStatus) {
             is UploadStatus.Uploading -> {
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -188,6 +191,31 @@ fun RestoreCard(onClick: () -> Unit) {
             Text(
                 text = stringResource(R.string.restore),
                 style = MaterialTheme.typography.bodyLarge
+            )
+        }
+    }
+}
+
+// New Composable for the Info Card
+@Composable
+fun InfoCard() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.restore),
+                style = MaterialTheme.typography.titleLarge
+            )
+            Text(
+                text = stringResource(R.string.barwar),
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }

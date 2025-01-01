@@ -72,6 +72,7 @@ import com.malopieds.innertune.constants.PersistentQueueKey
 import com.malopieds.innertune.constants.PlayerVolumeKey
 import com.malopieds.innertune.constants.RepeatModeKey
 import com.malopieds.innertune.constants.ShowLyricsKey
+import com.malopieds.innertune.constants.SimilarContent
 import com.malopieds.innertune.constants.SkipSilenceKey
 import com.malopieds.innertune.db.MusicDatabase
 import com.malopieds.innertune.db.entities.Event
@@ -156,7 +157,7 @@ class MusicService :
 
     private lateinit var connectivityManager: ConnectivityManager
 
-    private val audioQuality by enumPreference(this, AudioQualityKey, AudioQuality.AUTO)
+    private val audioQuality by enumPreference(this, AudioQualityKey, com.malopieds.innertune.constants.AudioQuality.AUTO)
 
     private var currentQueue: Queue = EmptyQueue
     var queueTitle: String? = null
@@ -472,7 +473,10 @@ class MusicService :
             player.playWhenReady = playWhenReady
         }
         scope.launch(SilentHandler) {
-            val initialStatus = withContext(Dispatchers.IO) { queue.getInitialStatus() }
+            val initialStatus =
+                withContext(Dispatchers.IO) {
+                    queue.getInitialStatus().filterExplicit(dataStore.get(HideExplicitKey, false))
+                }
             if (queue.preloadItem != null && player.playbackState == STATE_IDLE) return@launch
             if (initialStatus.title != null) {
                 queueTitle = initialStatus.title
@@ -529,19 +533,21 @@ class MusicService :
     }
 
     fun getAutomix(playlistId: String) {
-        scope.launch(SilentHandler) {
-            YouTube
-                .next(WatchEndpoint(playlistId = playlistId))
-                .onSuccess {
-                    YouTube
-                        .next(WatchEndpoint(playlistId = it.endpoint.playlistId))
-                        .onSuccess {
-                            automixItems.value =
-                                it.items.map { song ->
-                                    song.toMediaItem()
-                                }
-                        }
-                }
+        if (dataStore[SimilarContent] == true) {
+            scope.launch(SilentHandler) {
+                YouTube
+                    .next(WatchEndpoint(playlistId = playlistId))
+                    .onSuccess {
+                        YouTube
+                            .next(WatchEndpoint(playlistId = it.endpoint.playlistId))
+                            .onSuccess {
+                                automixItems.value =
+                                    it.items.map { song ->
+                                        song.toMediaItem()
+                                    }
+                            }
+                    }
+            }
         }
     }
 
@@ -632,7 +638,7 @@ class MusicService :
             currentQueue.hasNextPage()
         ) {
             scope.launch(SilentHandler) {
-                val mediaItems = currentQueue.nextPage()
+                val mediaItems = currentQueue.nextPage().filterExplicit(dataStore.get(HideExplicitKey, false))
                 if (player.playbackState != STATE_IDLE) {
                     player.addMediaItems(mediaItems)
                 }
@@ -688,7 +694,6 @@ class MusicService :
         }
     }
 
-
     override fun onPlayerError(error: PlaybackException) {
         if (dataStore.get(AutoSkipNextOnErrorKey, false) && player.hasNextMediaItem()) {
             player.seekToNext()
@@ -696,7 +701,6 @@ class MusicService :
             player.playWhenReady = true
         }
     }
-
 
     private fun createCacheDataSource(): CacheDataSource.Factory =
         CacheDataSource
@@ -817,9 +821,14 @@ class MusicService :
                 )
             }
             scope.launch(Dispatchers.IO) { recoverSong(mediaId, playerResponse) }
+            if (format.url != null) {
+                songUrlCache[mediaId] = format.url!! to playerResponse.streamingData!!.expiresInSeconds * 1000L
+                dataSpec.withUri(format.url!!.toUri()).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
+            } else {
+                songUrlCache[mediaId] = format.findUrl() to playerResponse.streamingData!!.expiresInSeconds * 1000L
+                dataSpec.withUri(format.findUrl().toUri()).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
+            }
 
-            songUrlCache[mediaId] = format.url!! to playerResponse.streamingData!!.expiresInSeconds * 1000L
-            dataSpec.withUri(format.url!!.toUri()).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
         }
     }
 

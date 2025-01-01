@@ -261,6 +261,9 @@ fun PlayerMenu(
 
             },
             confirmButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(android.R.string.ok))
+                }
 
             },
             text = {
@@ -276,7 +279,7 @@ fun PlayerMenu(
                             )
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
-                        // Mute/Unmute Icon with Toggle Functionality
+
                         Icon(
                             painter = painterResource(
                                 // Dynamic icon based on mute state
@@ -328,7 +331,7 @@ fun PlayerMenu(
                             )
                         )
 
-                        // Volume Percentage Text
+
                         Text(
                             text = if (isMuted) "0%" else "${(playerVolume.value * 100).toInt()}%",
                             style = MaterialTheme.typography.bodySmall,
