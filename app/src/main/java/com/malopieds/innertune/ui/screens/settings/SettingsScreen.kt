@@ -11,11 +11,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -363,58 +365,58 @@ fun SettingsScreen(
 
         Spacer(Modifier.height(25.dp))
 
-        PreferenceEntry(
+        CustomPreferenceEntry(
             title = { Text(stringResource(R.string.appearance)) },
             icon = { Icon(painterResource(R.drawable.palette), null) },
             onClick = { navController.navigate("settings/appearance") },
         )
-        PreferenceEntry(
+        CustomPreferenceEntry(
             title = { Text(stringResource(R.string.content)) },
             icon = { Icon(painterResource(R.drawable.language), null) },
             onClick = { navController.navigate("settings/content") },
         )
-        PreferenceEntry(
+        CustomPreferenceEntry(
             title = { Text(stringResource(R.string.player_and_audio)) },
             icon = { Icon(painterResource(R.drawable.play), null) },
             onClick = { navController.navigate("settings/player") },
         )
-        PreferenceEntry(
+        CustomPreferenceEntry(
             title = { Text(stringResource(R.string.storage)) },
             icon = { Icon(painterResource(R.drawable.storage), null) },
             onClick = { navController.navigate("settings/storage") },
         )
-        PreferenceEntry(
+        CustomPreferenceEntry(
             title = { Text(stringResource(R.string.privacy)) },
             icon = { Icon(painterResource(R.drawable.security), null) },
             onClick = { navController.navigate("settings/privacy") },
         )
-        PreferenceEntry(
+        CustomPreferenceEntry(
             title = { Text(stringResource(R.string.discord_integration)) },
             icon = { Icon(painterResource(R.drawable.discord), null) },
             onClick = { navController.navigate("settings/discord") },
         )
-        PreferenceEntry(
+        CustomPreferenceEntry(
             title = { Text(stringResource(R.string.backup_restore)) },
             icon = { Icon(painterResource(R.drawable.restore), null) },
             onClick = { navController.navigate("settings/backup_restore") },
         )
-        PreferenceEntry(
+        CustomPreferenceEntry(
             title = { Text(stringResource(R.string.about)) },
             icon = { Icon(painterResource(R.drawable.info), null) },
             onClick = { navController.navigate("settings/about") }
         )
-        PreferenceEntry(
+        CustomPreferenceEntry(
             title = { Text(stringResource(R.string.Donate)) },
             icon = { Icon(painterResource(R.drawable.donate), null) },
             onClick = { uriHandler.openUri("https://buymeacoffee.com/arturocervantes") }
         )
 
-        PreferenceEntry(
+        CustomPreferenceEntry(
             title = { Text(stringResource(R.string.Telegramchanel)) },
             icon = { Icon(painterResource(R.drawable.telegram), null) },
             onClick = { uriHandler.openUri("https://t.me/+NZXjVj6lETxkYTNh") }
         )
-        PreferenceEntry(
+        CustomPreferenceEntry(
             title = { Text(stringResource(R.string.contribution)) },
             icon = { Icon(painterResource(R.drawable.apps), null) },
             onClick = { uriHandler.openUri("https://t.me/+NZXjVj6lETxkYTNh") }
@@ -466,7 +468,7 @@ fun SettingsScreen(
 fun ChangelogButtonWithPopup() {
     var showBottomSheet by remember { mutableStateOf(false) }
 
-    PreferenceEntry(
+    CustomPreferenceEntry(
         title = { Text(stringResource(R.string.Changelog)) },
         icon = { Icon(painterResource(R.drawable.schedule), null) },
         onClick = { showBottomSheet = true }
@@ -578,7 +580,7 @@ fun ChangelogScreen() {
 fun TranslatePreference(uriHandler: UriHandler) {
     var showDialog by remember { mutableStateOf(false) }
 
-    PreferenceEntry(
+    CustomPreferenceEntry(
         title = { Text(stringResource(R.string.Translate)) },
         icon = { Icon(painterResource(R.drawable.translate), null) },
         onClick = { showDialog = true }
@@ -600,5 +602,36 @@ fun TranslatePreference(uriHandler: UriHandler) {
                 }
             }
         )
+    }
+}
+
+
+@Composable
+fun CustomPreferenceEntry(
+    title: @Composable () -> Unit,
+    icon: @Composable (() -> Unit)? = null,
+    onClick: () -> Unit
+) {
+    ElevatedCard(
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(40.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable(onClick = onClick)
+
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (icon != null) {
+                icon()
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            title()
+        }
     }
 }
