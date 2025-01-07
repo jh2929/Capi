@@ -1,6 +1,5 @@
 package com.malopieds.innertune.ui.screens.playlist
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.icu.text.Transliterator
@@ -32,9 +31,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,8 +40,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SearchBar
-import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -54,7 +48,6 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -77,7 +70,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -153,7 +145,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.time.LocalDateTime
 
-@SuppressLint("StringFormatInvalid")
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun LocalPlaylistScreen(
@@ -634,61 +625,44 @@ fun LocalPlaylistScreen(
                             }
                             val focusRequester = remember { FocusRequester() }
                             val focusManager = LocalFocusManager.current
-                            SearchBar(
-                                query = searchQuery.text,
-                                onQueryChange = { searchQuery = TextFieldValue(it) },
-                                onSearch = {
-                                    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                                    imm.hideSoftInputFromWindow((context as Activity).currentFocus?.windowToken, 0)
-                                    focusManager.clearFocus()
-                                },
-                                active = false,
-                                onActiveChange = {},
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                label = { Text(context.getString(R.string.search)) },
+                                singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 16.dp)
-                                    .focusRequester(focusRequester),
-                                placeholder = {
-                                    Text(
-                                        text = context.getString(R.string.search),
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
-                                },
+                                    .focusRequester(focusRequester),  // Attach the FocusRequester to the TextField
+                                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(
+                                    onSearch = {
+                                        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                                        imm.hideSoftInputFromWindow((context as Activity).currentFocus?.windowToken, 0)
+                                        focusManager.clearFocus()
+                                    }
+                                ),
+                                shape = MaterialTheme.shapes.large,
                                 leadingIcon = {
                                     Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        painterResource(R.drawable.search),
+                                        contentDescription = null
                                     )
                                 },
                                 trailingIcon = {
-                                    if (searchQuery.text.isNotEmpty()) {
-                                        IconButton(onClick = {
-                                            searchQuery = TextFieldValue("")
-                                            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                                            imm.hideSoftInputFromWindow((context as Activity).currentFocus?.windowToken, 0)
-                                            focusManager.clearFocus()
-                                        }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
+                                    IconButton(onClick = {
+                                        searchQuery = TextFieldValue("")
+                                        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                                        imm.hideSoftInputFromWindow((context as Activity).currentFocus?.windowToken, 0)
+                                        focusManager.clearFocus()
+                                    }) {
+                                        Icon(
+                                            painterResource(R.drawable.close),
+                                            contentDescription = null
+                                        )
                                     }
-                                },
-                                shape = RoundedCornerShape(32.dp),
-                                colors = SearchBarDefaults.colors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                    dividerColor = Color.Transparent,
-                                    inputFieldColors = TextFieldDefaults.colors(
-                                        focusedIndicatorColor = Color.Transparent,
-                                        unfocusedIndicatorColor = Color.Transparent,
-                                        cursorColor = MaterialTheme.colorScheme.primary
-                                    )
-                                ),
-                                tonalElevation = 0.dp
-                            ) { }
+                                }
+                            )
                         }
                     }
 

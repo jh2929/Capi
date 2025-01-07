@@ -22,9 +22,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,13 +31,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.SearchBar
-import androidx.compose.material3.SearchBarDefaults
-import androidx.compose.material3.SearchBarDefaults.colors
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
@@ -57,7 +49,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -109,9 +100,6 @@ import com.malopieds.innertune.utils.makeTimeString
 import com.malopieds.innertune.utils.rememberEnumPreference
 import com.malopieds.innertune.utils.rememberPreference
 import com.malopieds.innertune.viewmodels.AutoPlaylistViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.mapLatest
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -133,17 +121,9 @@ fun AutoPlaylistScreen(
         remember {
             mutableStateListOf<Song>()
         }
-
     var searchQuery by remember {
         mutableStateOf(TextFieldValue(""))
     }
-    val searchQueryFlow = remember(searchQuery) {
-        MutableStateFlow(searchQuery.text)
-    }
-    val searchQueryStr by searchQueryFlow
-        .debounce(300) // Debounce of 300 milliseconds
-        .mapLatest { query -> textNoAccentsOrPunctMark(query.trim()) }
-        .collectAsState(initial = "")
     val likeLength =
         remember(songs) {
             songs?.fastSumBy { it.song.duration } ?: 0
@@ -415,66 +395,44 @@ fun AutoPlaylistScreen(
                             }
                             val focusRequester = remember { FocusRequester() }
                             val focusManager = LocalFocusManager.current
-                            TextFieldDefaults.colors(
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                cursorColor = MaterialTheme.colorScheme.primary
-                            )
-                            SearchBar(
-                                query = searchQuery.text,
-                                onQueryChange = {
-                                    searchQuery = TextFieldValue(it)
-                                    searchQueryFlow.value = it
-                                },
-                                onSearch = {
-                                    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                                    imm.hideSoftInputFromWindow((context as Activity).currentFocus?.windowToken, 0)
-                                    focusManager.clearFocus()
-                                },
-                                active = false,
-                                onActiveChange = {},
+                            OutlinedTextField(
+                                value = searchQuery,
+                                onValueChange = { searchQuery = it },
+                                label = { Text(context.getString(R.string.search)) },
+                                singleLine = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp)
-                                    .focusRequester(focusRequester),
-                                placeholder = {
-                                    Text(
-                                        text = context.getString(R.string.search),
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
-                                },
+                                    .padding(bottom = 16.dp)
+                                    .focusRequester(focusRequester),  // Attach the FocusRequester to the TextField
+                                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(
+                                    onSearch = {
+                                        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                                        imm.hideSoftInputFromWindow((context as Activity).currentFocus?.windowToken, 0)
+                                        focusManager.clearFocus()
+                                    }
+                                ),
+                                shape = MaterialTheme.shapes.large,
                                 leadingIcon = {
                                     Icon(
-                                        imageVector = Icons.Default.Search,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                        painterResource(R.drawable.search),
+                                        contentDescription = null
                                     )
                                 },
                                 trailingIcon = {
-                                    if (searchQuery.text.isNotEmpty()) {
-                                        IconButton(onClick = {
-                                            searchQuery = TextFieldValue("")
-                                            searchQueryFlow.value = ""
-                                            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                                            imm.hideSoftInputFromWindow((context as Activity).currentFocus?.windowToken, 0)
-                                            focusManager.clearFocus()
-                                        }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Close,
-                                                contentDescription = null,
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
+                                    IconButton(onClick = {
+                                        searchQuery = TextFieldValue("")
+                                        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                                        imm.hideSoftInputFromWindow((context as Activity).currentFocus?.windowToken, 0)
+                                        focusManager.clearFocus()
+                                    }) {
+                                        Icon(
+                                            painterResource(R.drawable.close),
+                                            contentDescription = null
+                                        )
                                     }
-                                },
-                                shape = RoundedCornerShape(32.dp),
-                                colors = colors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                    dividerColor = Color.Transparent
-                                ),
-                                tonalElevation = 0.dp
-                            ) { }
-
+                                }
+                            )
 
                         }
                     }
@@ -569,14 +527,13 @@ fun AutoPlaylistScreen(
                 }
 
                 val searchQueryStr = textNoAccentsOrPunctMark(searchQuery.text.trim())
-
-                val filteredSongs = if (searchQueryStr.isEmpty()) {
-                    wrappedSongs
-                } else {
+                val filteredSongs = if (searchQuery.text.isEmpty())
+                { wrappedSongs }
+                else{
                     wrappedSongs?.filter {
-                        textNoAccentsOrPunctMark(it.item.song.title).contains(searchQueryStr, ignoreCase = true) ||
+                        textNoAccentsOrPunctMark(it.item.song.title).contains(searchQueryStr, ignoreCase = true) or
                                 textNoAccentsOrPunctMark(it.item.artists.joinToString("")).contains(searchQueryStr, ignoreCase = true)
-                    }?.sortedBy { it.item.song.title }
+                    }
                 }
                 if (filteredSongs != null) {
                     itemsIndexed(
