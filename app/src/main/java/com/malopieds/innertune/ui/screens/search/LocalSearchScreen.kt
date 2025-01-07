@@ -22,7 +22,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -54,7 +53,7 @@ import com.malopieds.innertune.viewmodels.LocalFilter
 import com.malopieds.innertune.viewmodels.LocalSearchViewModel
 import kotlinx.coroutines.flow.drop
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LocalSearchScreen(
     query: String,
@@ -89,15 +88,16 @@ fun LocalSearchScreen(
     Column {
         ChipsRow(
             chips =
-            listOf(
-                LocalFilter.ALL to stringResource(R.string.filter_all),
-                LocalFilter.SONG to stringResource(R.string.filter_songs),
-                LocalFilter.ALBUM to stringResource(R.string.filter_albums),
-                LocalFilter.ARTIST to stringResource(R.string.filter_artists),
-                LocalFilter.PLAYLIST to stringResource(R.string.filter_playlists),
-            ),
+                listOf(
+                    LocalFilter.ALL to stringResource(R.string.filter_all),
+                    LocalFilter.SONG to stringResource(R.string.filter_songs),
+                    LocalFilter.ALBUM to stringResource(R.string.filter_albums),
+                    LocalFilter.ARTIST to stringResource(R.string.filter_artists),
+                    LocalFilter.PLAYLIST to stringResource(R.string.filter_playlists),
+                ),
             currentValue = searchFilter,
             onValueUpdate = { viewModel.filter.value = it },
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
         )
 
         LazyColumn(
@@ -113,23 +113,23 @@ fun LocalSearchScreen(
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(ListItemHeight)
-                                .clickable { viewModel.filter.value = filter }
-                                .padding(start = 12.dp, end = 18.dp),
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height(ListItemHeight)
+                                    .clickable { viewModel.filter.value = filter }
+                                    .padding(start = 12.dp, end = 18.dp),
                         ) {
                             Text(
                                 text =
-                                stringResource(
-                                    when (filter) {
-                                        LocalFilter.SONG -> R.string.filter_songs
-                                        LocalFilter.ALBUM -> R.string.filter_albums
-                                        LocalFilter.ARTIST -> R.string.filter_artists
-                                        LocalFilter.PLAYLIST -> R.string.filter_playlists
-                                        LocalFilter.ALL -> error("")
-                                    },
-                                ),
+                                    stringResource(
+                                        when (filter) {
+                                            LocalFilter.SONG -> R.string.filter_songs
+                                            LocalFilter.ALBUM -> R.string.filter_albums
+                                            LocalFilter.ARTIST -> R.string.filter_artists
+                                            LocalFilter.PLAYLIST -> R.string.filter_playlists
+                                            LocalFilter.ALL -> error("")
+                                        },
+                                    ),
                                 style = MaterialTheme.typography.titleLarge,
                                 modifier = Modifier.weight(1f),
                             )
@@ -148,7 +148,39 @@ fun LocalSearchScreen(
                     contentType = { CONTENT_TYPE_LIST },
                 ) { item ->
                     when (item) {
-                        is Song ->
+                        is Song -> {
+                            Modifier
+                                                                .combinedClickable(
+                                                                    onClick = {
+                                                                        if (item.id == mediaMetadata?.id) {
+                                                                            playerConnection.player.togglePlayPause()
+                                                                        } else {
+                                                                            val songs =
+                                                                                result.map
+                                                                                    .getOrDefault(LocalFilter.SONG, emptyList())
+                                                                                    .filterIsInstance<Song>()
+                                                                                    .map { it.toMediaItem() }
+                                                                            playerConnection.playQueue(
+                                                                                ListQueue(
+                                                                                    title = context.getString(R.string.queue_searched_songs),
+                                                                                    items = songs,
+                                                                                    startIndex = songs.indexOfFirst { it.mediaId == item.id },
+                                                                                ),
+                                                                            )
+                                                                        }
+                                                                    },
+                                                                    onLongClick = {
+                                                                        menuState.show {
+                                                                            SongMenu(
+                                                                                originalSong = item,
+                                                                                navController = navController,
+                                                                            ) {
+                                                                                onDismiss()
+                                                                                menuState.dismiss()
+                                                                            }
+                                                                        }
+                                                                    },
+                                                                )
                             SongListItem(
                                 song = item,
                                 isActive = item.id == mediaMetadata?.id,
@@ -174,75 +206,51 @@ fun LocalSearchScreen(
                                     }
                                 },
                                 modifier =
-                                Modifier
-                                    .combinedClickable(
-                                        onClick = {
-                                            if (item.id == mediaMetadata?.id) {
-                                                playerConnection.player.togglePlayPause()
-                                            } else {
-                                                val songs =
-                                                    result.map
-                                                        .getOrDefault(LocalFilter.SONG, emptyList())
-                                                        .filterIsInstance<Song>()
-                                                        .map { it.toMediaItem() }
-                                                playerConnection.playQueue(
-                                                    ListQueue(
-                                                        title = context.getString(R.string.queue_searched_songs),
-                                                        items = songs,
-                                                        startIndex = songs.indexOfFirst { it.mediaId == item.id },
-                                                    ),
-                                                )
-                                            }
-                                        },
-                                        onLongClick = {
-                                            menuState.show {
-                                                SongMenu(
-                                                    originalSong = item,
-                                                    navController = navController,
-                                                ) {
-                                                    onDismiss()
-                                                    menuState.dismiss()
-                                                }
-                                            }
-                                        },
-                                    ).animateItemPlacement(),
+                                Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
                             )
+                        }
 
-                        is Album ->
+                        is Album -> {
+                            Modifier
+                                                                .clickable {
+                                                                    onDismiss()
+                                                                    navController.navigate("album/${item.id}")
+                                                                }
                             AlbumListItem(
                                 album = item,
                                 isActive = item.id == mediaMetadata?.album?.id,
                                 isPlaying = isPlaying,
                                 modifier =
-                                Modifier
-                                    .clickable {
-                                        onDismiss()
-                                        navController.navigate("album/${item.id}")
-                                    }.animateItemPlacement(),
+                                Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
                             )
+                        }
 
-                        is Artist ->
+                        is Artist -> {
+                            Modifier
+                                                                .clickable {
+                                                                    onDismiss()
+                                                                    navController.navigate("artist/${item.id}")
+                                                                }
                             ArtistListItem(
                                 artist = item,
                                 modifier =
-                                Modifier
-                                    .clickable {
-                                        onDismiss()
-                                        navController.navigate("artist/${item.id}")
-                                    }.animateItemPlacement(),
+                                Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
                             )
+                        }
 
-                        is Playlist ->
+                        is Playlist -> {
+                            Modifier
+                                                            .clickable {
+                                                                onDismiss()
+                                                                navController.navigate("local_playlist/${item.id}")
+                                                            }
                             PlaylistListItem(
                                 playlist = item,
                                 modifier =
-                                Modifier
-                                    .clickable {
-                                        onDismiss()
-                                        navController.navigate("local_playlist/${item.id}")
-                                    }.animateItemPlacement(),
+                                Modifier.animateItem(fadeInSpec = null, fadeOutSpec = null),
                                 context = LocalContext.current
                             )
+                        }
                     }
                 }
             }
