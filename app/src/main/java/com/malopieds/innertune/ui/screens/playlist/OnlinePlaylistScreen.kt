@@ -27,6 +27,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,6 +38,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.SearchBarDefaults.colors
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -53,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -306,44 +313,56 @@ fun OnlinePlaylistScreen(
                             }
                             val focusRequester = remember { FocusRequester() }
                             val focusManager = LocalFocusManager.current
-                            OutlinedTextField(
-                                value = searchQuery,
-                                onValueChange = { searchQuery = it },
-                                label = { Text(context.getString(R.string.search)) },
-                                singleLine = true,
+                            SearchBar(
+                                query = searchQuery.text,
+                                onQueryChange = { searchQuery = TextFieldValue(it) },
+                                onSearch = {
+                                    val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                                    imm.hideSoftInputFromWindow((context as Activity).currentFocus?.windowToken, 0)
+                                    focusManager.clearFocus()
+                                },
+                                active = false,
+                                onActiveChange = {},
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(bottom = 16.dp)
-                                    .focusRequester(focusRequester),  // Attach the FocusRequester to the TextField
-                                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Search),
-                                keyboardActions = KeyboardActions(
-                                    onSearch = {
-                                        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                                        imm.hideSoftInputFromWindow((context as Activity).currentFocus?.windowToken, 0)
-                                        focusManager.clearFocus()
-                                    }
-                                ),
-                                shape = MaterialTheme.shapes.large,
+                                    .focusRequester(focusRequester),
+                                placeholder = {
+                                    Text(
+                                        text = context.getString(R.string.search),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                },
                                 leadingIcon = {
                                     Icon(
-                                        painterResource(R.drawable.search),
-                                        contentDescription = null
+                                        imageVector = Icons.Default.Search,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 },
                                 trailingIcon = {
-                                    IconButton(onClick = {
-                                        searchQuery = TextFieldValue("")
-                                        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                                        imm.hideSoftInputFromWindow((context as Activity).currentFocus?.windowToken, 0)
-                                        focusManager.clearFocus()
-                                    }) {
-                                        Icon(
-                                            painterResource(R.drawable.close),
-                                            contentDescription = null
-                                        )
+                                    if (searchQuery.text.isNotEmpty()) {
+                                        IconButton(onClick = {
+                                            searchQuery = TextFieldValue("")
+                                            val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                                            imm.hideSoftInputFromWindow((context as Activity).currentFocus?.windowToken, 0)
+                                            focusManager.clearFocus()
+                                        }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
-                                }
-                            )
+                                },
+                                shape = RoundedCornerShape(32.dp),
+                                colors = colors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                    dividerColor = Color.Transparent
+                                ),
+                                tonalElevation = 0.dp
+                            ) { }
                         }
                     }
                     item {
