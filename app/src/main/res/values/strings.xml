@@ -422,4 +422,5 @@
     <string name="enable_similar_content">Enable similar content</string>
     <string name="barwar">Attention when restoring the backups, the previously downloaded songs are not downloaded. it is HIGHLY RECOMMENDED to play the restored songs in order to avoid any download errors.</string>
     <string name="restore_confirmation_title">Restoration Completed</string>
+    <string name="enable_translucent_navigation_bar">Barra de navegación translúcida</string>
 </resources>

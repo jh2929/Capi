@@ -190,6 +190,7 @@ class MainActivity : ComponentActivity() {
 
 
 
+
     private var latestVersionName by mutableStateOf(BuildConfig.VERSION_NAME)
     val latestVersion by mutableLongStateOf(BuildConfig.VERSION_CODE.toLong())
     val Context.dataStore by preferencesDataStore(name = "app_config")
@@ -793,26 +794,26 @@ class MainActivity : ComponentActivity() {
                                 .clip(RoundedCornerShape(20.dp))
                                 .align(Alignment.BottomCenter)
                                 .offset {
-                                        if (navigationBarHeight == 0.dp) {
-                                            IntOffset(
-                                                x = 0,
-                                                y = (bottomInset + NavigationBarHeight).roundToPx(),
-                                            )
-                                        } else {
-                                            val slideOffset =
-                                                (bottomInset + NavigationBarHeight) *
+                                    if (navigationBarHeight == 0.dp) {
+                                        IntOffset(
+                                            x = 0,
+                                            y = (bottomInset + NavigationBarHeight).roundToPx(),
+                                        )
+                                    } else {
+                                        val slideOffset =
+                                            (bottomInset + NavigationBarHeight) *
                                                     playerBottomSheetState.progress.coerceIn(
                                                         0f,
                                                         1f,
                                                     )
-                                            val hideOffset =
-                                                (bottomInset + NavigationBarHeight) * (1 - navigationBarHeight / NavigationBarHeight)
-                                            IntOffset(
-                                                x = 0,
-                                                y = (slideOffset + hideOffset).roundToPx(),
-                                            )
-                                        }
-                                    },
+                                        val hideOffset =
+                                            (bottomInset + NavigationBarHeight) * (1 - navigationBarHeight / NavigationBarHeight)
+                                        IntOffset(
+                                            x = 0,
+                                            y = (slideOffset + hideOffset).roundToPx(),
+                                        )
+                                    }
+                                },
                         ) {
                             navigationItems.fastForEach { screen ->
                                 NavigationBarItem(
