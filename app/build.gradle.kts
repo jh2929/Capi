@@ -130,6 +130,7 @@ dependencies {
     implementation(libs.work.runtime.ktx)
 
     implementation(libs.markdownview.android)
+
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
 
@@ -153,5 +154,8 @@ dependencies {
     implementation(libs.glance.appwidget)
     implementation(libs.glance.appwidget.preview)
     implementation(libs.glance.preview)
+
+
+
 
 }

@@ -341,12 +341,12 @@ class MusicService :
             }.onSuccess { queue ->
                 playQueue(
                     queue =
-                    ListQueue(
-                        title = queue.title,
-                        items = queue.items.map { it.toMediaItem() },
-                        startIndex = queue.mediaItemIndex,
-                        position = queue.position,
-                    ),
+                        ListQueue(
+                            title = queue.title,
+                            items = queue.items.map { it.toMediaItem() },
+                            startIndex = queue.mediaItemIndex,
+                            position = queue.position,
+                        ),
                     playWhenReady = false,
                 )
             }
@@ -786,11 +786,11 @@ class MusicService :
                         ?.filter { it.isAudio }
                         ?.maxByOrNull {
                             it.bitrate *
-                                    when (audioQuality) {
-                                        AudioQuality.AUTO -> if (connectivityManager.isActiveNetworkMetered) -1 else 1
-                                        AudioQuality.HIGH -> 1
-                                        AudioQuality.LOW -> -1
-                                    } + (if (it.mimeType.startsWith("audio/webm")) 10240 else 0) // prefer opus stream
+                                when (audioQuality) {
+                                    AudioQuality.AUTO -> if (connectivityManager.isActiveNetworkMetered) -1 else 1
+                                    AudioQuality.HIGH -> 1
+                                    AudioQuality.LOW -> -1
+                                } + (if (it.mimeType.startsWith("audio/webm")) 10240 else 0) // prefer opus stream
                         }
                 } else {
                     playerResponse.streamingData
@@ -798,11 +798,11 @@ class MusicService :
                         ?.filter { it.isAudio }
                         ?.maxByOrNull {
                             it.bitrate *
-                                    when (audioQuality) {
-                                        AudioQuality.AUTO -> if (connectivityManager.isActiveNetworkMetered) -1 else 1
-                                        AudioQuality.HIGH -> 1
-                                        AudioQuality.LOW -> -1
-                                    } + (if (it.mimeType.startsWith("audio/webm")) 10240 else 0) // prefer opus stream
+                                when (audioQuality) {
+                                    AudioQuality.AUTO -> if (connectivityManager.isActiveNetworkMetered) -1 else 1
+                                    AudioQuality.HIGH -> 1
+                                    AudioQuality.LOW -> -1
+                                } + (if (it.mimeType.startsWith("audio/webm")) 10240 else 0) // prefer opus stream
                         }
                 } ?: throw PlaybackException(getString(R.string.error_no_stream), null, ERROR_CODE_NO_STREAM)
 
@@ -866,9 +866,9 @@ class MusicService :
         val mediaItem = eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
 
         if (playbackStats.totalPlayTimeMs >= (
-                    dataStore[HistoryDuration]?.times(1000f)
-                        ?: 30000f
-                    ) &&
+                dataStore[HistoryDuration]?.times(1000f)
+                    ?: 30000f
+            ) &&
             !dataStore.get(PauseListenHistoryKey, false)
         ) {
             database.query {

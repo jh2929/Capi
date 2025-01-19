@@ -20,6 +20,7 @@ coil = "2.7.0"
 workRuntimeKtx = "2.9.1"
 composeMarkdown = "0.2.0"
 markdownviewAndroid = "2.0.0"
+newpipeextractor = "0.24.3"
 
 [libraries]
 annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
@@ -95,6 +96,7 @@ timber = { group = "com.jakewharton.timber", name = "timber", version = "5.0.1" 
 accompanist-coil = { group = "com.google.accompanist", name = "accompanist-coil", version.ref = "accompanistCoil" }
 work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
 markdownview-android = { group = "com.github.mukeshsolanki", name = "MarkdownView-Android", version.ref = "markdownviewAndroid" }
+newpipe-extractor = { group = "com.github.TeamNewPipe", name = "NewPipeExtractor", version = "v0.24.3" }
 
 [plugins]
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

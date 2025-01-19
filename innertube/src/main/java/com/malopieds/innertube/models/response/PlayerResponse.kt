@@ -58,15 +58,12 @@ data class PlayerResponse(
             val audioChannels: Int?,
             val loudnessDb: Double?,
             val lastModified: Long?,
-            val signatureCipher: String?
+            val signatureCipher: String?,
         ) {
-            fun findUrl(): String {
-
-                return url?.let { createUrl(url = it) } ?: signatureCipher?.let { createUrl(cipher = it) }!!
-            }
-
             val isAudio: Boolean
                 get() = width == null
+
+            fun findUrl() = url?.let { createUrl(url = it) } ?: signatureCipher?.let { createUrl(cipher = it) }!!
         }
     }
 
