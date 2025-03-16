@@ -5,6 +5,7 @@
 <div align="center">
   <h1>OpenTune</h1>
   <p>Un cliente elegante de YouTube Music con Material Design 3 para Android</p>
+  
   <img src="https://github.com/user-attachments/assets/0d3db989-fefa-4381-bf0c-8bd5ebdabd7b" alt="Icono de OpenTune" width="200"/>
 </div>
 
@@ -131,6 +132,13 @@ Haz tu donación a través de **PayPal**:
 [**Paypal - Arturo Cervantes**](https://www.paypal.com/paypalme/ArturoCervantes254)
 
 ---
+
+### Que es?
+
+  <p>  OpenTune es un cliente avanzado de YouTube Music diseñado específicamente para dispositivos Android, con una interfaz moderna basada en Material Design 3. Ofrece una experiencia fluida y altamente personalizable, permitiéndote explorar, reproducir y gestionar tu música favorita con una estética elegante y una navegación optimizada.
+
+Gracias a su diseño intuitivo y adaptable, OpenTune proporciona una alternativa ligera y eficiente a la aplicación oficial, manteniendo el acceso a todo el catálogo de YouTube Music sin sacrificar el rendimiento ni la facilidad de uso.****</p>
+
 
 ## Derechos de Autor
 
