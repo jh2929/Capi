@@ -120,6 +120,8 @@ Este comando compilará la aplicación completamente (incluyendo test y dependen
 Si deseas traducir la aplicación a tu idioma o mejorar las traducciones existentes, no dudes en ponerte en contacto conmigo a través de correo electrónico:  
 [cervantesarturo254@gmail.com](mailto:cervantesarturo254@gmail.com)
 
+[![Crowdin](https://badges.crowdin.net/opentune/localized.svg)](https://crowdin.com/project/opentune)
+
 ---
 
 ## Apoya el Proyecto
