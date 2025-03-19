@@ -98,7 +98,7 @@ Para obtener información detallada sobre la instalación, configuración y uso 
 
 #### Desde la pagina Oficial
 
-1. Ve a la webo ofical de [OpenTune](https://opentune.netlify.app/) en tu navegador
+1. Ve a la web ofical de [OpenTune](https://opentune.netlify.app/) en tu navegador
 2. Descarga el archivo APK más reciente
 3. Habilita la instalación desde fuentes desconocidas en la configuración de tu dispositivo
 4. Instala el APK descargado
