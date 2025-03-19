@@ -168,7 +168,7 @@ git submodule update --init --recursive
 
 ### Código de Conducta
 
-Todos los colaboradores deben adherirse a nuestro código de conducta que promueve un entorno inclusivo, respetuoso y constructivo. Antes de contribuir, por favor lee el [Código de Conducta](https://github.com/Arturo254/OpenTune/blob/main/CODE_OF_CONDUCT.md) completo.
+Todos los colaboradores deben adherirse a nuestro código de conducta que promueve un entorno inclusivo, respetuoso y constructivo. Antes de contribuir, por favor lee el [Código de Conducta](https://github.com/Arturo254/OpenTune/blob/master/CODE_OF_CONDUCT.md) completo.
 
 ### Traducción
 
@@ -192,7 +192,7 @@ Para contribuir al código:
 8. Abre un Pull Request detallando los cambios realizados
 
 > [!TIP]
-> Revisa nuestras [directrices de contribución](https://github.com/Arturo254/OpenTune/blob/main/CONTRIBUTING.md) para obtener información más detallada sobre el proceso de desarrollo.
+> Revisa nuestras [directrices de contribución](https://github.com/Arturo254/OpenTune/blob/master/CONTRIBUTING.md) para obtener información más detallada sobre el proceso de desarrollo.
 
 ## Apoyo al Proyecto
 
