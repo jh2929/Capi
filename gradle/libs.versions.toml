@@ -1,64 +1,49 @@
 [versions]
-androidGradlePlugin = "8.5.2"
-annotation = "1.8.2"
-glance = "1.1.0"
-json = "20240303"
-kotlin = "2.0.0"
-compose = "1.6.8"
-lifecycle = "2.8.4"
-material3 = "1.3.0-beta05"
-media3 = "1.4.0"
+androidGradlePlugin = "8.9.0"
+annotation = "1.9.1"
+json = "20241224"
+kotlin = "2.1.0"
+compose = "1.7.6"
+lifecycle = "2.8.7"
+material3 = "1.3.1"
+media3 = "1.5.1"
 room = "2.6.1"
-hilt = "2.51.1"
-ktor = "2.3.12"
-ksp = "2.0.0-1.0.24"
-squigglyslider = "1.0.0"
-accompanistCoil = "0.15.0"
-blurry = "4.0.1"
-coilCompose = "2.7.0"
-coil = "2.7.0"
-workRuntimeKtx = "2.9.1"
-composeMarkdown = "0.2.0"
-markdownviewAndroid = "2.0.0"
-newpipeextractor = "0.24.3"
+hilt = "2.55"
+ktor = "3.0.3"
+ksp = "2.1.0-1.0.29"
+kotlinxSerializationJson = "1.8.0"
 
 [libraries]
 annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
-glance = { module = "androidx.glance:glance", version.ref = "glance" }
-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
-glance-appwidget-preview = { module = "androidx.glance:glance-appwidget-preview", version.ref = "glance" }
-glance-preview = { module = "androidx.glance:glance-preview", version.ref = "glance" }
-guava = { group = "com.google.guava", name = "guava", version = "33.0.0-android" }
-coroutines-guava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-guava", version = "1.7.3" }
+guava = { group = "com.google.guava", name = "guava", version = "33.4.0-android" }
+coroutines-guava = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-guava", version = "1.10.1" }
 concurrent-futures = { group = "androidx.concurrent", name = "concurrent-futures-ktx", version = "1.2.0" }
 
 gradle = { group = "com.android.tools.build", name = "gradle", version.ref = "androidGradlePlugin" }
-activity = { group = "androidx.activity", name = "activity-compose", version = "1.9.1" }
-navigation = { group = "androidx.navigation", name = "navigation-compose", version = "2.7.7" }
+activity = { group = "androidx.activity", name = "activity-compose", version = "1.10.0" }
+navigation = { group = "androidx.navigation", name = "navigation-compose", version = "2.8.5" }
 hilt-navigation = { group = "androidx.hilt", name = "hilt-navigation-compose", version = "1.2.0" }
-datastore = { group = "androidx.datastore", name = "datastore-preferences", version = "1.1.1" }
+datastore = { group = "androidx.datastore", name = "datastore-preferences", version = "1.1.2" }
 
 compose-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "compose" }
-compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version = "compose" }
-compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "compose" }
+compose-foundation = { group = "androidx.compose.foundation", name = "foundation", version = "1.7.6" }
+compose-ui = { group = "androidx.compose.ui", name = "ui", version = "compose" }
 compose-ui-util = { group = "androidx.compose.ui", name = "ui-util", version.ref = "compose" }
 compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "compose" }
 compose-animation = { group = "androidx.compose.animation", name = "animation-graphics", version.ref = "compose" }
-compose-animation-graphics = { group = "androidx.compose.animation", name = "animation-graphics", version.ref = "compose" }
 compose-reorderable = { group = "org.burnoutcrew.composereorderable", name = "reorderable", version = "0.9.6" }
 
 
-squigglyslider = { module = "me.saket.squigglyslider:squigglyslider", version.ref = "squigglyslider" }
+squigglyslider = { group = "me.saket.squigglyslider", name = "squigglyslider", version = "1.0.0" }
+
 viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 
 material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 
-accompanist-swiperefresh = { group = "com.google.accompanist", name = "accompanist-swiperefresh", version = "0.28.0" }
+coil = { group = "io.coil-kt", name = "coil-compose", version = "2.7.0" }
 
-coil = { group = "io.coil-kt", name = "coil-compose", version = "2.6.0" }
-
-shimmer = { group = "com.valentinilk.shimmer", name = "compose-shimmer", version = "1.0.3" }
+shimmer = { group = "com.valentinilk.shimmer", name = "compose-shimmer", version = "1.3.1" }
 
 palette = { group = "androidx.palette", name = "palette", version = "1.0.0" }
 
@@ -70,9 +55,9 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 
-apache-lang3 = { group = "org.apache.commons", name = "commons-lang3", version = "3.12.0" }
+apache-lang3 = { group = "org.apache.commons", name = "commons-lang3", version = "3.17.0" }
 
-hilt = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
+hilt = { group = "com.google.dagger", name = "hilt-android", version = "2.53.1" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 
 ktor-client-core = { group = "io.ktor", name = "ktor-client-core", version.ref = "ktor" }
@@ -86,17 +71,14 @@ json = { module = "org.json:json", version.ref = "json" }
 
 brotli = { group = "org.brotli", name = "dec", version = "0.1.2" }
 
-opencc4j = { group = "com.github.houbb", name = "opencc4j", version = "1.7.2" }
-
-desugaring = { group = "com.android.tools", name = "desugar_jdk_libs", version = "2.0.4" }
+desugaring = { group = "com.android.tools", name = "desugar_jdk_libs", version = "2.1.4" }
 
 junit = { group = "junit", name = "junit", version = "4.13.2" }
 
 timber = { group = "com.jakewharton.timber", name = "timber", version = "5.0.1" }
-accompanist-coil = { group = "com.google.accompanist", name = "accompanist-coil", version.ref = "accompanistCoil" }
-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntimeKtx" }
-markdownview-android = { group = "com.github.mukeshsolanki", name = "MarkdownView-Android", version.ref = "markdownviewAndroid" }
-newpipe-extractor = { group = "com.github.TeamNewPipe", name = "NewPipeExtractor", version = "v0.24.3" }
+
+newpipe-extractor = { group = "com.github.TeamNewPipe", name = "NewPipeExtractor", version = "3a33cefbc014a820056d83076914544f29b82644" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 
 [plugins]
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

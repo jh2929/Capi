@@ -1,10 +1,9 @@
 @file:Suppress("UnstableApiUsage")
 
-val isFullBuild: Boolean by rootProject.extra
-
 plugins {
     id("com.android.application")
     kotlin("android")
+    kotlin("plugin.serialization") version "2.1.0"
     kotlin("kapt")
     alias(libs.plugins.hilt)
     alias(libs.plugins.kotlin.ksp)
@@ -12,15 +11,15 @@ plugins {
 }
 
 android {
-    namespace = "com.malopieds.innertune"
-    compileSdk = 34
+    namespace = "com.arturo254.opentune"
+    //noinspection GradleDependency
+    compileSdk = 35
     defaultConfig {
         applicationId = "com.Arturo254.opentune"
-        minSdk = 26
-        //noinspection OldTargetApi
-        targetSdk = 34
-        versionCode = 25
-        versionName = "1.9.4"
+        minSdk = 24
+        targetSdk = 35
+        versionCode = 111
+        versionName = "1.9.6"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
@@ -28,16 +27,13 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             isCrunchPngs = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
         debug {
             applicationIdSuffix = ".debug"
-        }
-    }
-    flavorDimensions += "version"
-    productFlavors {
-        create("foss") {
-            dimension = "version"
         }
     }
     signingConfigs {
@@ -54,10 +50,6 @@ android {
         buildConfig = true
         compose = true
     }
-
-    
-
-
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
@@ -86,9 +78,7 @@ android {
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
-
 dependencies {
-
     implementation(libs.guava)
     implementation(libs.coroutines.guava)
     implementation(libs.concurrent.futures)
@@ -104,7 +94,6 @@ dependencies {
     implementation(libs.compose.ui.util)
     implementation(libs.compose.ui.tooling)
     implementation(libs.compose.animation)
-    implementation(libs.compose.animation.graphics)
     implementation(libs.compose.reorderable)
 
     implementation(libs.viewmodel)
@@ -113,8 +102,6 @@ dependencies {
     implementation(libs.material3)
     implementation(libs.palette)
     implementation(projects.materialColorUtilities)
-
-    implementation(libs.accompanist.swiperefresh)
 
     implementation(libs.coil)
 
@@ -126,36 +113,24 @@ dependencies {
     implementation(libs.squigglyslider)
 
     implementation(libs.room.runtime)
-    implementation(libs.accompanist.coil)
-    implementation(libs.work.runtime.ktx)
-
-    implementation(libs.markdownview.android)
-
+    implementation(libs.kotlinx.serialization.json)
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
 
     implementation(libs.apache.lang3)
 
     implementation(libs.hilt)
+    implementation("org.jsoup:jsoup:1.18.1")
     kapt(libs.hilt.compiler)
 
     implementation(projects.innertube)
     implementation(projects.kugou)
     implementation(projects.lrclib)
     implementation(projects.kizzy)
+
     implementation(libs.ktor.client.core)
 
     coreLibraryDesugaring(libs.desugaring)
 
     implementation(libs.timber)
-
-
-    implementation(libs.glance)
-    implementation(libs.glance.appwidget)
-    implementation(libs.glance.appwidget.preview)
-    implementation(libs.glance.preview)
-
-
-
-
 }

@@ -11,7 +11,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-
     <queries>
         <intent>
             <action android:name="android.media.action.DISPLAY_AUDIO_EFFECT_CONTROL_PANEL" />
@@ -21,11 +20,15 @@
         android:name=".App"
         android:allowBackup="true"
         android:appCategory="audio"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
+        android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:supportsRtl="true"
-        android:theme="@style/Theme.InnerTune"
-        >
+
+        android:supportsRtl="false"
+        android:theme="@style/Theme.OpenTune"
+        tools:targetApi="tiramisu">
         <uses-library
             android:name="org.apache.http.legacy"
             android:required="false" />
@@ -34,7 +37,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.InnerTune"
+            android:theme="@style/Theme.OpenTune"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -47,7 +50,7 @@
             </intent-filter>
 
             <!-- Youtube filter -->
-            <intent-filter>
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
@@ -71,11 +74,13 @@
                 <data android:pathPrefix="/c/" />
                 <!-- playlist prefix -->
                 <data android:pathPrefix="/playlist" />
+                <!-- browse prefix -->
+                <data android:pathPrefix="/browse/" />
                 <!-- search prefix -->
                 <data android:pathPrefix="/search" />
             </intent-filter>
 
-            <intent-filter>
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <action android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH" />
                 <action android:name="android.nfc.action.NDEF_DISCOVERED" />
@@ -109,7 +114,8 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
 
-            <meta-data android:name="android.app.shortcuts"
+            <meta-data
+                android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
 
@@ -137,8 +143,8 @@
 
         <service
             android:name=".playback.ExoDownloadService"
-            android:foregroundServiceType="dataSync"
-            android:exported="false">
+            android:exported="false"
+            android:foregroundServiceType="dataSync">
             <intent-filter>
                 <action android:name="androidx.media3.exoplayer.downloadService.action.RESTART" />
                 <category android:name="android.intent.category.DEFAULT" />

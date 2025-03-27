@@ -69,11 +69,6 @@
 -dontwarn org.openjsse.javax.net.ssl.SSLSocket
 -dontwarn org.openjsse.net.ssl.OpenJSSE
 -dontwarn org.slf4j.impl.StaticLoggerBinder
--dontwarn com.google.firebase.perf.network.FirebasePerfOkHttpClient
--dontwarn com.google.firebase.perf.network.FirebasePerfUrlConnection
-# opencc4j
--keep class com.github.houbb.opencc4j.** { *; }
--dontwarn com.huaban.analysis.jieba.JiebaSegmenter
 
 # Keep Data data classes
 -keep class com.my.kizzy.remote.** { <fields>; }
@@ -86,3 +81,11 @@
 -keep class org.mozilla.classfile.ClassFileWriter
 -dontwarn org.mozilla.javascript.JavaToJSONConverters
 -dontwarn org.mozilla.javascript.tools.**
+# Please add these rules to your existing keep rules in order to suppress warning
+# This is generated automatically by the Android Gradle plugin.
+-dontwarn java.beans.BeanDescriptor
+-dontwarn java.beans.BeanInfo
+-dontwarn java.beans.IntrospectionException
+-dontwarn java.beans.Introspector
+-dontwarn java.beans.PropertyDescriptor
+

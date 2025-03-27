@@ -4,7 +4,6 @@
 *.ap_
 *.aab
 
-
 # Files for the ART/Dalvik VM
 *.dex
 
@@ -19,7 +18,6 @@ out/
 # release/
 
 # Gradle files
-.kotlin/
 .gradle/
 build/
 
@@ -62,9 +60,6 @@ captures/
 .externalNativeBuild
 .cxx/
 
-# Google Services (e.g. APIs or Firebase)
-google-services.json
-
 # Freeline
 freeline.py
 freeline/
@@ -89,3 +84,7 @@ lint/tmp/
 
 .DS_Store
 /app/release/output-metadata.json
+
+.kotlin
+app/release
+output-metadata.json

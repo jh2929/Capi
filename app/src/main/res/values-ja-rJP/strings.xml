@@ -70,6 +70,8 @@
     <string name="play">再生</string>
     <string name="play_next">次に再生</string>
     <string name="add_to_queue">キューに追加</string>
+    <string name="add_to_library">ライブラリに追加</string>
+    <string name="remove_from_library">ライブラリから削除</string>
     <string name="download">ダウンロード</string>
     <string name="downloading">ダウンロード中</string>
     <string name="remove_download">ダウンロード削除</string>
@@ -148,6 +150,10 @@
     </plurals>
     <plurals name="n_year">
         <item quantity="other">%d年</item>
+    </plurals>
+    <plurals name="n_element">
+
+        <item quantity="other">%d 要素</item>
     </plurals>
 
     <!-- Snackbar -->
@@ -256,6 +262,4 @@
     <string name="new_version_available">New version available</string>
     <string name="translation_models">Translation Models</string>
     <string name="clear_translation_models">Clear translation models</string>
-    <string name="changelog">Changelog</string>
-    <string name="betafun">Beta Features</string>
 </resources>

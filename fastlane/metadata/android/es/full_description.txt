@@ -1,19 +1,23 @@
-Un cliente elegante de YouTube Music con Material Design 3 para Android
+Cliente de YouTube Music Material 3 para Android
 
-<br><b>Características:</b>
+Características:
 
-- 🎵 Reproducción de música de YouTube y YouTube Music sin anuncios.
-- 🔊 Reproducción en segundo plano.
-- 🔍 Búsqueda avanzada de canciones, videos, álbumes y listas de reproducción.
-- 🔑 Inicio de sesión integrado.
-- 📚 Gestión completa de tu biblioteca musical.
-- ⬇️ Descarga y almacenamiento en caché para reproducción offline.
-- 🗣️ Letras sincronizadas.
-- ⏩ Omisión inteligente de silencios.
-- 🔊 Normalización de audio.
-- ⏱️ Ajuste de tempo y tono.
-- 🌗 Tema dinámico.
-- 🌍 Soporte multiidioma.
-- 🚗 Compatibilidad con Android Auto.
-- 💎 Diseño Material 3.
-- 🔗 Descarga de portada de álbum
+- Reproducir cualquier canción o video de YouTube Music
+- Reproducción en segundo plano
+- Sugerencias personalizadas rápidas
+- Gestión de la biblioteca
+- Descargar y almacenar canciones para reproducción sin conexión
+- Buscar canciones, álbumes, artistas, videos y listas de reproducción
+- Letras en vivo
+- Soporte para inicio de sesión en cuenta de YouTube Music
+- Sincronización de canciones, artistas, álbumes y listas de reproducción, desde y hacia tu cuenta
+- Saltar silencios
+- Importar listas de reproducción
+- Normalización de audio
+- Ajustar el tempo/timbre
+- Gestión de listas de reproducción locales
+- Reordenar canciones en la lista de reproducción o cola
+- Tema claro - oscuro - negro - dinámico
+- Temporizador de sueño
+- Material 3
+- etc.
