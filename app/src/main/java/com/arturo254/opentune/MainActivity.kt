@@ -852,7 +852,7 @@ class MainActivity : ComponentActivity() {
                                 Box {
                                     BottomSheetPlayer(
                                         state = playerBottomSheetState,
-                                        navController = navController
+                                        navController = navController,
                                     )
                                     NavigationBar(
                                         modifier = Modifier
