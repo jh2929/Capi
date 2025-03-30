@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Bottom navigation -->
     <string name="home">ホーム</string>
@@ -5,12 +6,10 @@
     <string name="artists">アーティスト</string>
     <string name="albums">アルバム</string>
     <string name="playlists">プレイリスト</string>
-
     <!-- Top bar -->
     <plurals name="n_selected">
         <item quantity="other">%dを選択済み</item>
     </plurals>
-
     <!-- Home -->
     <string name="history">履歴</string>
     <string name="stats">統計</string>
@@ -19,18 +18,24 @@
     <string name="quick_picks">おすすめ</string>
     <string name="quick_picks_empty">何曲か再生するとおすすめを生成します</string>
     <string name="new_release_albums">新作アルバム</string>
-
+    <string name="forgotten_favorites">Forgotten favorites</string>
+    <string name="similar_to">Similar to</string>
+    <string name="your_ytb_playlists">Your youtube account</string>
     <!-- History -->
     <string name="today">今日</string>
     <string name="yesterday">昨日</string>
     <string name="this_week">今週</string>
     <string name="last_week">先週</string>
-
+    <string name="local_history">Local</string>
+    <string name="remote_history">Remote</string>
     <!-- Stats -->
     <string name="most_played_songs">最も再生された曲</string>
     <string name="most_played_artists">最も再生されたアーティスト</string>
     <string name="most_played_albums">最も再生されたアルバム</string>
-
+    <string name="weeks">Weeks</string>
+    <string name="months">Months</string>
+    <string name="years">Years</string>
+    <string name="continuous">Continuous</string>
     <!-- Search -->
     <string name="search">検索</string>
     <string name="search_yt_music">YouTube Musicを検索…</string>
@@ -48,21 +53,32 @@
     <string name="filter_featured_playlists">おすすめのプレイリスト</string>
     <string name="filter_bookmarked">Bookmarked</string>
     <string name="no_results_found">見つかりませんでした</string>
-
     <!-- Artist screen -->
     <string name="from_your_library">ライブラリから</string>
-
+    <!-- Album screen -->
+    <string name="other_versions">Other versions</string>
+    <!-- Library -->
+    <string name="liked">Liked</string>
+    <string name="offline">Downloaded</string>
+    <string name="my_top">My Top</string>
+    <string name="library_song_empty">Library songs will show up here</string>
+    <string name="library_artist_empty">Library artists will show up here</string>
+    <string name="library_album_empty">Library albums will show up here</string>
+    <string name="library_playlist_empty">Your playlists will show up here</string>
     <!-- Playlist -->
     <string name="liked_songs">いいねした曲</string>
     <string name="downloaded_songs">ダウンロードした曲</string>
+    <string name="sync_playlist">Sync Playlist</string>
     <string name="playlist_is_empty">プレイリストが空です</string>
-
+    <string name="remove_download_playlist_confirm">Do you really want to remove all \"%s\" playlist songs from the Downloaded Songs storage?</string>
+    <string name="delete_playlist_confirm">Do you really want to delete the playlist \"%s\"?</string>
+    <string name="elements_selected">%1$d Elements selected</string>
+    <string name="allows_for_sync_witch_youtube">Note: This allows for syncing with YouTube Music. This is NOT changeable later.</string>
     <!-- Button -->
     <string name="retry">再試行</string>
     <string name="radio">ラジオ</string>
     <string name="shuffle">シャッフル</string>
     <string name="reset">Reset</string>
-
     <!-- Menu -->
     <string name="details">詳細</string>
     <string name="edit">編集</string>
@@ -72,6 +88,7 @@
     <string name="add_to_queue">キューに追加</string>
     <string name="add_to_library">ライブラリに追加</string>
     <string name="remove_from_library">ライブラリから削除</string>
+    <string name="remove_from_playlist">Remove from playlist</string>
     <string name="download">ダウンロード</string>
     <string name="downloading">ダウンロード中</string>
     <string name="remove_download">ダウンロード削除</string>
@@ -86,9 +103,13 @@
     <string name="search_online">オンラインで検索</string>
     <string name="sync">同期</string>
     <string name="advanced">Advanced</string>
-
+    <string name="select">Select all</string>
+    <string name="like_all">Like all</string>
+    <string name="dislike_all">Dislike all</string>
+    <string name="tempo_and_pitch">Time and tone</string>
     <!-- Sort menu -->
     <string name="sort_by_create_date">追加日時</string>
+    <string name="sort_by_last_updated">Date updated</string>
     <string name="sort_by_name">曲名</string>
     <string name="sort_by_artist">アーティスト</string>
     <string name="sort_by_year">リリース年</string>
@@ -96,7 +117,6 @@
     <string name="sort_by_length">長さ</string>
     <string name="sort_by_play_time">再生時間</string>
     <string name="sort_by_custom">カスタム</string>
-
     <!-- Dialog -->
     <string name="media_id">メディアID</string>
     <string name="mime_type">MIMEタイプ</string>
@@ -108,27 +128,29 @@
     <string name="file_size">ファイルサイズ</string>
     <string name="unknown">不明</string>
     <string name="copied">クリップボードにコピー</string>
-
     <string name="edit_lyrics">歌詞を編集</string>
     <string name="search_lyrics">歌詞を検索</string>
-
+    <string name="lyrics">Lyrics</string>
     <string name="edit_song">曲を編集</string>
     <string name="song_title">曲名</string>
     <string name="song_artists">曲のアーティスト</string>
     <string name="error_song_title_empty">曲名は空にできません。</string>
     <string name="error_song_artist_empty">曲のアーティストは空にできません。</string>
     <string name="save">保存</string>
-
     <string name="choose_playlist">プレイリストを選択</string>
     <string name="edit_playlist">プレイリストを編集</string>
     <string name="create_playlist">プレイリストを作成</string>
     <string name="playlist_name">プレイリスト名</string>
     <string name="error_playlist_name_empty">プレイリスト名は空白にできません。</string>
-
+    <string name="already_in_playlist">Already in playlist:</string>
     <string name="edit_artist">アーティストを編集</string>
     <string name="artist_name">アーティスト名</string>
     <string name="error_artist_name_empty">アーティスト名は空白にできません。</string>
-
+    <string name="duplicates">Duplicates</string>
+    <string name="skip_duplicates">Skip duplicates</string>
+    <string name="add_anyway">Add anyway</string>
+    <string name="duplicates_description_single">The song is already in your playlist</string>
+    <string name="duplicates_description_multiple">%d songs are already in your playlist</string>
     <!-- Noun -->
     <plurals name="n_song">
         <item quantity="other">%d曲</item>
@@ -152,16 +174,17 @@
         <item quantity="other">%d年</item>
     </plurals>
     <plurals name="n_element">
-
         <item quantity="other">%d 要素</item>
     </plurals>
-
+    <plurals name="n_time">
+        <item quantity="other">%d times</item>
+    </plurals>
     <!-- Snackbar -->
     <string name="playlist_imported">プレイリストをインポートしました</string>
+    <string name="imported_playlist">インポートしたプレイリスト</string>
     <string name="removed_song_from_playlist">プレイリストから「%s」を削除しました</string>
     <string name="playlist_synced">プレイリストが同期されました</string>
     <string name="undo">元に戻す</string>
-
     <!-- Player -->
     <string name="lyrics_not_found">歌詞が見つかりません</string>
     <string name="sleep_timer">スリープタイマー</string>
@@ -173,7 +196,8 @@
     <string name="error_no_internet">ネットワーク接続がありません</string>
     <string name="error_timeout">タイムアウトしました</string>
     <string name="error_unknown">不明なエラー</string>
-
+    <string name="seek_backward">5 seconds backward</string>
+    <string name="seek_forward">5 seconds forward</string>
     <!-- Player action -->
     <string name="action_like">いいね</string>
     <string name="action_remove_like">いいねを削除</string>
@@ -182,50 +206,102 @@
     <string name="repeat_mode_off">Repeat mode off</string>
     <string name="repeat_mode_one">Repeat current song</string>
     <string name="repeat_mode_all">Repeat queue</string>
-
     <!-- Queue Title -->
     <string name="queue_all_songs">すべての曲</string>
     <string name="queue_searched_songs">検索した曲</string>
-
+    <string name="similar_content">Similar content</string>
     <!-- Notification name -->
     <string name="music_player">音楽プレイヤー</string>
-
     <!-- Settings -->
     <string name="settings">設定</string>
+    <string name="login_settings">Login settings</string>
+    <string name="use_login_for_browse">Use login for browsing premium content</string>
+    <string name="use_login_for_browse_desc">This can shows premium-only albums if you are logged in with a Premium account</string>
+    <string name="general_settings">General settings</string>
     <string name="appearance">外観</string>
+    <string name="theme">Theme</string>
     <string name="enable_dynamic_theme">動的なテーマを有効化</string>
     <string name="dark_theme">ダークテーマ</string>
     <string name="dark_theme_on">オン</string>
     <string name="dark_theme_off">オフ</string>
     <string name="dark_theme_follow_system">システムに従う</string>
+    <string name="player_background_style">Player background style</string>
+    <string name="follow_theme">Follow theme</string>
+    <string name="gradient">Gradient</string>
+    <string name="player_background_blur">Blur</string>
+    <string name="enable_squiggly_slider">Enable squiggly slider</string>
+    <string name="enable_swipe_thumbnail">Enable swipe to change song</string>
     <string name="pure_black">Pure black</string>
-    <string name="default_open_tab">起動時に開くタブ</string>
     <string name="customize_navigation_tabs">ナビゲーションタブのカスタマイズ</string>
+    <string name="player">Player</string>
+    <string name="player_text_alignment">Player text alignment</string>
     <string name="lyrics_text_position">歌詞テキストの位置</string>
+    <string name="sided">Sided</string>
     <string name="left">左</string>
     <string name="center">中央</string>
     <string name="right">右</string>
-
+    <string name="lyrics_click_change">Change lyrics on click</string>
+    <string name="grid_cell_size">Grid cell size</string>
+    <string name="small">Small</string>
+    <string name="big">Big</string>
+    <string name="player_slider_style">Player slider style</string>
+    <string name="default_">Default</string>
+    <string name="squiggly">Squiggly</string>
+    <string name="slim">Slim</string>
+    <string name="misc">Misc</string>
+    <string name="default_open_tab">起動時に開くタブ</string>
+    <string name="slim_navbar">Hide bottom navigation bar labels</string>
     <string name="content">コンテンツ</string>
+    <string name="google">Google</string>
+    <string name="discord">Discord</string>
     <string name="login">ログイン</string>
+    <string name="advanced_login">Advanced login (token)</string>
+    <string name="logout">Logout</string>
+    <string name="not_logged_in">Not logged in</string>
+    <string name="token_hidden">Tap to show token</string>
+    <string name="token_shown">Tap again to copy or edit</string>
+    <string name="token_adv_login_description">This is an ADVANCED login method. As an alternative to the web portal, you may directly enter or update your login token here. For example, this can speed up logging in on multiple devices. Please note that any invalid token formats the app fails to parse will not be accepted</string>
+    <string name="ytm_sync">Automatically sync with your YouTube Music account</string>
+    <string name="general">General</string>
     <string name="content_language">コンテンツの既定の言語</string>
     <string name="content_country">コンテンツの既定の国</string>
     <string name="system_default">システムに従う</string>
+    <string name="proxy">Proxy</string>
     <string name="enable_proxy">プロキシを有効化</string>
     <string name="proxy_type">プロキシのタイプ</string>
     <string name="proxy_url">プロキシのURL</string>
+    <string name="default_lib_chips">Change default library chip</string>
+    <string name="set_quick_picks">Set quick picks</string>
+    <string name="last_song_listened">Based on last song listened</string>
     <string name="restart_to_take_effect">再起動して反映</string>
-
+    <string name="app_language">App language (Beta)</string>
+    <string name="configure_app_language">Configure app languages</string>
+    <string name="intent_app_language_not_found">Couldn\'t find app language settings, please configure them manually</string>
+    <string name="open_supported_links">Open supported link by default</string>
+    <string name="configure_supported_links">Configure supported links</string>
+    <string name="intent_supported_links_not_found">Couldn\'t find supported links settings, please configure them manually</string>
+    <string name="enable_kugou">酷狗 (Kugou) からの歌詞取得を有効化</string>
+    <string name="enable_lrclib">Enable LrcLib lyrics provider</string>
+    <string name="set_first_lyrics_provider">Preferred lyrics provider</string>
     <string name="player_and_audio">プレイヤーと音声</string>
     <string name="audio_quality">音声品質</string>
+    <string name="audio_quality_max">Max (beta)</string>
     <string name="audio_quality_auto">自動</string>
     <string name="audio_quality_high">高</string>
     <string name="audio_quality_low">低</string>
+    <string name="queue">Queue</string>
     <string name="persistent_queue">再生キューを保持</string>
+    <string name="persistent_queue_desc">Restore your last queue when the app starts</string>
+    <string name="auto_load_more">Auto load more songs</string>
+    <string name="auto_load_more_desc">Automatically add more songs when the end of the queue is reached, if possible</string>
+    <string name="enable_similar_content">Enable Similar Content</string>
+    <string name="similar_content_desc">Automatically add more similar songs when the end of the queue is reached</string>
     <string name="skip_silence">無音部分をスキップ</string>
     <string name="audio_normalization">音声の正規化</string>
+    <string name="auto_skip_next_on_error">Auto skip to next song when error occurs</string>
+    <string name="auto_skip_next_on_error_desc">Ensure your continuous playback experience</string>
+    <string name="stop_music_on_task_clear">Stop music on task clear</string>
     <string name="equalizer">イコライザー</string>
-
     <string name="storage">ストレージ</string>
     <string name="cache">キャッシュ</string>
     <string name="image_cache">画像のキャッシュ</string>
@@ -238,28 +314,76 @@
     <string name="max_song_cache_size">曲の最大キャッシュサイズ</string>
     <string name="clear_song_cache">曲のキャッシュを削除</string>
     <string name="size_used">%s 使用中</string>
-
     <string name="privacy">プライバシー</string>
+    <string name="listen_history">Listen History</string>
+    <string name="search_history">Search History</string>
     <string name="pause_listen_history">再生履歴を一時停止</string>
     <string name="clear_listen_history">再生履歴を削除</string>
     <string name="clear_listen_history_confirm">すべての再生履歴を削除しますか？</string>
     <string name="pause_search_history">検索履歴の記録を一時停止</string>
     <string name="clear_search_history">検索履歴を削除</string>
     <string name="clear_search_history_confirm">すべての検索履歴を削除しますか？</string>
-    <string name="enable_kugou">酷狗 (Kugou) からの歌詞取得を有効化</string>
-
+    <string name="disable_screenshot">Disable screenshot</string>
+    <string name="disable_screenshot_desc">When this option is on, screenshots and the app\'s view in Recents are disabled.</string>
+    <string name="hide_explicit">Hide explicit content</string>
     <string name="backup_restore">バックアップと復元</string>
     <string name="backup">バックアップ</string>
     <string name="restore">復元</string>
-    <string name="imported_playlist">インポートしたプレイリスト</string>
     <string name="backup_create_success">バックアップの作成に成功しました</string>
     <string name="backup_create_failed">バックアップを作成できませんでした</string>
     <string name="restore_failed">バックアップの復元に失敗しました</string>
-
+    <string name="discord_integration">Discord integration</string>
+    <string name="discord_information">OpenTune uses the KizzyRPC library to set your Discord account\'s status. This involves using the Discord Gateway connection, which may be considered a violation of Discord\'s TOS. However, there are no known cases of user accounts being suspended for this reason. Use at your own risk.  OpenTunne will only extract your token, and everything else is stored locally.</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="options">Options</string>
+    <string name="preview">Preview</string>
+    <string name="login_failed">Login failed</string>
+    <string name="enable_discord_rpc">Enable Rich Presence</string>
+    <string name="default_links">Open supported links</string>
+    <string name="open_app_settings_error">Couldn\'t open app settings</string>
+    <string name="release_notes">Release Notes</string>
     <string name="about">アプリについて</string>
     <string name="app_version">アプリのバージョン</string>
-
     <string name="new_version_available">New version available</string>
     <string name="translation_models">Translation Models</string>
     <string name="clear_translation_models">Clear translation models</string>
+    <string name="all_time">All time</string>
+    <string name="past_24_hours">Past 24 hours</string>
+    <string name="past_week">Past week</string>
+    <string name="past_month">Past month</string>
+    <string name="past_year">Past year</string>
+    <string name="top_length">My Top list length</string>
+    <string name="history_duration">History duration</string>
+    <string name="contributors">contributors</string>
+    <string name="Donate">Donate</string>
+    <string name="Telegramchanel">Telegram Chanel</string>
+    <string name="contribution">Contribution</string>
+    <string name="Hi">Hi</string>
+    <string name="NewVersion">New Version</string>
+    <string name="Changelog">Changelog</string>
+    <string name="changelogs">changelogs</string>
+    <string name="no_changes">no changes</string>
+    <string name="Translate">Translate</string>
+    <string name="Redirección">Redirección</string>
+    <string name="poeditor_redirect">You are about to be redirected to poeditor.com</string>
+    <string name="barwar">Attention when restoring the backups, the previously downloaded songs are not downloaded. it is HIGHLY RECOMMENDED to play the restored songs in order to avoid any download errors.</string>
+    <string name="backup_link_title">Backup uploaded successfully!</string>
+    <string name="backup_link_description">Your backup will be available for 14 days.</string>
+    <string name="copy_link">Copy Link</string>
+    <string name="customize_thumbnail_corner_radius">Customize thumbnail corner radius</string>
+    <string name="corner_radius_label">Corner radius: %1$s</string>
+    <string name="unmute">Unmute</string>
+    <plurals name="seconds">
+        <item quantity="other">%d seconds</item>
+    </plurals>
+    <string name="mute">Mute</string>
+    <string name="explore">Explore</string>
+    <string name="custom_avatar">Custom avatar (BETA)</string>
+    <string name="custom_avatar_beta">Custom avatar (BETA)</string>
+    <string name="select_image">Select image</string>
+    <string name="default_avatar">Default avatar</string>
+    <string name="restore_default_avatar">Restore default avatar</string>
+    <string name="SearchResutls">Search Results</string>
+    <string name="Sujestions">Suggestions</string>
+    <string name="SearchHistory">Search History</string>
 </resources>
