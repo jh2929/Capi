@@ -438,4 +438,14 @@
     <string name="SearchResutls">Search Results</string>
     <string name="Sujestions">Suggestions</string>
     <string name="SearchHistory">Search History</string>
+    <string name="collapse">Collapse</string>
+    <string name="expand">Expand</string>
+    <string name="reset_to_default">Reset to default</string>
+    <string name="Presets">Presets</string>
+    <string name="custom">Custom</string>
+    <string name="close">Close</string>
+    <string name="custom_value">Custom value</string>
+    <string name="adjust_radius">Adjust radius</string>
+    <string name="cancel">Cancel</string>
+    <string name="apply">Apply</string>
 </resources>

@@ -311,7 +311,7 @@
     <string name="clear_translation_models">Clear translation models</string>
     <string name="forgotten_favorites">Favoritos olvidados</string>
     <string name="similar_to">Similar a</string>
-    <string name="keep_listening">Siga escuchando</string>
+    <string name="keep_listening">Seguir escuchando</string>
     <string name="local_history">Local</string>
     <string name="weeks">Semanas</string>
     <string name="months">Meses</string>
@@ -421,4 +421,14 @@
     <string name="SearchResutls">Resultados de búsqueda</string>
     <string name="Sujestions">Sugerencias</string>
     <string name="SearchHistory">Historial de búsqueda</string>
+    <string name="collapse">Contraer</string>
+    <string name="expand">Ampliar</string>
+    <string name="reset_to_default">Restablecer por defecto</string>
+    <string name="Presets">Preajustes</string>
+    <string name="custom">Personalizar</string>
+    <string name="close">Cerrar</string>
+    <string name="custom_value">Valor personalizado</string>
+    <string name="adjust_radius">Ajustar radio</string>
+    <string name="cancel">Cancelar</string>
+    <string name="apply">Aplicar</string>
 </resources>
