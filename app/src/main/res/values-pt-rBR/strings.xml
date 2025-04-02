@@ -398,4 +398,14 @@
     <string name="SearchResutls">Resultados da Pesquisa</string>
     <string name="Sujestions">Sugestões</string>
     <string name="SearchHistory">Histórico de Pesquisa</string>
+    <string name="apply">Aplicar</string>
+    <string name="collapse">Recolher</string>
+    <string name="expand">Expandir</string>
+    <string name="reset_to_default">Redefinir para o padrão</string>
+    <string name="Presets">Predefinições</string>
+    <string name="custom">Personalizado</string>
+    <string name="close">Fechar</string>
+    <string name="custom_value">Valor personalizado</string>
+    <string name="adjust_radius">Ajustar raio</string>
+    <string name="cancel">Cancelar</string>
 </resources>

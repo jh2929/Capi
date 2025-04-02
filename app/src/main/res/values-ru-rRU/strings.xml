@@ -422,4 +422,14 @@
     <string name="SearchResutls">Search Results</string>
     <string name="Sujestions">Suggestions</string>
     <string name="SearchHistory">Search History</string>
+    <string name="apply">Применить</string>
+    <string name="collapse">Свернуть</string>
+    <string name="expand">Развернуть</string>
+    <string name="reset_to_default">Сбросить до значений по умолчанию</string>
+    <string name="Presets">Предустановки</string>
+    <string name="custom">Пользовательский</string>
+    <string name="close">Закрыть</string>
+    <string name="custom_value">Пользовательское значение</string>
+    <string name="adjust_radius">Настроить радиус</string>
+    <string name="cancel">Отмена</string>
 </resources>
