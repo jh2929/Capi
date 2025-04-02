@@ -1,11 +1,15 @@
 package com.arturo254.opentune.ui.screens.settings
 
-import android.annotation.TargetApi
+import android.app.Activity
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.content.res.Resources
 import android.os.Build
+import android.os.Handler
 import android.os.LocaleList
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
@@ -18,13 +22,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.capitalize
 import androidx.compose.ui.text.toLowerCase
+import androidx.core.os.ConfigurationCompat
+import androidx.core.os.LocaleListCompat
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -45,6 +54,8 @@ import com.arturo254.opentune.ui.component.SwitchPreference
 import com.arturo254.opentune.ui.utils.backToMain
 import com.arturo254.opentune.utils.rememberEnumPreference
 import com.arturo254.opentune.utils.rememberPreference
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import java.net.Proxy
 import java.util.Locale
 
@@ -166,28 +177,19 @@ fun ContentSettings(
 
         // Language settings
         PreferenceGroupTitle(title = stringResource(R.string.app_language))
+
+// Obtener el estado de idioma usando el nuevo método
+        val (selectedLanguage, setSelectedLanguage) = rememberLanguageState()
+
         ListPreference(
             title = { Text(stringResource(R.string.app_language)) },
-            icon = { Icon(painterResource(R.drawable.translate), null) },
+            icon = { Icon(painterResource(R.drawable.language), null) },
             selectedValue = selectedLanguage,
             values = LanguageCodeToName.keys.toList(),
             valueText = { LanguageCodeToName[it] ?: stringResource(R.string.system_default) },
             onValueSelected = { newLanguage ->
-                if (localeManager.updateLocale(newLanguage)) {
-                    setSelectedLanguage(newLanguage)
-
-                    // Restart activity to apply changes
-                    val intent = context.packageManager
-                        .getLaunchIntentForPackage(context.packageName)
-                        ?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-                    context.startActivity(intent)
-                } else {
-                    Toast.makeText(
-                        context,
-                        "Failed to update language. Please try again.",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+                // Simplemente llama a la función setter - el resto se maneja internamente
+                setSelectedLanguage(newLanguage)
             }
         )
 
@@ -288,42 +290,124 @@ fun ContentSettings(
     )
 }
 
-// LocaleManager
+/**
+ * Enhanced LocaleManager for handling locale changes in Jetpack Compose applications.
+ */
 class LocaleManager(private val context: Context) {
+
     companion object {
+        private const val TAG = "LocaleManager"
+        private const val PREF_NAME = "LocalePreferences"
+        private const val PREF_LANGUAGE_KEY = "selected_language"
+
+        // Languages that require special script handling
         private val COMPLEX_SCRIPT_LANGUAGES = setOf(
             "ne", "mr", "hi", "bn", "pa", "gu", "ta", "te", "kn", "ml",
             "si", "th", "lo", "my", "ka", "am", "km",
             "zh-CN", "zh-TW", "zh-HK", "ja", "ko"
         )
+
+        // Singleton instance
+        @Volatile private var instance: LocaleManager? = null
+
+        fun getInstance(context: Context): LocaleManager {
+            return instance ?: synchronized(this) {
+                instance ?: LocaleManager(context.applicationContext).also { instance = it }
+            }
+        }
     }
 
+    private val sharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+
+    // StateFlow to observe language changes
+    private val _currentLanguage = MutableStateFlow(getSelectedLanguageCode())
+    val currentLanguage: StateFlow<String> = _currentLanguage
+
+    /**
+     * Get the currently selected language code
+     */
+    fun getSelectedLanguageCode(): String {
+        return sharedPreferences.getString(PREF_LANGUAGE_KEY, getSystemLanguageCode()) ?: getSystemLanguageCode()
+    }
+
+    /**
+     * Get the system default language code
+     */
+    private fun getSystemLanguageCode(): String {
+        val localeList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            ConfigurationCompat.getLocales(Resources.getSystem().configuration)
+        } else {
+            LocaleListCompat.create(Locale.getDefault())
+        }
+
+        return if (localeList.isEmpty) "en" else localeList[0]?.language ?: "en"
+    }
+
+    /**
+     * Update the locale synchronously (for Compose compatibility)
+     * @param languageCode The language code to set
+     * @return true if successful, false otherwise
+     */
     fun updateLocale(languageCode: String): Boolean {
         try {
-            val locale = createLocaleFromCode(languageCode)
-            val config = context.resources.configuration
+            // Save preference
+            sharedPreferences.edit().putString(PREF_LANGUAGE_KEY, languageCode).apply()
+            _currentLanguage.value = languageCode
 
+            val locale = createLocaleFromCode(languageCode)
+            // Crear una nueva instancia de Configuration en lugar de clonar
+            val config = Configuration(context.resources.configuration)
+
+            // Update Locale.default for APIs that might use it
             Locale.setDefault(locale)
 
+            // Apply configuration based on API level
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 setLocaleApi24(config, locale)
             } else {
                 setLocaleLegacy(config, locale)
             }
 
+            // Update resources configuration
+            val resources = context.resources
             @Suppress("DEPRECATION")
-            context.resources.updateConfiguration(config, context.resources.displayMetrics)
-
-            val newContext = context.createConfigurationContext(config)
-            updateAppContext(newContext)
+            resources.updateConfiguration(config, resources.displayMetrics)
 
             return true
         } catch (e: Exception) {
-            Log.e("LocaleManager", "Failed to update locale", e)
+            Log.e(TAG, "Failed to update locale", e)
             return false
         }
     }
 
+    /**
+     * Apply locale to a context
+     */
+    fun applyLocaleToContext(baseContext: Context): Context {
+        val languageCode = getSelectedLanguageCode()
+        val locale = createLocaleFromCode(languageCode)
+        Locale.setDefault(locale)
+
+        val config = Configuration(baseContext.resources.configuration)
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            config.setLocale(locale)
+            val localeList = LocaleList(locale)
+            LocaleList.setDefault(localeList)
+            config.setLocales(localeList)
+            baseContext.createConfigurationContext(config)
+        } else {
+            @Suppress("DEPRECATION")
+            config.locale = locale
+            @Suppress("DEPRECATION")
+            baseContext.resources.updateConfiguration(config, baseContext.resources.displayMetrics)
+            baseContext
+        }
+    }
+
+    /**
+     * Creates a Locale object from a language code
+     */
     private fun createLocaleFromCode(languageCode: String): Locale {
         return when {
             languageCode == "zh-CN" -> Locale.SIMPLIFIED_CHINESE
@@ -333,30 +417,45 @@ class LocaleManager(private val context: Context) {
             languageCode in COMPLEX_SCRIPT_LANGUAGES -> {
                 if (languageCode.contains("-")) {
                     val (language, country) = languageCode.split("-")
-                    Locale.Builder()
-                        .setLanguage(language)
-                        .setRegion(country)
-                        .setScript(getScriptForLanguage(languageCode))
-                        .build()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        Locale.Builder()
+                            .setLanguage(language)
+                            .setRegion(country)
+                            .setScript(getScriptForLanguage(languageCode))
+                            .build()
+                    } else {
+                        Locale(language, country)
+                    }
                 } else {
-                    Locale.Builder()
-                        .setLanguage(languageCode)
-                        .setScript(getScriptForLanguage(languageCode))
-                        .build()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        Locale.Builder()
+                            .setLanguage(languageCode)
+                            .setScript(getScriptForLanguage(languageCode))
+                            .build()
+                    } else {
+                        Locale(languageCode)
+                    }
                 }
             }
 
             languageCode.contains("-") -> {
-                val (language, country) = languageCode.split("-")
-                Locale(language, country)
+                val parts = languageCode.split("-")
+                if (parts.size >= 2) {
+                    Locale(parts[0], parts[1])
+                } else {
+                    Locale(languageCode)
+                }
             }
 
             else -> Locale(languageCode)
         }
     }
 
+    /**
+     * Get the appropriate script for complex languages
+     */
     private fun getScriptForLanguage(languageCode: String): String {
-        return when (languageCode) {
+        return when (languageCode.substringBefore("-")) {
             "hi", "mr" -> "Deva" // Devanagari
             "bn" -> "Beng" // Bengali
             "pa" -> "Guru" // Gurmukhi
@@ -370,58 +469,172 @@ class LocaleManager(private val context: Context) {
             "ka" -> "Geor" // Georgian
             "am" -> "Ethi" // Ethiopic
             "km" -> "Khmr" // Khmer
+            "ne" -> "Deva" // Nepali uses Devanagari
+            "lo" -> "Laoo" // Lao
+            "my" -> "Mymr" // Myanmar/Burmese
             else -> ""
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.N)
+    /**
+     * Set locale for Android N and above
+     */
     private fun setLocaleApi24(config: Configuration, locale: Locale) {
-        val localeList = LocaleList(locale)
-        LocaleList.setDefault(localeList)
-        config.setLocales(localeList)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val localeList = LocaleList(locale)
+            LocaleList.setDefault(localeList)
+            config.setLocales(localeList)
+        }
     }
 
+    /**
+     * Set locale for Android versions below N
+     */
     @Suppress("DEPRECATION")
     private fun setLocaleLegacy(config: Configuration, locale: Locale) {
         config.locale = locale
     }
 
-    private fun updateAppContext(newContext: Context) {
+    /**
+     * Restart the app to apply language changes
+     */
+    /**
+     * Restart the app to apply language changes
+     * Versión corregida para evitar cierres inesperados
+     */
+    fun restartApp(context: Context) {
         try {
-            val activityThread = Class.forName("android.app.ActivityThread")
-            val thread = activityThread.getMethod("currentActivityThread").invoke(null)
-            val application = activityThread.getMethod("getApplication").invoke(thread)
-            val appContext = application.javaClass.getMethod("getBaseContext").invoke(application)
+            // Obtener el intent de inicio con más cuidado
+            val packageManager = context.packageManager
+            val packageName = context.packageName
 
-            val contextImpl = Class.forName("android.app.ContextImpl")
-            val implResources = contextImpl.getDeclaredField("mResources")
-            implResources.isAccessible = true
-            implResources.set(appContext, newContext.resources)
+            val intent = packageManager.getLaunchIntentForPackage(packageName)
+            if (intent != null) {
+                // Configurar intent con banderas apropiadas
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+                // Agregamos un pequeño retraso para asegurar que la configuración se aplique
+                Handler(Looper.getMainLooper()).postDelayed({
+                    context.startActivity(intent)
+
+                    // Solo finalizamos si es una Activity
+                    if (context is Activity) {
+                        context.finish()
+                    }
+                }, 100) // 100ms de retraso
+            } else {
+                // Fallback en caso de que no se pueda obtener el intent de inicio
+                val mainIntent = Intent(Intent.ACTION_MAIN)
+                mainIntent.addCategory(Intent.CATEGORY_LAUNCHER)
+                mainIntent.setPackage(packageName)
+                mainIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NEW_TASK)
+
+                val resolveInfos = packageManager.queryIntentActivities(mainIntent, 0)
+                if (resolveInfos.isNotEmpty()) {
+                    val resolveInfo = resolveInfos[0]
+                    val activityInfo = resolveInfo.activityInfo
+                    val componentName = ComponentName(activityInfo.packageName, activityInfo.name)
+
+                    mainIntent.component = componentName
+                    context.startActivity(mainIntent)
+
+                    if (context is Activity) {
+                        context.finish()
+                    }
+                }
+            }
         } catch (e: Exception) {
-            Log.e("LocaleManager", "Failed to update app context", e)
+            Log.e("LocaleManager", "Failed to restart app: ${e.message}", e)
+            // No hacemos nada más, permitiendo que la aplicación continúe funcionando
         }
     }
 }
 
-// Language mappings
+/**
+ * Dictionary mapping language codes to their display names
+ * Extended with more languages and native names
+ */
 val LanguageCodeToName = mapOf(
-    "ar" to "Arabic",
-    "be" to "Belarusian",
-    "zh" to "Chinese Simplified",
-    "cs" to "Czech",
-    "nl" to "Dutch",
+    "ar" to "Arabic (العربية)",
+    "be" to "Belarusian (Беларуская)",
+    "zh-CN" to "Chinese Simplified (简体中文)",
+    "zh-TW" to "Chinese Traditional (繁體中文)",
+    "cs" to "Czech (Čeština)",
+    "nl" to "Dutch (Nederlands)",
     "en" to "English",
-    "fr" to "French",
-    "de" to "German",
-    "id" to "Indonesian",
-    "it" to "Italian",
-    "ja" to "Japanese",
-    "ko" to "Korean",
-    "pt" to "Portuguese (Brazil)",
-    "ru" to "Russian",
-    "es" to "Spanish",
-    "tr" to "Turkish",
-    "uk" to "Ukrainian",
-    "vi" to "Vietnamese"
+    "fr" to "French (Français)",
+    "de" to "German (Deutsch)",
+    "hi" to "Hindi (हिन्दी)",
+    "id" to "Indonesian (Bahasa Indonesia)",
+    "it" to "Italian (Italiano)",
+    "ja" to "Japanese (日本語)",
+    "ko" to "Korean (한국어)",
+    "pt-BR" to "Portuguese - Brazil (Português)",
+    "ru" to "Russian (Русский)",
+    "es" to "Spanish (Español)",
+    "tr" to "Turkish (Türkçe)",
+    "uk" to "Ukrainian (Українська)",
+    "vi" to "Vietnamese (Tiếng Việt)"
 )
 
+@Composable
+fun rememberLanguageState(
+    initialLanguage: String? = null
+): Pair<String, (String) -> Unit> {
+    val context = LocalContext.current
+    val localeManager = remember { LocaleManager.getInstance(context) }
+    var selectedLanguage by remember {
+        mutableStateOf(initialLanguage ?: localeManager.getSelectedLanguageCode())
+    }
+
+    return selectedLanguage to { newLanguage ->
+        // Primero actualizamos el estado local para reflejar inmediatamente el cambio en la UI
+        selectedLanguage = newLanguage
+
+        // Luego actualizamos la configuración, pero manejamos el reinicio con más cuidado
+        if (localeManager.updateLocale(newLanguage)) {
+            // Utilizamos un coroutine scope para el reinicio
+            val activity = context as? Activity
+            val currentContext = activity ?: context
+
+            // Mostramos un Toast para informar al usuario
+            Toast.makeText(
+                context,
+                "Changing language to ${LanguageCodeToName[newLanguage] ?: newLanguage}...",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            // Reiniciamos con un pequeño retraso
+            Handler(Looper.getMainLooper()).postDelayed({
+                localeManager.restartApp(currentContext)
+            }, 500)  // Damos tiempo para que el Toast se muestre
+        } else {
+            // Notificamos error
+            Toast.makeText(
+                context,
+                "Failed to update language. Please try again.",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
+}
+
+/**
+ * Base Application class that applies the saved locale
+ * Extend your Application class from this one
+ */
+abstract class ComposeLocaleAwareApplication : android.app.Application() {
+    override fun attachBaseContext(base: Context) {
+        // Apply the saved locale to the application context
+        val localeManager = LocaleManager(base)
+        val localeUpdatedContext = localeManager.applyLocaleToContext(base)
+        super.attachBaseContext(localeUpdatedContext)
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        // Initialize locale manager
+        LocaleManager.getInstance(this)
+    }
+}

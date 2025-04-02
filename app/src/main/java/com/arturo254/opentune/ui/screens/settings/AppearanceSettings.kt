@@ -641,12 +641,6 @@ fun ThumbnailCornerRadiusModal(
                             .padding(bottom = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = stringResource(id = R.string.customize_thumbnail_corner_radius),
-                            style = MaterialTheme.typography.titleLarge,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.weight(1f)
-                        )
 
                         IconButton(
                             onClick = onDismiss,
