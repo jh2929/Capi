@@ -825,7 +825,7 @@ fun TranslatePreference(uriHandler: UriHandler) {
                 TextButton(
                     onClick = {
                         showDialog = false
-                        uriHandler.openUri("https://crowdin.com/project/opentune/invite?h=8ddda5f5fcb5b4487443d7cdd45094fc2381037")
+                        uriHandler.openUri("https://poeditor.com/join/project/208BwCVazA")
                     }
                 ) {
                     Text("OK")
