@@ -244,6 +244,12 @@ enum class PlayerBackgroundStyle {
     BLUR,
 }
 
+
+
+enum class PlayerButtonsStyle {
+    DEFAULT,
+    SECONDARY,
+}
 val TopSize = stringPreferencesKey("topSize")
 val HistoryDuration = floatPreferencesKey("historyDuration")
 
@@ -255,6 +261,7 @@ val TranslateLyricsKey = booleanPreferencesKey("translateLyrics")
 
 val PlayerVolumeKey = floatPreferencesKey("playerVolume")
 val RepeatModeKey = intPreferencesKey("repeatMode")
+val PlayerButtonsStyleKey = stringPreferencesKey("player_buttons_style")
 
 val SearchSourceKey = stringPreferencesKey("searchSource")
 val SwipeThumbnailKey = booleanPreferencesKey("swipeThumbnail")

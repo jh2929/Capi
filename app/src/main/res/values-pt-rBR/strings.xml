@@ -408,4 +408,7 @@
     <string name="custom_value">Valor personalizado</string>
     <string name="adjust_radius">Ajustar raio</string>
     <string name="cancel">Cancelar</string>
+    <string name="player_buttons_style">Estilo dos botões do jogador</string>
+    <string name="default_style">Estilo padrão</string>
+    <string name="secondary_color_style">Estilo de cor secundária</string>
 </resources>

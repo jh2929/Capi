@@ -128,6 +128,8 @@ import com.arturo254.opentune.ui.theme.extractGradientColors
 import com.arturo254.opentune.utils.makeTimeString
 import com.arturo254.opentune.utils.rememberEnumPreference
 import com.arturo254.opentune.utils.rememberPreference
+import com.arturo254.opentune.constants.PlayerButtonsStyle
+import com.arturo254.opentune.constants.PlayerButtonsStyleKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -216,6 +218,11 @@ fun BottomSheetPlayer(
         mutableStateOf(false)
     }
 
+
+    val playerButtonsStyle by rememberEnumPreference(
+        key = PlayerButtonsStyleKey,
+        defaultValue = PlayerButtonsStyle.DEFAULT
+    )
     if (!canSkipNext && automix.isNotEmpty()) {
         playerConnection.service.addToQueueAutomix(automix[0], 0)
     }
@@ -331,6 +338,15 @@ fun BottomSheetPlayer(
                 }
             }
         }
+
+    val (textButtonColor, iconButtonColor) = when (playerButtonsStyle) {
+        PlayerButtonsStyle.DEFAULT -> Pair(TextBackgroundColor, icBackgroundColor)
+        PlayerButtonsStyle.SECONDARY -> Pair(
+            MaterialTheme.colorScheme.secondary,
+            MaterialTheme.colorScheme.onSecondary
+        )
+    }
+
 
     val download by LocalDownloadUtil.current.getDownload(mediaMetadata?.id ?: "")
         .collectAsState(initial = null)
@@ -653,7 +669,7 @@ fun BottomSheetPlayer(
                         Modifier
                             .size(42.dp)
                             .clip(RoundedCornerShape(24.dp))
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .background(textButtonColor)
                             .clickable {
                                 playerConnection.service.startRadioSeamlessly()
                             },
@@ -661,7 +677,7 @@ fun BottomSheetPlayer(
                     Image(
                         painter = painterResource(R.drawable.radio),
                         contentDescription = null,
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSecondaryContainer),
+                        colorFilter = ColorFilter.tint(iconButtonColor),
                         modifier =
                             Modifier
                                 .align(Alignment.Center)
@@ -676,7 +692,7 @@ fun BottomSheetPlayer(
                         Modifier
                             .size(42.dp)
                             .clip(RoundedCornerShape(24.dp))
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .background(textButtonColor)
                             .clickable {
                                 if (download?.state == Download.STATE_COMPLETED) {
                                     DownloadService.sendRemoveDownload(
@@ -716,7 +732,7 @@ fun BottomSheetPlayer(
                                 },
                             ),
                         contentDescription = null,
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSecondaryContainer),
+                        colorFilter = ColorFilter.tint(iconButtonColor),
                         modifier =
                             Modifier
                                 .align(Alignment.Center)
@@ -759,14 +775,14 @@ fun BottomSheetPlayer(
                                     Modifier
                                         .size(42.dp)
                                         .clip(RoundedCornerShape(24.dp))
-                                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                                        .background(textButtonColor)
                                         .clickable {
                                             showSleepTimerDialog = true
                                         },
                             ) {
                                 Image(
                                     painter = painterResource(R.drawable.bedtime),
-                                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSecondaryContainer),
+                                    colorFilter = ColorFilter.tint(iconButtonColor),
                                     contentDescription = null,
                                     modifier =
                                         Modifier
@@ -786,7 +802,7 @@ fun BottomSheetPlayer(
                         Modifier
                             .size(42.dp)
                             .clip(RoundedCornerShape(24.dp))
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .background(textButtonColor)
                             .clickable {
                                 menuState.show {
                                     PlayerMenu(
@@ -802,7 +818,7 @@ fun BottomSheetPlayer(
                     Image(
                         painter = painterResource(R.drawable.more_horiz),
                         contentDescription = null,
-                        colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSecondaryContainer),
+                        colorFilter = ColorFilter.tint(iconButtonColor),
                     )
                 }
             }
@@ -971,7 +987,7 @@ fun BottomSheetPlayer(
                     Modifier
                         .size(72.dp)
                         .clip(RoundedCornerShape(playPauseRoundness))
-                        .background(TextBackgroundColor)
+                        .background(textButtonColor)
                         .clickable {
                             if (playbackState == STATE_ENDED) {
                                 playerConnection.player.seekTo(0, 0)
@@ -995,7 +1011,7 @@ fun BottomSheetPlayer(
                             },
                         ),
                         contentDescription = null,
-                        colorFilter = ColorFilter.tint(icBackgroundColor),
+                        colorFilter = ColorFilter.tint(iconButtonColor),
                         modifier =
                         Modifier
                             .align(Alignment.Center)

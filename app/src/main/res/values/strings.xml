@@ -448,4 +448,7 @@
     <string name="adjust_radius">Adjust radius</string>
     <string name="cancel">Cancel</string>
     <string name="apply">Apply</string>
+    <string name="player_buttons_style">Player Buttons style</string>
+    <string name="default_style">Default style</string>
+    <string name="secondary_color_style">Secondary color style</string>
 </resources>

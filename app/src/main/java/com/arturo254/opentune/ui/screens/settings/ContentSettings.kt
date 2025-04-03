@@ -183,7 +183,7 @@ fun ContentSettings(
 
         ListPreference(
             title = { Text(stringResource(R.string.app_language)) },
-            icon = { Icon(painterResource(R.drawable.language), null) },
+            icon = { Icon(painterResource(R.drawable.translate), null) },
             selectedValue = selectedLanguage,
             values = LanguageCodeToName.keys.toList(),
             valueText = { LanguageCodeToName[it] ?: stringResource(R.string.system_default) },

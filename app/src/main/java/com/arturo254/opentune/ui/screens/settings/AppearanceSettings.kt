@@ -65,6 +65,8 @@ import com.arturo254.opentune.constants.LyricsClickKey
 import com.arturo254.opentune.constants.LyricsTextPositionKey
 import com.arturo254.opentune.constants.PlayerBackgroundStyle
 import com.arturo254.opentune.constants.PlayerBackgroundStyleKey
+import com.arturo254.opentune.constants.PlayerButtonsStyle
+import com.arturo254.opentune.constants.PlayerButtonsStyleKey
 import com.arturo254.opentune.constants.PureBlackKey
 import com.arturo254.opentune.constants.SliderStyle
 import com.arturo254.opentune.constants.SliderStyleKey
@@ -106,6 +108,11 @@ fun AppearanceSettings(
     val (darkMode, onDarkModeChange) = rememberEnumPreference(
         DarkModeKey,
         defaultValue = DarkMode.AUTO
+    )
+
+    val (playerButtonsStyle, onPlayerButtonsStyleChange) = rememberEnumPreference(
+        PlayerButtonsStyleKey,
+        defaultValue = PlayerButtonsStyle.DEFAULT
     )
     val (playerBackground, onPlayerBackgroundChange) =
         rememberEnumPreference(
@@ -355,6 +362,19 @@ fun AppearanceSettings(
                 // Aquí puedes manejar el valor del radio seleccionado
                 Timber.tag("Thumbnail").d("Radio seleccionado: $selectedRadius")
             }
+        )
+
+        EnumListPreference(
+            title = { Text(stringResource(R.string.player_buttons_style)) },
+            icon = { Icon(painterResource(R.drawable.palette), null) },
+            selectedValue = playerButtonsStyle,
+            onValueSelected = onPlayerButtonsStyleChange,
+            valueText = {
+                when (it) {
+                    PlayerButtonsStyle.DEFAULT -> stringResource(R.string.default_style)
+                    PlayerButtonsStyle.SECONDARY -> stringResource(R.string.secondary_color_style)
+                }
+            },
         )
 
 
@@ -634,25 +654,6 @@ fun ThumbnailCornerRadiusModal(
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Encabezado con mejor separación del contenido
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-
-                        IconButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Close,
-                                contentDescription = stringResource(id = R.string.close),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
 

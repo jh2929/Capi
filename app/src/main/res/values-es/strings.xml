@@ -431,4 +431,7 @@
     <string name="adjust_radius">Ajustar radio</string>
     <string name="cancel">Cancelar</string>
     <string name="apply">Aplicar</string>
+    <string name="player_buttons_style">Estilo de los botones del reproductor</string>
+    <string name="default_style">Estilo predeterminado</string>
+    <string name="secondary_color_style">Estilo de color secundario</string>
 </resources>

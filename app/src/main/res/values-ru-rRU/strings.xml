@@ -432,4 +432,7 @@
     <string name="custom_value">Пользовательское значение</string>
     <string name="adjust_radius">Настроить радиус</string>
     <string name="cancel">Отмена</string>
+    <string name="player_buttons_style">Стиль кнопок проигрывателя</string>
+    <string name="default_style">Стиль по умолчанию</string>
+    <string name="secondary_color_style">Вторичный цветовой стиль</string>
 </resources>
