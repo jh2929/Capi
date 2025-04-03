@@ -411,4 +411,12 @@
     <string name="player_buttons_style">Estilo dos botões do jogador</string>
     <string name="default_style">Estilo padrão</string>
     <string name="secondary_color_style">Estilo de cor secundária</string>
+    <string name="update_version">Atualizar v%1$s</string>
+    <string name="download_question">Gostaria de baixar a nova versão?</string>
+    <string name="downloadup">Baixar</string>
+    <string name="downloadingup">Baixando atualização...</string>
+    <string name="download_completed">Download concluído</string>
+    <string name="install">Instalar</string>
+    <string name="tap_to_update">Toque para atualizar</string>
+    <string name="download_errorup">Erro ao baixar a atualização</string>
 </resources>

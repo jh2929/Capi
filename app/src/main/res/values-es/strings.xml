@@ -434,4 +434,12 @@
     <string name="player_buttons_style">Estilo de los botones del reproductor</string>
     <string name="default_style">Estilo predeterminado</string>
     <string name="secondary_color_style">Estilo de color secundario</string>
+    <string name="update_version">Actualización v%1$s</string>
+    <string name="download_question">¿Quieres descargar la nueva versión?</string>
+    <string name="downloadup">Descargar</string>
+    <string name="downloadingup">Descargando actualización...</string>
+    <string name="download_completed">Descarga completada</string>
+    <string name="install">Instalar</string>
+    <string name="tap_to_update">Pulsar para actualizar</string>
+    <string name="download_errorup">Error al descargar la actualización</string>
 </resources>
