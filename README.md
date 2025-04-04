@@ -174,7 +174,7 @@ Todos los colaboradores deben adherirse a nuestro código de conducta que promue
 
 Si deseas ayudar a traducir OpenTune a tu idioma o mejorar las traducciones existentes, puedes:
 
-1. Unirte a nuestro proyecto en [Crowdin](https://crowdin.com/project/opentune)
+1. Unirte a nuestro proyecto en [POEditor](https://poeditor.com/join/project/208BwCVazA)
 2. Contactar directamente al desarrollador:
    - **Email**: [cervantesarturo254@gmail.com](mailto:cervantesarturo254@gmail.com)
 
