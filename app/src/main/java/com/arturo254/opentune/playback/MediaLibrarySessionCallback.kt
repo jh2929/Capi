@@ -152,7 +152,7 @@ constructor(
                         .map { it.toMediaItem(parentId) }
 
                     MusicService.ARTIST ->
-                        database.artistsByCreateDateAsc().first().map { artist ->
+                        database.artistsInAA().first().map { artist ->
                             browsableMediaItem(
                                 "${MusicService.ARTIST}/${artist.id}",
                                 artist.artist.name,
@@ -167,7 +167,7 @@ constructor(
                         }
 
                     MusicService.ALBUM ->
-                        database.albumsByCreateDateAsc().first().map { album ->
+                        database.albumsInAA().first().map { album ->
                             browsableMediaItem(
                                 "${MusicService.ALBUM}/${album.id}",
                                 album.album.title,
@@ -224,7 +224,7 @@ constructor(
                     else ->
                         when {
                             parentId.startsWith("${MusicService.ARTIST}/") ->
-                                database.artistSongsByCreateDateAsc(parentId.removePrefix("${MusicService.ARTIST}/"))
+                                database.artistSongsInAA(parentId.removePrefix("${MusicService.ARTIST}/"))
                                     .first().map {
                                     it.toMediaItem(parentId)
                                 }

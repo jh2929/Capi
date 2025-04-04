@@ -173,6 +173,13 @@ interface DatabaseDao {
 
     @Transaction
     @Query(
+        "SELECT song.* FROM song_artist_map " +
+                "JOIN song ON song_artist_map.songId = song.id WHERE artistId = :artistId ORDER BY inLibrary",
+    )
+    fun artistSongsInAA(artistId: String): Flow<List<Song>>
+
+    @Transaction
+    @Query(
         "SELECT song.* FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = :artistId AND inLibrary IS NOT NULL ORDER BY inLibrary",
     )
     fun artistSongsByCreateDateAsc(artistId: String): Flow<List<Song>>
@@ -523,7 +530,13 @@ interface DatabaseDao {
 
     @Transaction
     @Query(
-        "SELECT *, (SELECT COUNT(1) FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = artist.id AND song.inLibrary IS NOT NULL) AS songCount FROM artist WHERE songCount > 0 ORDER BY rowId",
+        "SELECT *, (SELECT COUNT(1) FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = artist.id) AS songCount FROM artist WHERE (songCount > 0 AND bookmarkedAt IS NOT NULL)  ORDER BY rowId DESC",
+    )
+    fun artistsInAA(): Flow<List<Artist>>
+
+    @Transaction
+    @Query(
+        "SELECT *, (SELECT COUNT(1) FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = artist.id AND song.inLibrary IS NOT NULL) AS songCount FROM artist WHERE songCount > 0  ORDER BY rowId",
     )
     fun artistsByCreateDateAsc(): Flow<List<Artist>>
 
@@ -643,6 +656,10 @@ interface DatabaseDao {
 
     @Query("SELECT *, (SELECT COUNT(1) FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = artist.id AND song.inLibrary IS NOT NULL) AS songCount FROM artist WHERE id = :id")
     fun artist(id: String): Flow<Artist?>
+
+    @Transaction
+    @Query("SELECT *, (SELECT COUNT(1) FROM song WHERE song.albumId = album.id) AS songCount FROM album WHERE album.bookmarkedAt IS NOT NULL ORDER BY rowId DESC")
+    fun albumsInAA(): Flow<List<Album>>
 
     @Transaction
     @Query("SELECT * FROM album WHERE EXISTS(SELECT * FROM song WHERE song.albumId = album.id AND song.inLibrary IS NOT NULL) ORDER BY rowId")
