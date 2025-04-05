@@ -174,9 +174,16 @@ Todos los colaboradores deben adherirse a nuestro código de conducta que promue
 
 Si deseas ayudar a traducir OpenTune a tu idioma o mejorar las traducciones existentes, puedes:
 
-1. Unirte a nuestro proyecto en [POEditor](https://poeditor.com/join/project/208BwCVazA)
-2. Contactar directamente al desarrollador:
+1. Unirte a nuestro proyecto en [POEditor](https://poeditor.com/join/project/208BwCVazA) (RECOMENDADO)
+2. 1. Unirte a nuestro proyecto en [Crowdin](https://crowdin.com/project/opentune)
+3. Contactar directamente al desarrollador:
    - **Email**: [cervantesarturo254@gmail.com](mailto:cervantesarturo254@gmail.com)
+     
+### Grupos Oficiales de Telegram:
+
+ [Chat](https://t.me/OpenTune_chat)
+
+ [Actualizaciones/Avisos](https://t.me/opentune_updates)
 
 ### Desarrollo
 
