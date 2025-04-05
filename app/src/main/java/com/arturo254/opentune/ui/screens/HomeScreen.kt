@@ -78,7 +78,6 @@ import com.arturo254.opentune.db.entities.Playlist
 import com.arturo254.opentune.db.entities.Song
 import com.arturo254.opentune.extensions.togglePlayPause
 import com.arturo254.opentune.models.toMediaMetadata
-import com.arturo254.opentune.playback.queues.ListQueue
 import com.arturo254.opentune.playback.queues.LocalAlbumRadio
 import com.arturo254.opentune.playback.queues.YouTubeAlbumRadio
 import com.arturo254.opentune.playback.queues.YouTubeQueue
@@ -458,7 +457,7 @@ fun HomeScreen(
             keepListening?.takeIf { it.isNotEmpty() }?.let { keepListening ->
                 item {
                     NavigationTitle(
-                        title = stringResource(R.string.keep_listening),
+                        title = stringResource(R.string.keeplistening),
                         modifier = Modifier.animateItem()
                     )
                 }

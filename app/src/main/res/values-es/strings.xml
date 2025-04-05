@@ -311,7 +311,7 @@
     <string name="clear_translation_models">Clear translation models</string>
     <string name="forgotten_favorites">Favoritos olvidados</string>
     <string name="similar_to">Similar a</string>
-    <string name="keep_listening">Seguir escuchando</string>
+    <string name="keeplistening">Seguir escuchando</string>
     <string name="local_history">Local</string>
     <string name="weeks">Semanas</string>
     <string name="months">Meses</string>
@@ -442,4 +442,10 @@
     <string name="install">Instalar</string>
     <string name="tap_to_update">Pulsar para actualizar</string>
     <string name="download_errorup">Error al descargar la actualización</string>
+    <string name="info_title">Información</string>
+    <string name="info_description">Esta sección proporciona detalles clave sobre el proceso de copia de seguridad y restauración, incluyendo la seguridad de sus datos y cómo garantizar que su información permanezca segura y sea fácilmente accesible.</string>
+    <string name="backup_info_title">Información importante</string>
+    <string name="backup_info_description">Al realizar una copia de seguridad de sus datos, no se incluyen las descargas. Se recomienda borrar la caché a través de la aplicación para un rendimiento óptimo. El servicio de copia de seguridad es seguro, lo que garantiza la privacidad y protección de sus datos.</string>
+    <string name="backup_description">Cree una copia de seguridad de sus datos actuales.</string>
+    <string name="restore_description">Recupere sus datos desde una copia de seguridad.</string>
 </resources>

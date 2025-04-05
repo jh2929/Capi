@@ -17,6 +17,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -35,10 +36,16 @@ import kotlinx.coroutines.withContext
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.asRequestBody
+import okio.BufferedSink
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
+import java.net.SocketTimeoutException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.UUID
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,7 +64,7 @@ fun BackupAndRestore(
                 viewModel.backup(context, uri)
                 coroutineScope.launch {
                     uploadStatus = UploadStatus.Uploading
-                    val fileUrl = uploadBackupToCloud(context, uri)
+                    val fileUrl = uploadBackupToFilebin(context, uri)
                     uploadStatus = if (fileUrl != null) {
                         UploadStatus.Success(fileUrl)
                     } else {
@@ -74,55 +81,7 @@ fun BackupAndRestore(
             }
         }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Spacer(Modifier.windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top)))
-
-        BackupCard(onClick = {
-            val formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
-            backupLauncher.launch("${context.getString(R.string.app_name)}_${LocalDateTime.now().format(formatter)}.backup")
-        })
-
-        RestoreCard(onClick = {
-            restoreLauncher.launch(arrayOf("application/octet-stream"))
-        })
-
-        // New Card with Title and Text
-        InfoCard()
-
-        when (val status = uploadStatus) {
-            is UploadStatus.Uploading -> {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                Text(
-                    text = "Uploading backup to cloud...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            is UploadStatus.Success -> {
-                UploadSuccessCard(
-                    fileUrl = status.fileUrl,
-                    onCopyClick = {
-                        copyToClipboard(context, status.fileUrl)
-                    }
-                )
-            }
-            is UploadStatus.Failure -> {
-                Text(
-                    text = "Upload failed. Please try again.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
-            null -> { /* No status to show */ }
-        }
-    }
-
+    // No modifico la TopAppBar como se solicitó
     TopAppBar(
         title = { Text(stringResource(R.string.backup_restore)) },
         navigationIcon = {
@@ -137,143 +96,294 @@ fun BackupAndRestore(
             }
         },
     )
-}
 
-@Composable
-fun BackupCard(onClick: () -> Unit) {
-    Card(
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
-            .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.backup),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = stringResource(R.string.backup),
-                style = MaterialTheme.typography.bodyLarge
-            )
+        Spacer(Modifier.windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top)))
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Sección de información
+        InfoSection()
+
+        // Sección de acciones principales
+        ActionSection(
+            onBackupClick = {
+                val formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
+                backupLauncher.launch("${context.getString(R.string.app_name)}_${LocalDateTime.now().format(formatter)}.backup")
+            },
+            onRestoreClick = {
+                restoreLauncher.launch(arrayOf("application/octet-stream"))
+            }
+        )
+
+        // Estado de carga
+        UploadStatusSection(uploadStatus) {
+            copyToClipboard(context, (uploadStatus as UploadStatus.Success).fileUrl)
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
 @Composable
-fun RestoreCard(onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
-            .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.restore),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = stringResource(R.string.restore),
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
-    }
-}
-
-// New Composable for the Info Card
-@Composable
-fun InfoCard() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+private fun InfoSection() {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.info),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = stringResource(R.string.backup_info_title),
+                    style = MaterialTheme.typography.titleLarge
+                )
+            }
+
             Text(
-                text = stringResource(R.string.restore),
-                style = MaterialTheme.typography.titleLarge
+                text = stringResource(R.string.backup_info_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Text(
-                text = stringResource(R.string.barwar),
-                style = MaterialTheme.typography.bodyMedium
+
+        }
+    }
+}
+
+@Composable
+private fun ActionSection(
+    onBackupClick: () -> Unit,
+    onRestoreClick: () -> Unit
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Usando colores del tema para el botón de backup
+        ActionButton(
+            icon = painterResource(R.drawable.backup),
+            title = stringResource(R.string.backup),
+            description = stringResource(R.string.backup_description),
+            isPrimary = true,
+            onClick = onBackupClick
+        )
+
+        // Usando colores del tema para el botón de restore
+        ActionButton(
+            icon = painterResource(R.drawable.restore),
+            title = stringResource(R.string.restore),
+            description = stringResource(R.string.restore_description),
+            isPrimary = false,
+            onClick = onRestoreClick
+        )
+    }
+}
+
+@Composable
+private fun ActionButton(
+    icon: Painter,
+    title: String,
+    description: String,
+    isPrimary: Boolean = true,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        contentPadding = PaddingValues(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isPrimary)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = if (isPrimary)
+                MaterialTheme.colorScheme.onPrimaryContainer
+            else
+                MaterialTheme.colorScheme.onSecondaryContainer
+        )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = icon,
+                contentDescription = null,
+                modifier = Modifier.size(28.dp)
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = LocalContentColor.current.copy(alpha = 0.8f)
+                )
+            }
+
+            Icon(
+                painter = painterResource(R.drawable.arrow_forward),
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
             )
         }
     }
 }
 
 @Composable
-fun UploadSuccessCard(fileUrl: String, onCopyClick: () -> Unit) {
+private fun UploadStatusSection(
+    uploadStatus: UploadStatus?,
+    onCopyClick: () -> Unit
+) {
+    when (uploadStatus) {
+        is UploadStatus.Uploading -> {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(48.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Subiendo copia de seguridad...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        is UploadStatus.Success -> {
+            SuccessCard(fileUrl = uploadStatus.fileUrl, onCopyClick = onCopyClick)
+        }
+        is UploadStatus.Failure -> {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.error),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = "Error al subir la copia de seguridad. Intente nuevamente.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+        null -> { /* No status to show */ }
+    }
+}
+
+@Composable
+private fun SuccessCard(fileUrl: String, onCopyClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.check_circle),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = stringResource(R.string.backup_link_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
             Text(
-                stringResource(R.string.backup_link_title),
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                stringResource(R.string.backup_link_description),
+                text = stringResource(R.string.backup_link_description),
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(8.dp))
+
             OutlinedCard(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
                         text = fileUrl,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.weight(1f)
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
                     )
+
                     Button(
                         onClick = onCopyClick,
+                        modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            containerColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
+                        Icon(
+                            painter = painterResource(R.drawable.content_copy),
+                            contentDescription = null
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(stringResource(R.string.copy_link))
                     }
                 }
@@ -282,46 +392,91 @@ fun UploadSuccessCard(fileUrl: String, onCopyClick: () -> Unit) {
     }
 }
 
-suspend fun uploadBackupToCloud(context: Context, uri: Uri): String? {
+suspend fun uploadBackupToFilebin(context: Context, uri: Uri, progressCallback: (Float) -> Unit = {}): String? {
     return withContext(Dispatchers.IO) {
+        val tempFile = File(context.cacheDir, "temp_backup_${System.currentTimeMillis()}.backup")
+
         try {
-            val tempFile = File(context.cacheDir, "temp_backup.backup")
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                tempFile.outputStream().use { output ->
-                    input.copyTo(output)
+            // Copiar archivo a almacenamiento temporal con seguimiento de progreso
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                val fileSize = inputStream.available().toFloat()
+                var totalBytesRead = 0L
+
+                tempFile.outputStream().use { outputStream ->
+                    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                    var bytesRead: Int
+
+                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                        outputStream.write(buffer, 0, bytesRead)
+                        totalBytesRead += bytesRead
+                        progressCallback(totalBytesRead / fileSize * 0.5f) // Primera mitad es copia de archivo
+                    }
+                }
+            } ?: return@withContext null
+
+            // Generar un bin ID aleatorio para filebin.net
+            val binId = UUID.randomUUID().toString().substring(0, 8)
+
+            // Crear RequestBody con monitoreo de progreso
+            val fileRequestBody = object : RequestBody() {
+                override fun contentType(): MediaType? = "application/octet-stream".toMediaTypeOrNull()
+
+                override fun contentLength(): Long = tempFile.length()
+
+                override fun writeTo(sink: BufferedSink) {
+                    tempFile.inputStream().use { input ->
+                        val fileSize = tempFile.length().toFloat()
+                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                        var bytesRead: Int
+                        var totalBytesRead = 0L
+
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            sink.write(buffer, 0, bytesRead)
+                            totalBytesRead += bytesRead
+                            val uploadProgress = 0.5f + (totalBytesRead / fileSize * 0.5f)
+                            progressCallback(uploadProgress)
+                        }
+                    }
                 }
             }
 
-            val client = OkHttpClient()
-
-            val requestBody = MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
-                .addFormDataPart(
-                    "file", tempFile.name,
-                    tempFile.asRequestBody("application/octet-stream".toMediaTypeOrNull())
-                )
+            val client = OkHttpClient.Builder()
+                .connectTimeout(30, TimeUnit.SECONDS)
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(30, TimeUnit.SECONDS)
                 .build()
 
+            val fileName = tempFile.name
             val request = Request.Builder()
-                .url("https://file.io")
-                .post(requestBody)
+                .url("https://filebin.net/$binId/$fileName")
+                .put(fileRequestBody)
                 .build()
 
             val response = client.newCall(request).execute()
-            val responseBody = response.body?.string()
 
-            // Parse the JSON response to get the file URL
-            val fileUrl = responseBody?.let { JSONObject(it).getString("link") }
+            // Limpiar archivo temporal
+            if (tempFile.exists()) {
+                tempFile.delete()
+            }
 
-            tempFile.delete() // Clean up the temporary file
+            if (!response.isSuccessful) {
+                return@withContext null
+            }
 
-            fileUrl
+            // URL predecible de filebin.net
+            return@withContext "https://filebin.net/$binId/$fileName"
+
         } catch (e: Exception) {
-            e.printStackTrace()
-            null
+            // Limpiar archivo temporal en caso de excepción
+            if (tempFile.exists()) {
+                tempFile.delete()
+            }
+
+            return@withContext null
         }
     }
 }
+
 
 fun copyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

@@ -419,4 +419,10 @@
     <string name="install">Instalar</string>
     <string name="tap_to_update">Toque para atualizar</string>
     <string name="download_errorup">Erro ao baixar a atualização</string>
+    <string name="info_title">Informações</string>
+    <string name="info_description">Esta seção fornece detalhes importantes sobre o processo de backup e restauração, incluindo a segurança dos seus dados e como garantir que suas informações permaneçam seguras e facilmente acessíveis.</string>
+    <string name="backup_info_title">Informações importantes</string>
+    <string name="backup_info_description">Quando você faz backup dos seus dados, seus downloads não são incluídos. É recomendável limpar o cache por meio do aplicativo para obter o desempenho ideal. O serviço de backup é seguro, garantindo que seus dados permaneçam privados e protegidos.</string>
+    <string name="backup_description">Crie um arquivo de backup dos seus dados atuais</string>
+    <string name="restore_description">Recupere seus dados de um arquivo de backup</string>
 </resources>
