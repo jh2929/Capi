@@ -1178,7 +1178,7 @@ fun NotificationPermissionPreference() {
     }
 
     SwitchPreference(
-        title = { Text("Activar notificaciones") },
+        title = { Text(stringResource(R.string.notification)) },
         icon = {
             Icon(
                 painter = painterResource(id = if (permissionGranted) R.drawable.notification_on else R.drawable.notification_off),

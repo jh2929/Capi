@@ -6,6 +6,7 @@
     <string name="artists">Καλλιτέχνες</string>
     <string name="albums">Άλμπουμς</string>
     <string name="playlists">Λίστες</string>
+    <string name="explore">Εξερεύνηση</string>
     <!-- Top bar -->
     <plurals name="n_selected">
         <item quantity="one">%d επιλέχθηκε</item>
@@ -21,6 +22,7 @@
     <string name="new_release_albums">Νέες εκδόσεις</string>
     <string name="forgotten_favorites">Ξεχασμένα αγαπημένα</string>
     <string name="similar_to">Παρόμοια με</string>
+    <string name="keep_listening">Συνεχίστε να ακούτε</string>
     <string name="your_ytb_playlists">Ο λογαριασμός σας στο YouTube</string>
     <!-- History -->
     <string name="today">Σήμερα</string>
@@ -106,7 +108,6 @@
     <string name="advanced">Για προχωρημένους</string>
     <string name="select">Επιλογή όλων</string>
     <string name="like_all">Αγαπημένα όλα</string>
-    <string name="dislike_all">Dislike all</string>
     <string name="tempo_and_pitch">Ρυθμός και Τάση</string>
     <!-- Sort menu -->
     <string name="sort_by_create_date">Ημερομηνία προσθήκης</string>
@@ -266,7 +267,6 @@
     <string name="google">Google</string>
     <string name="discord">Discord</string>
     <string name="login">Σύνδεση</string>
-    <string name="advanced_login">Advanced login (token)</string>
     <string name="logout">Αποσυνδέση</string>
     <string name="not_logged_in">Δεν έχει γίνει είσοδος</string>
     <string name="token_hidden">Πατήστε για να εμφανιστεί το διακριτικό</string>
@@ -365,37 +365,8 @@
     <string name="past_year">Προηγούμενο έτος</string>
     <string name="top_length">Μήκος της Κορυφαίας Λίστας Μου</string>
     <string name="history_duration">Διάρκεια ιστορικού</string>
-    <string name="contributors">contributors</string>
-    <string name="Donate">Donate</string>
-    <string name="Telegramchanel">Telegram Chanel</string>
-    <string name="contribution">Contribution</string>
-    <string name="Hi">Hi</string>
-    <string name="NewVersion">New Version</string>
-    <string name="Changelog">Changelog</string>
-    <string name="changelogs">changelogs</string>
-    <string name="no_changes">no changes</string>
-    <string name="Translate">Translate</string>
-    <string name="Redirección">Redirección</string>
-    <string name="poeditor_redirect">You are about to be redirected to poeditor.com</string>
-    <string name="barwar">Attention when restoring the backups, the previously downloaded songs are not downloaded. it is HIGHLY RECOMMENDED to play the restored songs in order to avoid any download errors.</string>
-    <string name="backup_link_title">Backup uploaded successfully!</string>
-    <string name="backup_link_description">Your backup will be available for 14 days.</string>
-    <string name="copy_link">Copy Link</string>
-    <string name="customize_thumbnail_corner_radius">Customize thumbnail corner radius</string>
-    <string name="corner_radius_label">Corner radius: %1$s</string>
-    <string name="unmute">Unmute</string>
     <plurals name="seconds">
         <item quantity="one">1 δευτερόλεπτο</item>
         <item quantity="other">%d δευτερόλεπτα</item>
     </plurals>
-    <string name="mute">Mute</string>
-    <string name="explore">Εξερεύνηση</string>
-    <string name="custom_avatar">Custom avatar (BETA)</string>
-    <string name="custom_avatar_beta">Custom avatar (BETA)</string>
-    <string name="select_image">Select image</string>
-    <string name="default_avatar">Default avatar</string>
-    <string name="restore_default_avatar">Restore default avatar</string>
-    <string name="SearchResutls">Search Results</string>
-    <string name="Sujestions">Suggestions</string>
-    <string name="SearchHistory">Search History</string>
 </resources>

@@ -457,7 +457,7 @@ fun HomeScreen(
             keepListening?.takeIf { it.isNotEmpty() }?.let { keepListening ->
                 item {
                     NavigationTitle(
-                        title = stringResource(R.string.keeplistening),
+                        title = stringResource(R.string.keep_listening),
                         modifier = Modifier.animateItem()
                     )
                 }

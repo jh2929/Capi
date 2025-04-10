@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -17,12 +18,46 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -35,11 +70,19 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.FileProvider
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.arturo254.innertube.utils.parseCookieString
 import com.arturo254.opentune.BuildConfig
@@ -51,10 +94,21 @@ import com.arturo254.opentune.ui.component.IconButton
 import com.arturo254.opentune.ui.component.PreferenceEntry
 import com.arturo254.opentune.ui.utils.backToMain
 import com.arturo254.opentune.utils.rememberPreference
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
+import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.ConcurrentHashMap
+
 
 @SuppressLint("ObsoleteSdkInt")
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
@@ -110,7 +164,7 @@ fun VersionCard(uriHandler: UriHandler) {
         ) {
             Spacer(Modifier.height(3.dp))
             Text(
-                text = " Version: $appVersion",
+                text = "${stringResource(R.string.Version)} $appVersion",
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontSize = 17.sp,
                     fontFamily = FontFamily.Monospace
@@ -693,17 +747,343 @@ fun SettingsScreen(
     )
 }
 
+
+/**
+ * Clase de estado para el changelog que contiene toda la información necesaria
+ * para representar los diferentes estados de la UI
+ */
+data class ChangelogState(
+    val changes: String = "", // Ahora guardamos el markdown completo en lugar de solo una lista
+    val isLoading: Boolean = true,
+    val error: String? = null
+)
+
+/**
+ * Clase ViewModel para manejar la lógica de negocio y el estado de la UI
+ */
+class ChangelogViewModel : ViewModel() {
+    private val _uiState = MutableStateFlow(ChangelogState())
+    val uiState: StateFlow<ChangelogState> = _uiState.asStateFlow()
+
+    // Cache simple para evitar llamadas repetidas a la API
+    private val cache = ConcurrentHashMap<String, Pair<String, Long>>()
+    private val cacheTimeMs = 30 * 60 * 1000 // 30 minutos
+
+    fun loadChangelog(repoOwner: String, repoName: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+
+            try {
+                val cacheKey = "$repoOwner/$repoName"
+
+                // Verificar si hay datos en caché
+                val cachedData = getCachedChanges(cacheKey)
+                if (cachedData != null) {
+                    _uiState.update {
+                        it.copy(
+                            changes = cachedData,
+                            isLoading = false
+                        )
+                    }
+                    return@launch
+                }
+
+                // Si no hay caché, hacer la petición
+                val markdownContent = fetchReleaseMarkdown(repoOwner, repoName)
+
+                // Guardar en caché
+                cacheChanges(cacheKey, markdownContent)
+
+                _uiState.update {
+                    it.copy(
+                        changes = markdownContent,
+                        isLoading = false
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e("ChangelogViewModel", "Error cargando changelog", e)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Error al cargar los cambios: ${e.message}"
+                    )
+                }
+            }
+        }
+    }
+
+    private fun getCachedChanges(key: String): String? {
+        val cached = cache[key] ?: return null
+        val (content, timestamp) = cached
+
+        // Comprobar si el caché ha expirado
+        if (System.currentTimeMillis() - timestamp > cacheTimeMs) {
+            cache.remove(key)
+            return null
+        }
+
+        return content
+    }
+
+    private fun cacheChanges(key: String, content: String) {
+        cache[key] = content to System.currentTimeMillis()
+    }
+
+    /**
+     * Función para hacer la petición a la API de GitHub con reintentos
+     */
+    private suspend fun fetchReleaseMarkdown(owner: String, repo: String): String =
+        withContext(Dispatchers.IO) {
+            repeat(3) { attempt ->
+                try {
+                    val url = URL("https://api.github.com/repos/$owner/$repo/releases/latest")
+                    val connection = url.openConnection() as HttpURLConnection
+                    connection.connectTimeout = 15000 // 15 segundos de timeout
+                    connection.readTimeout = 15000
+                    connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
+
+                    if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                        if (attempt == 2) throw IOException("Error HTTP: ${connection.responseCode}")
+                        delay(1000)
+
+                    }
+
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    val jsonObject = JSONObject(response)
+                    return@withContext jsonObject.optString("body", "")
+                } catch (e: Exception) {
+                    if (attempt == 2) throw e
+                    delay(1000)
+                }
+            }
+
+            throw IOException("No se pudo obtener la información después de los reintentos")
+        }
+}
+
+/**
+ * Componente para renderizar Markdown en Jetpack Compose
+ */
+@Composable
+fun MarkdownText(
+    markdown: String,
+    modifier: Modifier = Modifier
+) {
+    val lines = markdown.lines()
+
+    Column(modifier = modifier) {
+        for (line in lines) {
+            val trimmedLine = line.trim()
+            when {
+                trimmedLine.startsWith("# ") -> {
+                    // Encabezado H1
+                    Text(
+                        text = trimmedLine.substring(2),
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+                trimmedLine.startsWith("## ") -> {
+                    // Encabezado H2
+                    Text(
+                        text = trimmedLine.substring(3),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(vertical = 6.dp)
+                    )
+                }
+                trimmedLine.startsWith("### ") -> {
+                    // Encabezado H3
+                    Text(
+                        text = trimmedLine.substring(4),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+                trimmedLine.startsWith("- ") || trimmedLine.startsWith("* ") -> {
+                    // Lista no ordenada
+                    Row(
+                        modifier = Modifier.padding(vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "•",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(end = 8.dp, top = 2.dp)
+                        )
+
+                        // Procesar el contenido de la lista para darle formato
+                        val itemContent = trimmedLine.substring(2)
+                        val annotatedString = buildAnnotatedString {
+                            var currentIndex = 0
+
+                            // Buscar texto en negrita: **texto** o __texto__
+                            val boldPattern = Regex("(\\*\\*|__)(.+?)(\\*\\*|__)")
+                            val boldMatches = boldPattern.findAll(itemContent)
+
+                            for (match in boldMatches) {
+                                // Añadir texto regular antes del formato
+                                if (match.range.first > currentIndex) {
+                                    append(itemContent.substring(currentIndex, match.range.first))
+                                }
+
+                                // Añadir texto en negrita
+                                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                    append(match.groupValues[2])
+                                }
+
+                                currentIndex = match.range.last + 1
+                            }
+
+                            // Añadir el resto del texto
+                            if (currentIndex < itemContent.length) {
+                                append(itemContent.substring(currentIndex))
+                            }
+                        }
+
+                        Text(
+                            text = annotatedString,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = 14.sp,
+                                fontFamily = FontFamily.Monospace
+                            ),
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
+                trimmedLine.startsWith("> ") -> {
+                    // Cita
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = trimmedLine.substring(2),
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontStyle = FontStyle.Italic
+                            ),
+                            modifier = Modifier.padding(8.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                trimmedLine.startsWith("```") -> {
+                    // Bloque de código - simplemente lo mostramos como texto monoespaciado
+                    // En una implementación completa, manejarías múltiples líneas
+                    if (trimmedLine.length > 3) {
+                        Text(
+                            text = "Código: " + trimmedLine.substring(3),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontFamily = FontFamily.Monospace
+                            ),
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                }
+                trimmedLine.startsWith("---") -> {
+                    // Separador horizontal
+                    Divider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+                trimmedLine.isNotEmpty() -> {
+                    // Texto normal
+                    val annotatedString = buildAnnotatedString {
+                        var currentIndex = 0
+
+                        // Procesar negrita: **texto** o __texto__
+                        val boldPattern = Regex("(\\*\\*|__)(.+?)(\\*\\*|__)")
+                        val boldMatches = boldPattern.findAll(trimmedLine)
+
+                        for (match in boldMatches) {
+                            // Añadir texto regular antes del formato
+                            if (match.range.first > currentIndex) {
+                                append(trimmedLine.substring(currentIndex, match.range.first))
+                            }
+
+                            // Añadir texto en negrita
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append(match.groupValues[2])
+                            }
+
+                            currentIndex = match.range.last + 1
+                        }
+
+                        // Procesar cursiva: *texto* o _texto_ (si no está dentro de negrita)
+                        if (currentIndex < trimmedLine.length) {
+                            val remainingText = trimmedLine.substring(currentIndex)
+                            val italicPattern = Regex("(\\*|_)([^*_]+?)(\\*|_)")
+                            val italicMatches = italicPattern.findAll(remainingText)
+
+                            var italicIndex = 0
+                            for (match in italicMatches) {
+                                // Añadir texto regular antes del formato
+                                if (match.range.first > italicIndex) {
+                                    append(remainingText.substring(italicIndex, match.range.first))
+                                }
+
+                                // Añadir texto en cursiva
+                                withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+                                    append(match.groupValues[2])
+                                }
+
+                                italicIndex = match.range.last + 1
+                            }
+
+                            // Añadir el resto del texto
+                            if (italicIndex < remainingText.length) {
+                                append(remainingText.substring(italicIndex))
+                            }
+                        }
+
+                        // Si no se ha procesado ningún formato, simplemente añadir el texto original
+                        if (length == 0) {
+                            append(trimmedLine)
+                        }
+                    }
+
+                    Text(
+                        text = annotatedString,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    )
+                }
+                else -> {
+                    // Línea vacía - espacio
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Botón de preferencia que muestra un modal con el changelog
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ChangelogButtonWithPopup() {
+fun ChangelogButtonWithPopup(
+    viewModel: ChangelogViewModel = viewModel()
+) {
     var showBottomSheet by remember { mutableStateOf(false) }
 
+    // Botón en las preferencias
     PreferenceEntry(
         title = { Text(stringResource(R.string.Changelog)) },
         icon = { Icon(painterResource(R.drawable.schedule), null) },
-        onClick = { showBottomSheet = true }
+        onClick = {
+            showBottomSheet = true
+        }
     )
 
+    // Modal de bottom sheet que se muestra al hacer clic
     if (showBottomSheet) {
         ModalBottomSheet(
             onDismissRequest = { showBottomSheet = false },
@@ -719,7 +1099,7 @@ fun ChangelogButtonWithPopup() {
                     modifier = Modifier
                         .verticalScroll(rememberScrollState())
                 ) {
-                    ChangelogScreen()
+                    ChangelogScreen(viewModel)
                     Spacer(Modifier.height(20.dp))
                 }
             }
@@ -727,20 +1107,20 @@ fun ChangelogButtonWithPopup() {
     }
 }
 
+/**
+ * Tarjeta que muestra el changelog con formato Markdown
+ */
 @Composable
-fun AutoChangelogCard(repoOwner: String, repoName: String) {
-    var changes by remember { mutableStateOf<List<String>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
+fun AutoChangelogCard(
+    viewModel: ChangelogViewModel,
+    repoOwner: String,
+    repoName: String
+) {
+    val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(key1 = Unit) {
-        try {
-            changes = fetchLatestChanges(repoOwner, repoName)
-            isLoading = false
-        } catch (e: Exception) {
-            error = "Error al cargar los cambios: ${e.message}"
-            isLoading = false
-        }
+    // Cargar los cambios cuando el componente se compone por primera vez
+    LaunchedEffect(key1 = repoOwner, key2 = repoName) {
+        viewModel.loadChangelog(repoOwner, repoName)
     }
 
     ElevatedCard(
@@ -762,23 +1142,40 @@ fun AutoChangelogCard(repoOwner: String, repoName: String) {
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(Modifier.height(8.dp))
-            when {
-                isLoading -> CircularProgressIndicator()
-                error != null -> Text(
-                    text = error!!,
-                    color = MaterialTheme.colorScheme.error
-                )
 
-                changes.isEmpty() -> Text(stringResource(R.string.no_changes))
-                else -> changes.forEach { change ->
-                    Text(
-                        text = "• $change",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = 14.sp,
-                            fontFamily = FontFamily.Monospace
-                        ),
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.padding(vertical = 2.dp)
+            when {
+                uiState.isLoading -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+                uiState.error != null -> {
+                    Column {
+                        Text(
+                            text = uiState.error!!,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        TextButton(onClick = {
+                            viewModel.loadChangelog(repoOwner, repoName)
+                        }) {
+                            Text("Reintentar")
+                        }
+                    }
+                }
+                uiState.changes.isEmpty() -> {
+                    Text(stringResource(R.string.no_changes))
+                }
+                else -> {
+                    // Renderizar el markdown
+                    MarkdownText(
+                        markdown = uiState.changes,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -786,24 +1183,16 @@ fun AutoChangelogCard(repoOwner: String, repoName: String) {
     }
 }
 
-suspend fun fetchLatestChanges(owner: String, repo: String): List<String> =
-    withContext(Dispatchers.IO) {
-        val url = URL("https://api.github.com/repos/$owner/$repo/releases/latest")
-        val connection = url.openConnection()
-        connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
-
-        val response = connection.getInputStream().bufferedReader().use { it.readText() }
-        val jsonObject = JSONObject(response)
-        val body = jsonObject.getString("body")
-
-        return@withContext body.lines()
-            .filter { it.trim().startsWith("-") || it.trim().startsWith("*") }
-            .map { it.trim().removePrefix("-").removePrefix("*").trim() }
-    }
-
+/**
+ * Pantalla principal de changelog
+ */
 @Composable
-fun ChangelogScreen() {
-    AutoChangelogCard(repoOwner = "Arturo254", repoName = "OpenTune")
+fun ChangelogScreen(viewModel: ChangelogViewModel = viewModel()) {
+    AutoChangelogCard(
+        viewModel = viewModel,
+        repoOwner = "Arturo254",
+        repoName = "OpenTune"
+    )
 }
 
 @Composable

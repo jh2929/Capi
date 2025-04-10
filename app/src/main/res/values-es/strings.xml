@@ -23,6 +23,7 @@
     <string name="new_release_albums">Nuevos lanzamientos</string>
 
     <!-- History -->
+    <string name="keep_listening">Seguir escuchando</string>
     <string name="your_ytb_playlists">De su cuenta de youtube</string>
     <string name="today">Hoy</string>
     <string name="yesterday">Ayer</string>
@@ -311,7 +312,6 @@
     <string name="clear_translation_models">Clear translation models</string>
     <string name="forgotten_favorites">Favoritos olvidados</string>
     <string name="similar_to">Similar a</string>
-    <string name="keeplistening">Seguir escuchando</string>
     <string name="local_history">Local</string>
     <string name="weeks">Semanas</string>
     <string name="months">Meses</string>
@@ -421,31 +421,33 @@
     <string name="SearchResutls">Resultados de búsqueda</string>
     <string name="Sujestions">Sugerencias</string>
     <string name="SearchHistory">Historial de búsqueda</string>
+    <string name="apply">Aplicar</string>
     <string name="collapse">Contraer</string>
-    <string name="expand">Ampliar</string>
-    <string name="reset_to_default">Restablecer por defecto</string>
+    <string name="expand">Expandir</string>
+    <string name="reset_to_default">Restablecer valores predeterminados</string>
     <string name="Presets">Preajustes</string>
-    <string name="custom">Personalizar</string>
+    <string name="custom">Personalizado</string>
     <string name="close">Cerrar</string>
     <string name="custom_value">Valor personalizado</string>
     <string name="adjust_radius">Ajustar radio</string>
     <string name="cancel">Cancelar</string>
-    <string name="apply">Aplicar</string>
+    <string name="restore_description">Recupere sus datos desde una copia de seguridad</string>
+    <string name="link_copied">Enlace copiado</string>
     <string name="player_buttons_style">Estilo de los botones del reproductor</string>
     <string name="default_style">Estilo predeterminado</string>
     <string name="secondary_color_style">Estilo de color secundario</string>
-    <string name="update_version">Actualización v%1$s</string>
-    <string name="download_question">¿Quieres descargar la nueva versión?</string>
+    <string name="backup_info_title">Información importante</string>
+    <string name="backup_info_description">Al realizar una copia de seguridad de sus datos, no se incluyen las descargas. Se recomienda borrar la caché a través de la aplicación para un rendimiento óptimo. El servicio de copias de seguridad es seguro y garantiza la privacidad y protección de sus datos.</string>
+    <string name="backup_description">Cree una copia de seguridad de sus datos actuales</string>
+    <string name="update_version">Actualizar v%1$s</string>
+    <string name="download_question">¿Desea descargar la nueva versión?</string>
     <string name="downloadup">Descargar</string>
     <string name="downloadingup">Descargando actualización...</string>
     <string name="download_completed">Descarga completada</string>
     <string name="install">Instalar</string>
-    <string name="tap_to_update">Pulsar para actualizar</string>
     <string name="download_errorup">Error al descargar la actualización</string>
+    <string name="tap_to_update">Pulse para actualizar</string>
     <string name="info_title">Información</string>
     <string name="info_description">Esta sección proporciona detalles clave sobre el proceso de copia de seguridad y restauración, incluyendo la seguridad de sus datos y cómo garantizar que su información permanezca segura y sea fácilmente accesible.</string>
-    <string name="backup_info_title">Información importante</string>
-    <string name="backup_info_description">Al realizar una copia de seguridad de sus datos, no se incluyen las descargas. Se recomienda borrar la caché a través de la aplicación para un rendimiento óptimo. El servicio de copia de seguridad es seguro, lo que garantiza la privacidad y protección de sus datos.</string>
-    <string name="backup_description">Cree una copia de seguridad de sus datos actuales.</string>
-    <string name="restore_description">Recupere sus datos desde una copia de seguridad.</string>
+    <string name="redireccion">Redireccion</string>
 </resources>
