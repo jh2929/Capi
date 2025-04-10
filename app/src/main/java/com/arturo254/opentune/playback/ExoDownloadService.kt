@@ -14,7 +14,6 @@ import androidx.media3.exoplayer.offline.DownloadService
 import androidx.media3.exoplayer.scheduler.PlatformScheduler
 import androidx.media3.exoplayer.scheduler.Scheduler
 import com.arturo254.opentune.R
-
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -198,7 +199,12 @@ fun HistoryScreen(
                         listOf(HistorySource.LOCAL to stringResource(R.string.local_history))
                     },
                     currentValue = historySource,
-                    onValueUpdate = { viewModel.historySource.value = it }
+                    onValueUpdate = {
+                        viewModel.historySource.value = it
+                        if (it == HistorySource.REMOTE){
+                            viewModel.fetchRemoteHistory()
+                        }
+                    }
                 )
             }
 
@@ -276,10 +282,9 @@ fun HistoryScreen(
                         )
                     }
 
-                    items(
+                    itemsIndexed(
                         items = wrappedItems,
-                        key = { "${dateAgo}_${it.item.event.id}" }
-                    ) { wrappedItem ->
+                    ) { index, wrappedItem ->
                         val event = wrappedItem.item
                         SongListItem(
                             song = event.song,
@@ -287,6 +292,7 @@ fun HistoryScreen(
                             isPlaying = isPlaying,
                             showInLibraryIcon = true,
                             isSelected = wrappedItem.isSelected && selection,
+
                             trailingContent = {
                                 IconButton(
                                     onClick = {
@@ -317,9 +323,10 @@ fun HistoryScreen(
                                                 playerConnection.player.togglePlayPause()
                                             } else {
                                                 playerConnection.playQueue(
-                                                    YouTubeQueue(
-                                                        endpoint = WatchEndpoint(videoId = event.song.id),
-                                                        preloadItem = event.song.toMediaMetadata(),
+                                                    ListQueue(
+                                                        title = dateAgoToString(dateAgo),
+                                                        items = wrappedItems.map { it.item.song.toMediaItem() },
+                                                        startIndex = index
                                                     )
                                                 )
                                             }

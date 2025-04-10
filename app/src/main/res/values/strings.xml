@@ -22,7 +22,7 @@
     <string name="new_release_albums">New releases</string>
     <string name="forgotten_favorites">Forgotten favorites</string>
     <string name="similar_to">Similar to</string>
-    <string name="keeplistening">Keep listening</string>
+    <string name="keep_listening" translatable="false">Keep listening</string>
     <string name="your_ytb_playlists">Your youtube account</string>
 
     <!-- History -->
@@ -448,22 +448,4 @@
     <string name="adjust_radius">Adjust radius</string>
     <string name="cancel">Cancel</string>
     <string name="apply">Apply</string>
-    <string name="player_buttons_style">Player Buttons style</string>
-    <string name="default_style">Default style</string>
-    <string name="secondary_color_style">Secondary color style</string>
-    <string name="update_version">Update v%1$s</string>
-    <string name="download_question">Would you like to download the new version?</string>
-    <string name="downloadup">Download</string>
-    <string name="downloadingup">Downloading update...</string>
-    <string name="download_completed">Download completed</string>
-    <string name="install">Install</string>
-    <string name="download_errorup">Error downloading the update</string>
-    <string name="tap_to_update">Tap to update</string>
-    <string name="info_title">Information</string>
-    <string name="info_description">This section provides key details about the backup and restore process, including the security of your data and how to ensure your information remains safe and easily accessible.</string>
-    <string name="backup_info_title">Important Information</string>
-    <string name="backup_info_description">When you back up your data, your downloads are not included. Its recommended to clear your cache through the app for optimal performance. The backup service is secure, ensuring your data remains private and protected.</string>
-
-    <string name="backup_description">Create a backup file of your current data</string>
-    <string name="restore_description">Recover your data from a backup file</string>
 </resources>
