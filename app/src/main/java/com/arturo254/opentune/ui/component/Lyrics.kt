@@ -57,7 +57,6 @@ import com.arturo254.opentune.constants.LyricsTextPositionKey
 import com.arturo254.opentune.constants.PlayerBackgroundStyle
 import com.arturo254.opentune.constants.PlayerBackgroundStyleKey
 import com.arturo254.opentune.constants.ShowLyricsKey
-import com.arturo254.opentune.constants.TranslateLyricsKey
 import com.arturo254.opentune.db.entities.LyricsEntity.Companion.LYRICS_NOT_FOUND
 import com.arturo254.opentune.lyrics.LyricsEntry
 import com.arturo254.opentune.lyrics.LyricsEntry.Companion.HEAD_LYRICS_ENTRY

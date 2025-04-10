@@ -23,8 +23,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.arturo254.opentune.R
 import com.arturo254.opentune.LocalPlayerAwareWindowInsets
+import com.arturo254.opentune.R
 import com.arturo254.opentune.constants.GridThumbnailHeight
 import com.arturo254.opentune.ui.component.IconButton
 import com.arturo254.opentune.ui.component.LocalMenuState

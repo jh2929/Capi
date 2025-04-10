@@ -36,10 +36,10 @@ import com.arturo254.opentune.models.toMediaMetadata
 import com.arturo254.opentune.playback.queues.YouTubeQueue
 import com.arturo254.opentune.ui.component.ChoiceChipsRow
 import com.arturo254.opentune.ui.component.IconButton
-import com.arturo254.opentune.ui.component.LocalSongsGrid
-import com.arturo254.opentune.ui.component.LocalArtistsGrid
 import com.arturo254.opentune.ui.component.LocalAlbumsGrid
+import com.arturo254.opentune.ui.component.LocalArtistsGrid
 import com.arturo254.opentune.ui.component.LocalMenuState
+import com.arturo254.opentune.ui.component.LocalSongsGrid
 import com.arturo254.opentune.ui.component.NavigationTitle
 import com.arturo254.opentune.ui.menu.AlbumMenu
 import com.arturo254.opentune.ui.menu.ArtistMenu

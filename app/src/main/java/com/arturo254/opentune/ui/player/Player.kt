@@ -104,6 +104,8 @@ import com.arturo254.opentune.R
 import com.arturo254.opentune.constants.DarkModeKey
 import com.arturo254.opentune.constants.PlayerBackgroundStyle
 import com.arturo254.opentune.constants.PlayerBackgroundStyleKey
+import com.arturo254.opentune.constants.PlayerButtonsStyle
+import com.arturo254.opentune.constants.PlayerButtonsStyleKey
 import com.arturo254.opentune.constants.PlayerHorizontalPadding
 import com.arturo254.opentune.constants.PlayerTextAlignmentKey
 import com.arturo254.opentune.constants.PureBlackKey
@@ -128,8 +130,6 @@ import com.arturo254.opentune.ui.theme.extractGradientColors
 import com.arturo254.opentune.utils.makeTimeString
 import com.arturo254.opentune.utils.rememberEnumPreference
 import com.arturo254.opentune.utils.rememberPreference
-import com.arturo254.opentune.constants.PlayerButtonsStyle
-import com.arturo254.opentune.constants.PlayerButtonsStyleKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive

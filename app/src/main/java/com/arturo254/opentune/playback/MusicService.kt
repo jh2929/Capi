@@ -49,7 +49,6 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionToken
-import com.google.common.util.concurrent.MoreExecutors
 import com.arturo254.innertube.YouTube
 import com.arturo254.innertube.models.SongItem
 import com.arturo254.innertube.models.WatchEndpoint
@@ -62,7 +61,6 @@ import com.arturo254.opentune.constants.AutoSkipNextOnErrorKey
 import com.arturo254.opentune.constants.DiscordTokenKey
 import com.arturo254.opentune.constants.EnableDiscordRPCKey
 import com.arturo254.opentune.constants.HideExplicitKey
-import com.arturo254.opentune.constants.minPlaybackDurKey
 import com.arturo254.opentune.constants.MediaSessionConstants.CommandToggleLike
 import com.arturo254.opentune.constants.MediaSessionConstants.CommandToggleRepeatMode
 import com.arturo254.opentune.constants.MediaSessionConstants.CommandToggleShuffle
@@ -73,6 +71,7 @@ import com.arturo254.opentune.constants.RepeatModeKey
 import com.arturo254.opentune.constants.ShowLyricsKey
 import com.arturo254.opentune.constants.SimilarContent
 import com.arturo254.opentune.constants.SkipSilenceKey
+import com.arturo254.opentune.constants.minPlaybackDurKey
 import com.arturo254.opentune.db.MusicDatabase
 import com.arturo254.opentune.db.entities.Event
 import com.arturo254.opentune.db.entities.FormatEntity
@@ -104,6 +103,7 @@ import com.arturo254.opentune.utils.enumPreference
 import com.arturo254.opentune.utils.get
 import com.arturo254.opentune.utils.isInternetAvailable
 import com.arturo254.opentune.utils.reportException
+import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

@@ -10,14 +10,30 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.disk.DiskCache
 import coil.request.CachePolicy
-import com.arturo254.opentune.constants.*
-import com.arturo254.opentune.extensions.*
-import com.arturo254.opentune.utils.dataStore
-import com.arturo254.opentune.utils.get
-import com.arturo254.opentune.utils.reportException
 import com.arturo254.innertube.YouTube
 import com.arturo254.innertube.models.YouTubeLocale
 import com.arturo254.kugou.KuGou
+import com.arturo254.opentune.constants.AccountChannelHandleKey
+import com.arturo254.opentune.constants.AccountEmailKey
+import com.arturo254.opentune.constants.AccountNameKey
+import com.arturo254.opentune.constants.ContentCountryKey
+import com.arturo254.opentune.constants.ContentLanguageKey
+import com.arturo254.opentune.constants.CountryCodeToName
+import com.arturo254.opentune.constants.DataSyncIdKey
+import com.arturo254.opentune.constants.InnerTubeCookieKey
+import com.arturo254.opentune.constants.LanguageCodeToName
+import com.arturo254.opentune.constants.MaxImageCacheSizeKey
+import com.arturo254.opentune.constants.ProxyEnabledKey
+import com.arturo254.opentune.constants.ProxyTypeKey
+import com.arturo254.opentune.constants.ProxyUrlKey
+import com.arturo254.opentune.constants.SYSTEM_DEFAULT
+import com.arturo254.opentune.constants.UseLoginForBrowse
+import com.arturo254.opentune.constants.VisitorDataKey
+import com.arturo254.opentune.extensions.toEnum
+import com.arturo254.opentune.extensions.toInetSocketAddress
+import com.arturo254.opentune.utils.dataStore
+import com.arturo254.opentune.utils.get
+import com.arturo254.opentune.utils.reportException
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +45,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.net.Proxy
-import java.util.*
+import java.util.Locale
 
 @HiltAndroidApp
 class App : Application(), ImageLoaderFactory {

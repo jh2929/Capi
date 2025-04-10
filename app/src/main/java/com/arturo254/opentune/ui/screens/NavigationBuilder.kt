@@ -17,7 +17,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.arturo254.opentune.ui.screens.AccountScreen
 import com.arturo254.opentune.BuildConfig
 import com.arturo254.opentune.ui.screens.artist.ArtistItemsScreen
 import com.arturo254.opentune.ui.screens.artist.ArtistScreen

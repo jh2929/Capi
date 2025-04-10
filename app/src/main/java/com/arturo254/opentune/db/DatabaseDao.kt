@@ -22,7 +22,6 @@ import com.arturo254.opentune.constants.SongSortType
 import com.arturo254.opentune.db.entities.Album
 import com.arturo254.opentune.db.entities.AlbumArtistMap
 import com.arturo254.opentune.db.entities.AlbumEntity
-import com.arturo254.opentune.db.entities.PlayCountEntity
 import com.arturo254.opentune.db.entities.AlbumWithSongs
 import com.arturo254.opentune.db.entities.Artist
 import com.arturo254.opentune.db.entities.ArtistEntity
@@ -30,6 +29,7 @@ import com.arturo254.opentune.db.entities.Event
 import com.arturo254.opentune.db.entities.EventWithSong
 import com.arturo254.opentune.db.entities.FormatEntity
 import com.arturo254.opentune.db.entities.LyricsEntity
+import com.arturo254.opentune.db.entities.PlayCountEntity
 import com.arturo254.opentune.db.entities.Playlist
 import com.arturo254.opentune.db.entities.PlaylistEntity
 import com.arturo254.opentune.db.entities.PlaylistSong
@@ -47,13 +47,10 @@ import com.arturo254.opentune.extensions.toSQLiteQuery
 import com.arturo254.opentune.models.MediaMetadata
 import com.arturo254.opentune.models.toMediaMetadata
 import com.arturo254.opentune.ui.utils.resize
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.launch
 import java.text.Collator
 import java.time.LocalDateTime
 import java.time.ZoneOffset

@@ -22,8 +22,8 @@ import com.arturo254.opentune.db.entities.ArtistEntity
 import com.arturo254.opentune.db.entities.Event
 import com.arturo254.opentune.db.entities.FormatEntity
 import com.arturo254.opentune.db.entities.LyricsEntity
-import com.arturo254.opentune.db.entities.PlaylistEntity
 import com.arturo254.opentune.db.entities.PlayCountEntity
+import com.arturo254.opentune.db.entities.PlaylistEntity
 import com.arturo254.opentune.db.entities.PlaylistSongMap
 import com.arturo254.opentune.db.entities.PlaylistSongMapPreview
 import com.arturo254.opentune.db.entities.RelatedSongMap

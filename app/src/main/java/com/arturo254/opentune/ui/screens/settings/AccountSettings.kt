@@ -19,13 +19,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.datastore.preferences.core.edit
 import androidx.navigation.NavController
 import com.arturo254.innertube.YouTube
 import com.arturo254.innertube.utils.parseCookieString
@@ -47,9 +45,7 @@ import com.arturo254.opentune.ui.component.PreferenceGroupTitle
 import com.arturo254.opentune.ui.component.SwitchPreference
 import com.arturo254.opentune.ui.component.TextFieldDialog
 import com.arturo254.opentune.ui.utils.backToMain
-import com.arturo254.opentune.utils.dataStore
 import com.arturo254.opentune.utils.rememberPreference
-import kotlinx.coroutines.runBlocking
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
