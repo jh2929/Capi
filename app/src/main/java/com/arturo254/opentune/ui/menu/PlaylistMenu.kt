@@ -176,7 +176,7 @@ fun PlaylistMenu(
                             DownloadService.sendRemoveDownload(
                                 context,
                                 ExoDownloadService::class.java,
-                                song.song.id,
+                                song.id,
                                 false,
                             )
                         }
@@ -235,33 +235,6 @@ fun PlaylistMenu(
             }
         )
     }
-
-    var showChoosePlaylistDialog by rememberSaveable {
-        mutableStateOf(false)
-    }
-
-    AddToPlaylistDialog(
-        isVisible = showChoosePlaylistDialog,
-        onGetSong = {
-            coroutineScope.launch(Dispatchers.IO) {
-                // add songs to playlist and push to ytm
-                songs.let {
-                    playlist.playlist.browseId?.let {
-                        YouTube.addPlaylistToPlaylist(
-                            it,
-                            playlist.id
-                        )
-                    }
-                }
-
-                playlist.playlist.browseId?.let { playlistId ->
-                    YouTube.addPlaylistToPlaylist(playlistId, playlist.id)
-                }
-            }
-            songs.map { it.id }
-        },
-        onDismiss = { showChoosePlaylistDialog = false }
-    )
 
     PlaylistListItem(
         playlist = playlist,
@@ -363,13 +336,6 @@ fun PlaylistMenu(
             ) {
                 showEditDialog = true
             }
-        }
-
-        GridMenuItem(
-            icon = R.drawable.playlist_add,
-            title = R.string.add_to_playlist
-        ) {
-            showChoosePlaylistDialog = true
         }
 
         if (downloadPlaylist != true) {

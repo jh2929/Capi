@@ -448,4 +448,8 @@
     <string name="adjust_radius">Adjust radius</string>
     <string name="cancel">Cancel</string>
     <string name="apply">Apply</string>
+    <string name="link_copied">Link copied</string>
+    <string name="clear">Clear</string>
+    <string name="search_in_library">Search in library</string>
+    <string name="navigate_back">Navigate back</string>
 </resources>

@@ -22,6 +22,7 @@ import com.arturo254.opentune.constants.SongSortType
 import com.arturo254.opentune.db.entities.Album
 import com.arturo254.opentune.db.entities.AlbumArtistMap
 import com.arturo254.opentune.db.entities.AlbumEntity
+import com.arturo254.opentune.db.entities.PlayCountEntity
 import com.arturo254.opentune.db.entities.AlbumWithSongs
 import com.arturo254.opentune.db.entities.Artist
 import com.arturo254.opentune.db.entities.ArtistEntity
@@ -46,8 +47,13 @@ import com.arturo254.opentune.extensions.toSQLiteQuery
 import com.arturo254.opentune.models.MediaMetadata
 import com.arturo254.opentune.models.toMediaMetadata
 import com.arturo254.opentune.ui.utils.resize
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import java.text.Collator
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -416,6 +422,13 @@ interface DatabaseDao {
         toTimeStamp: Long? = LocalDateTime.now().toInstant(ZoneOffset.UTC).toEpochMilli(),
     ): Flow<List<Album>>
 
+    @Query("SELECT sum(count) from playCount WHERE song = :songId")
+    fun getLifetimePlayCount(songId: String?): Flow<Int>
+    @Query("SELECT sum(count) from playCount WHERE song = :songId AND year = :year")
+    fun getPlayCountByYear(songId: String?, year: Int): Flow<Int>
+    @Query("SELECT count from playCount WHERE song = :songId AND year = :year AND month = :month")
+    fun getPlayCountByMonth(songId: String?, year: Int, month: Int): Flow<Int>
+
     @Transaction
     @Query(
         """
@@ -535,7 +548,7 @@ interface DatabaseDao {
 
     @Transaction
     @Query(
-        "SELECT *, (SELECT COUNT(1) FROM song_artist_map JOIN song ON song_artist_map.songId = song.id WHERE artistId = artist.id AND song.inLibrary IS NOT NULL) AS songCount FROM artist WHERE songCount > 0 ORDER BY songCount",
+        "SELECT * FROM artist WHERE songCount > 0 ORDER BY songCount"
     )
     fun artistsBySongCountAsc(): Flow<List<Artist>>
 
@@ -600,6 +613,18 @@ interface DatabaseDao {
     """,
     )
     fun artistsBookmarkedByPlayTimeAsc(): Flow<List<Artist>>
+
+    @Query("UPDATE artist SET songCount = :count WHERE id = :artistId")
+    suspend fun updateArtistSongCount(artistId: String, count: Int)
+
+    @Transaction
+    suspend fun updateArtistSongsCount(artistId: String) {
+    val count = getSongCountForArtist(artistId)
+    updateArtistSongCount(artistId, count)
+    }
+
+    @Query("SELECT COUNT(*) FROM song_artist_map WHERE artistId = :artistId")
+    suspend fun getSongCountForArtist(artistId: String): Int
 
     fun artists(
         sortType: ArtistSortType,
@@ -903,12 +928,28 @@ interface DatabaseDao {
     @Query("DELETE FROM search_history")
     fun clearSearchHistory()
 
-    @Transaction
     @Query("UPDATE song SET totalPlayTime = totalPlayTime + :playTime WHERE id = :songId")
-    fun incrementTotalPlayTime(
-        songId: String,
-        playTime: Long,
-    )
+    fun incrementTotalPlayTime(songId: String, playTime: Long)
+
+    @Query("UPDATE playCount SET count = count + 1 WHERE song = :songId AND year = :year AND month = :month")
+    fun incrementPlayCount(songId: String, year: Int, month: Int)
+
+    /**
+     * Increment by one the play count with today's year and month.
+     */
+    fun incrementPlayCount(songId: String) {
+        val time = LocalDateTime.now().atOffset(ZoneOffset.UTC)
+        var oldCount: Int
+        runBlocking {
+            oldCount = getPlayCountByMonth(songId, time.year, time.monthValue).first()
+        }
+
+        // add new
+        if (oldCount <= 0) {
+            insert(PlayCountEntity(songId, time.year, time.monthValue, 0))
+        }
+        incrementPlayCount(songId, time.year, time.monthValue)
+    }
 
     @Transaction
     @Query("UPDATE song SET inLibrary = :inLibrary WHERE id = :songId")
@@ -1000,6 +1041,9 @@ interface DatabaseDao {
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     fun insert(map: RelatedSongMap)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun insert(playCountEntity: PlayCountEntity): Long
 
     @Transaction
     fun insert(

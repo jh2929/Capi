@@ -62,7 +62,7 @@ import com.arturo254.opentune.constants.AutoSkipNextOnErrorKey
 import com.arturo254.opentune.constants.DiscordTokenKey
 import com.arturo254.opentune.constants.EnableDiscordRPCKey
 import com.arturo254.opentune.constants.HideExplicitKey
-import com.arturo254.opentune.constants.HistoryDuration
+import com.arturo254.opentune.constants.minPlaybackDurKey
 import com.arturo254.opentune.constants.MediaSessionConstants.CommandToggleLike
 import com.arturo254.opentune.constants.MediaSessionConstants.CommandToggleRepeatMode
 import com.arturo254.opentune.constants.MediaSessionConstants.CommandToggleShuffle
@@ -238,6 +238,7 @@ class MusicService :
                 }
         mediaLibrarySessionCallback.apply {
             toggleLike = ::toggleLike
+            toggleLibrary = ::toggleLibrary
         }
         mediaSession =
             MediaLibrarySession
@@ -614,6 +615,14 @@ class MusicService :
         player.prepare()
     }
 
+    private fun toggleLibrary() {
+        database.query {
+            currentSong.value?.let {
+                update(it.song.toggleLibrary())
+            }
+        }
+    }
+
     fun toggleLike() {
         database.query {
             currentSong.value?.let {
@@ -659,7 +668,7 @@ class MusicService :
                 val mediaItems =
                     currentQueue.nextPage().filterExplicit(dataStore.get(HideExplicitKey, false))
                 if (player.playbackState != STATE_IDLE) {
-                    player.addMediaItems(mediaItems)
+                    player.addMediaItems(mediaItems.drop(1))
                 }
             }
         }
@@ -863,42 +872,32 @@ class MusicService :
                 ).build()
         }
 
-    override fun onPlaybackStatsReady(
-        eventTime: AnalyticsListener.EventTime,
-        playbackStats: PlaybackStats,
-    ) {
-        val mediaItem =
-            eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
+    override fun onPlaybackStatsReady(eventTime: AnalyticsListener.EventTime, playbackStats: PlaybackStats) {
+        val mediaItem = eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
+        var minPlaybackDur = (dataStore.get(minPlaybackDurKey, 30).toFloat() / 100)
+        // ensure within bounds
+        if (minPlaybackDur >= 1f) {
+            minPlaybackDur = 0.99f // Ehhh 99 is good enough to avoid any rounding errors
+        } else if (minPlaybackDur < 0.01f) {
+            minPlaybackDur = 0.01f // Still want "spam skipping" to not count as plays
+        }
 
-        if (playbackStats.totalPlayTimeMs >= (
-                    dataStore[HistoryDuration]?.times(1000f)
-                        ?: 30000f
-                    ) &&
-            !dataStore.get(PauseListenHistoryKey, false)
+        if (playbackStats.totalPlayTimeMs.toFloat() / ((mediaItem.metadata?.duration?.times(1000))
+                ?: -1) >= minPlaybackDur
+            && !dataStore.get(PauseListenHistoryKey, false)
         ) {
             database.query {
+                incrementPlayCount(mediaItem.mediaId)
                 incrementTotalPlayTime(mediaItem.mediaId, playbackStats.totalPlayTimeMs)
                 try {
                     insert(
                         Event(
                             songId = mediaItem.mediaId,
                             timestamp = LocalDateTime.now(),
-                            playTime = playbackStats.totalPlayTimeMs,
-                        ),
+                            playTime = playbackStats.totalPlayTimeMs
+                        )
                     )
                 } catch (_: SQLException) {
-                }
-            }
-            // TODO: support playlist id
-            CoroutineScope(Dispatchers.IO).launch {
-                val playbackUrl = database.format(mediaItem.mediaId).first()?.playbackUrl
-                    ?: YTPlayerUtils.playerResponseForMetadata(mediaItem.mediaId, null)
-                        .getOrNull()?.playbackTracking?.videostatsPlaybackUrl?.baseUrl
-                playbackUrl?.let {
-                    YouTube.registerPlayback(null, playbackUrl)
-                        .onFailure {
-                            reportException(it)
-                        }
                 }
             }
         }

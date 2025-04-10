@@ -7,6 +7,7 @@ import com.arturo254.innertube.YouTube
 import com.arturo254.innertube.pages.HistoryPage
 import com.arturo254.opentune.constants.HistorySource
 import com.arturo254.opentune.db.MusicDatabase
+import com.arturo254.opentune.utils.reportException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,12 +26,13 @@ class HistoryViewModel
 constructor(
     val database: MusicDatabase,
 ) : ViewModel() {
+    var historySource = MutableStateFlow(HistorySource.LOCAL)
+
     private val today = LocalDate.now()
     private val thisMonday = today.with(DayOfWeek.MONDAY)
     private val lastMonday = thisMonday.minusDays(7)
 
     val historyPage = mutableStateOf<HistoryPage?>(null)
-    var historySource = MutableStateFlow(HistorySource.LOCAL)
 
     val events =
         database
@@ -63,8 +65,16 @@ constructor(
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
 
     init {
+        fetchRemoteHistory()
+    }
+
+    fun fetchRemoteHistory() {
         viewModelScope.launch(Dispatchers.IO) {
-            historyPage.value = YouTube.musicHistory().getOrNull()
+            YouTube.musicHistory().onSuccess {
+                historyPage.value = it
+            }.onFailure {
+                reportException(it)
+            }
         }
     }
 }

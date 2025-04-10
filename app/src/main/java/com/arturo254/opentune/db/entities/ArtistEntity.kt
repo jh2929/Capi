@@ -1,6 +1,7 @@
 package com.arturo254.opentune.db.entities
 
 import androidx.compose.runtime.Immutable
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.arturo254.innertube.YouTube
@@ -18,12 +19,17 @@ data class ArtistEntity(
     val name: String,
     val thumbnailUrl: String? = null,
     val channelId: String? = null,
+    @ColumnInfo(defaultValue = "0")
+    val songCount: Int = 0,
     val lastUpdateTime: LocalDateTime = LocalDateTime.now(),
     val bookmarkedAt: LocalDateTime? = null
 ) {
 
     val isYouTubeArtist: Boolean
-        get() = id.startsWith("UC")
+        get() = id.startsWith("UC") || id.startsWith("FEmusic_library_privately_owned_artist")
+
+    val isPrivatelyOwnedArtist: Boolean
+        get() = id.startsWith("FEmusic_library_privately_owned_artist")
 
     val isLocalArtist: Boolean
         get() = id.startsWith("LA")
