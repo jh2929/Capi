@@ -23,6 +23,7 @@ import com.arturo254.opentune.ui.screens.artist.ArtistScreen
 import com.arturo254.opentune.ui.screens.artist.ArtistSongsScreen
 import com.arturo254.opentune.ui.screens.library.LibraryScreen
 import com.arturo254.opentune.ui.screens.playlist.AutoPlaylistScreen
+import com.arturo254.opentune.ui.screens.playlist.CachePlaylistScreen
 import com.arturo254.opentune.ui.screens.playlist.LocalPlaylistScreen
 import com.arturo254.opentune.ui.screens.playlist.OnlinePlaylistScreen
 import com.arturo254.opentune.ui.screens.playlist.TopPlaylistScreen
@@ -193,6 +194,17 @@ fun NavGraphBuilder.navigationBuilder(
         ),
     ) {
         AutoPlaylistScreen(navController, scrollBehavior)
+    }
+    composable(
+        route = "cache_playlist/{playlist}",
+        arguments =
+            listOf(
+                navArgument("playlist") {
+                    type = NavType.StringType
+                },
+            ),
+    ) {
+        CachePlaylistScreen(navController, scrollBehavior)
     }
     composable(
         route = "top_playlist/{top}",

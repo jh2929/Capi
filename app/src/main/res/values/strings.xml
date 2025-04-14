@@ -470,4 +470,6 @@
     <string name="redireccion">Redireccion</string>
     <string name="Version">Version</string>
     <string name="notification">Activate Notifications</string>
+    <string name="cached_playlist">Cached</string>
+    <string name="added_to_queue">added to queue</string>
 </resources>
