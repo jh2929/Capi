@@ -6,7 +6,6 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -559,8 +558,6 @@ object AppConfig {
 }
 
 
-
-
 @Composable
 fun ThumbnailCornerRadiusSelectorButton(
     modifier: Modifier = Modifier,
@@ -580,7 +577,7 @@ fun ThumbnailCornerRadiusSelectorButton(
         modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-        .clip(RoundedCornerShape(26.dp)),
+            .clip(RoundedCornerShape(26.dp)),
         shadowElevation = 10.dp,
         color = MaterialTheme.colorScheme.surface,
         onClick = { showDialog = true }
@@ -909,7 +906,10 @@ fun ThumbnailCornerRadiusModal(
                         Button(
                             onClick = {
                                 CoroutineScope(Dispatchers.IO).launch {
-                                    AppConfig.saveThumbnailCornerRadius(context, thumbnailCornerRadius)
+                                    AppConfig.saveThumbnailCornerRadius(
+                                        context,
+                                        thumbnailCornerRadius
+                                    )
                                 }
                                 onRadiusSelected(thumbnailCornerRadius)
                             },
@@ -1011,21 +1011,16 @@ enum class PlayerTextAlignment {
 }
 
 
-
 // Extension property para el DataStore
 val Context.avatarDataStore: DataStore<Preferences> by preferencesDataStore(name = "avatar_preferences")
 
-/**
- * Gestor de preferencias para el avatar personalizado
- */
+/** Gestor de preferencias para el avatar personalizado */
 class AvatarPreferenceManager(private val context: Context) {
     companion object {
         private val CUSTOM_AVATAR_URI_KEY = stringPreferencesKey("custom_avatar_uri")
     }
 
-    /**
-     * Guarda la URI del avatar personalizado
-     */
+    /** Guarda la URI del avatar personalizado */
     suspend fun saveCustomAvatarUri(uriString: String?) {
         context.avatarDataStore.edit { preferences ->
             if (uriString == null) {
@@ -1036,9 +1031,7 @@ class AvatarPreferenceManager(private val context: Context) {
         }
     }
 
-    /**
-     * Flujo para obtener la URI del avatar personalizado
-     */
+    /** Flujo para obtener la URI del avatar personalizado */
     val getCustomAvatarUri: Flow<String?> = context.avatarDataStore.data
         .map { preferences ->
             preferences[CUSTOM_AVATAR_URI_KEY]
@@ -1046,7 +1039,8 @@ class AvatarPreferenceManager(private val context: Context) {
 }
 
 /**
- * Composable que permite al usuario seleccionar y gestionar un avatar personalizado
+ * Composable que permite al usuario seleccionar y gestionar un avatar
+ * personalizado
  */
 @Composable
 fun CustomAvatarSelector(
@@ -1164,9 +1158,7 @@ fun CustomAvatarSelector(
 }
 
 
-/**
- * Función para guardar la imagen en almacenamiento interno
- */
+/** Función para guardar la imagen en almacenamiento interno */
 private fun saveImageToInternalStorage(context: Context, uri: Uri): File? {
     return try {
         context.contentResolver.openInputStream(uri)?.use { inputStream ->

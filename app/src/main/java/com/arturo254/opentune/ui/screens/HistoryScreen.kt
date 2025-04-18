@@ -200,7 +200,7 @@ fun HistoryScreen(
                     currentValue = historySource,
                     onValueUpdate = {
                         viewModel.historySource.value = it
-                        if (it == HistorySource.REMOTE){
+                        if (it == HistorySource.REMOTE) {
                             viewModel.fetchRemoteHistory()
                         }
                     }

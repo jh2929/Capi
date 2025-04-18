@@ -11,10 +11,10 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.ListItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -311,6 +311,7 @@ fun SelectionSongMenu(
                         }
                     )
                 }
+
                 Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
                     ListItem(
                         headlineContent = { Text(text = stringResource(R.string.downloading)) },
@@ -325,6 +326,7 @@ fun SelectionSongMenu(
                         }
                     )
                 }
+
                 else -> {
                     ListItem(
                         headlineContent = { Text(text = stringResource(R.string.download)) },
@@ -676,6 +678,7 @@ fun SelectionMediaMetadataMenu(
                         }
                     )
                 }
+
                 Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
                     ListItem(
                         headlineContent = { Text(text = stringResource(R.string.downloading)) },
@@ -690,6 +693,7 @@ fun SelectionMediaMetadataMenu(
                         }
                     )
                 }
+
                 else -> {
                     ListItem(
                         headlineContent = { Text(text = stringResource(R.string.download)) },

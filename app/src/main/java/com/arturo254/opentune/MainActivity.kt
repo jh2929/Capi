@@ -999,14 +999,20 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 popEnterTransition = {
-                                    if ((initialState.destination.route in topLevelScreens || initialState.destination.route?.startsWith("search/") == true) && targetState.destination.route in topLevelScreens) {
+                                    if ((initialState.destination.route in topLevelScreens || initialState.destination.route?.startsWith(
+                                            "search/"
+                                        ) == true) && targetState.destination.route in topLevelScreens
+                                    ) {
                                         fadeIn(tween(250))
                                     } else {
                                         fadeIn(tween(250)) + slideInHorizontally { -it / 2 }
                                     }
                                 },
                                 popExitTransition = {
-                                    if ((initialState.destination.route in topLevelScreens || initialState.destination.route?.startsWith("search/") == true) && targetState.destination.route in topLevelScreens) {
+                                    if ((initialState.destination.route in topLevelScreens || initialState.destination.route?.startsWith(
+                                            "search/"
+                                        ) == true) && targetState.destination.route in topLevelScreens
+                                    ) {
                                         fadeOut(tween(200))
                                     } else {
                                         fadeOut(tween(200)) + slideOutHorizontally { it / 2 }
@@ -1224,9 +1230,6 @@ fun SwitchPreference(
         }
     }
 }
-
-
-
 
 
 suspend fun checkForUpdates(): String? = withContext(Dispatchers.IO) {

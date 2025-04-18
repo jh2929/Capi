@@ -353,12 +353,12 @@ class MusicService :
             }.onSuccess { queue ->
                 playQueue(
                     queue =
-                    ListQueue(
-                        title = queue.title,
-                        items = queue.items.map { it.toMediaItem() },
-                        startIndex = queue.mediaItemIndex,
-                        position = queue.position,
-                    ),
+                        ListQueue(
+                            title = queue.title,
+                            items = queue.items.map { it.toMediaItem() },
+                            startIndex = queue.mediaItemIndex,
+                            position = queue.position,
+                        ),
                     playWhenReady = false,
                 )
             }
@@ -840,7 +840,8 @@ class MusicService :
 
             val streamUrl = playbackData.streamUrl
 
-            songUrlCache[mediaId] = streamUrl to System.currentTimeMillis() + (playbackData.streamExpiresInSeconds * 1000L)
+            songUrlCache[mediaId] =
+                streamUrl to System.currentTimeMillis() + (playbackData.streamExpiresInSeconds * 1000L)
             dataSpec.withUri(streamUrl.toUri()).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
         }
     }
@@ -872,8 +873,12 @@ class MusicService :
                 ).build()
         }
 
-    override fun onPlaybackStatsReady(eventTime: AnalyticsListener.EventTime, playbackStats: PlaybackStats) {
-        val mediaItem = eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
+    override fun onPlaybackStatsReady(
+        eventTime: AnalyticsListener.EventTime,
+        playbackStats: PlaybackStats
+    ) {
+        val mediaItem =
+            eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
         var minPlaybackDur = (dataStore.get(minPlaybackDurKey, 30).toFloat() / 100)
         // ensure within bounds
         if (minPlaybackDur >= 1f) {

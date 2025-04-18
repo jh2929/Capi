@@ -246,11 +246,11 @@ enum class PlayerBackgroundStyle {
 }
 
 
-
 enum class PlayerButtonsStyle {
     DEFAULT,
     SECONDARY,
 }
+
 val TopSize = stringPreferencesKey("topSize")
 val HistoryDuration = floatPreferencesKey("historyDuration")
 

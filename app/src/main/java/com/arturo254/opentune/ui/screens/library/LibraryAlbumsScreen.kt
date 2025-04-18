@@ -106,10 +106,10 @@ fun LibraryAlbumsScreen(
             )
             ChipsRow(
                 chips =
-                listOf(
-                    AlbumFilter.LIKED to stringResource(R.string.filter_liked),
-                    AlbumFilter.LIBRARY to stringResource(R.string.filter_library)
-                ),
+                    listOf(
+                        AlbumFilter.LIKED to stringResource(R.string.filter_liked),
+                        AlbumFilter.LIBRARY to stringResource(R.string.filter_library)
+                    ),
                 currentValue = filter,
                 onValueUpdate = {
                     filter = it
@@ -186,12 +186,12 @@ fun LibraryAlbumsScreen(
             ) {
                 Icon(
                     painter =
-                    painterResource(
-                        when (viewType) {
-                            LibraryViewType.LIST -> R.drawable.list
-                            LibraryViewType.GRID -> R.drawable.grid_view
-                        },
-                    ),
+                        painterResource(
+                            when (viewType) {
+                                LibraryViewType.LIST -> R.drawable.list
+                                LibraryViewType.GRID -> R.drawable.grid_view
+                            },
+                        ),
                     contentDescription = null,
                 )
             }
@@ -253,9 +253,9 @@ fun LibraryAlbumsScreen(
                 LazyVerticalGrid(
                     state = lazyGridState,
                     columns =
-                    GridCells.Adaptive(
-                        minSize = GridThumbnailHeight + if (gridItemSize == GridItemSize.BIG) 24.dp else (-24).dp,
-                    ),
+                        GridCells.Adaptive(
+                            minSize = GridThumbnailHeight + if (gridItemSize == GridItemSize.BIG) 24.dp else (-24).dp,
+                        ),
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
                 ) {
                     item(

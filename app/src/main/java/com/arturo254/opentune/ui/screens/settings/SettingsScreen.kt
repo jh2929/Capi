@@ -179,8 +179,6 @@ fun VersionCard(uriHandler: UriHandler) {
 }
 
 
-
-
 @Composable
 fun UpdateCard(latestVersion: String = "") {
     val context = LocalContext.current
@@ -307,12 +305,13 @@ fun UpdateDownloadDialog(
                             Button(onClick = {
                                 downloadStatus = DownloadStatus.DOWNLOADING
                                 downloadScope.launch {
-                                    downloadedApkUri = downloadApk(context, latestVersion) { progress ->
-                                        downloadProgress = progress
-                                        if (progress >= 1f) {
-                                            downloadStatus = DownloadStatus.COMPLETED
+                                    downloadedApkUri =
+                                        downloadApk(context, latestVersion) { progress ->
+                                            downloadProgress = progress
+                                            if (progress >= 1f) {
+                                                downloadStatus = DownloadStatus.COMPLETED
+                                            }
                                         }
-                                    }
                                 }
                             }) {
                                 Text(stringResource(R.string.download))
@@ -347,8 +346,9 @@ fun UpdateDownloadDialog(
                                 if (downloadedApkUri != null) {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                         if (!context.packageManager.canRequestPackageInstalls()) {
-                                            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-                                                .setData(Uri.parse("package:${context.packageName}"))
+                                            val intent =
+                                                Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                                                    .setData(Uri.parse("package:${context.packageName}"))
                                             installPermissionLauncher.launch(intent)
                                         } else {
                                             installApk(context, downloadedApkUri!!)
@@ -391,7 +391,8 @@ suspend fun downloadApk(
 ): Uri? = withContext(Dispatchers.IO) {
     try {
         // URL del APK (ajusta esta URL según donde estén alojados tus archivos APK)
-        val apkUrl = "https://github.com/Arturo254/OpenTune/releases/download/$version/app-release.apk"
+        val apkUrl =
+            "https://github.com/Arturo254/OpenTune/releases/download/$version/app-release.apk"
 
         // Crear archivo de destino
         val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
@@ -420,8 +421,10 @@ suspend fun downloadApk(
 
             if (cursor.moveToFirst()) {
                 val statusColumn = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS)
-                val bytesDownloadedColumn = cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
-                val bytesTotalColumn = cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+                val bytesDownloadedColumn =
+                    cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+                val bytesTotalColumn =
+                    cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
 
                 if (statusColumn != -1 && bytesDownloadedColumn != -1 && bytesTotalColumn != -1) {
                     val status = cursor.getInt(statusColumn)
@@ -433,11 +436,13 @@ suspend fun downloadApk(
                             isDownloading = false
                             onProgressUpdate(1f)
                         }
+
                         DownloadManager.STATUS_FAILED -> {
                             isDownloading = false
                             onProgressUpdate(0f)
                             return@withContext null
                         }
+
                         else -> {
                             if (bytesTotal > 0) {
                                 val progress = bytesDownloaded.toFloat() / bytesTotal.toFloat()
@@ -749,8 +754,8 @@ fun SettingsScreen(
 
 
 /**
- * Clase de estado para el changelog que contiene toda la información necesaria
- * para representar los diferentes estados de la UI
+ * Clase de estado para el changelog que contiene toda la información
+ * necesaria para representar los diferentes estados de la UI
  */
 data class ChangelogState(
     val changes: String = "", // Ahora guardamos el markdown completo en lugar de solo una lista
@@ -758,9 +763,7 @@ data class ChangelogState(
     val error: String? = null
 )
 
-/**
- * Clase ViewModel para manejar la lógica de negocio y el estado de la UI
- */
+/** Clase ViewModel para manejar la lógica de negocio y el estado de la UI */
 class ChangelogViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(ChangelogState())
     val uiState: StateFlow<ChangelogState> = _uiState.asStateFlow()
@@ -829,9 +832,7 @@ class ChangelogViewModel : ViewModel() {
         cache[key] = content to System.currentTimeMillis()
     }
 
-    /**
-     * Función para hacer la petición a la API de GitHub con reintentos
-     */
+    /** Función para hacer la petición a la API de GitHub con reintentos */
     private suspend fun fetchReleaseMarkdown(owner: String, repo: String): String =
         withContext(Dispatchers.IO) {
             repeat(3) { attempt ->
@@ -861,9 +862,7 @@ class ChangelogViewModel : ViewModel() {
         }
 }
 
-/**
- * Componente para renderizar Markdown en Jetpack Compose
- */
+/** Componente para renderizar Markdown en Jetpack Compose */
 @Composable
 fun MarkdownText(
     markdown: String,
@@ -884,6 +883,7 @@ fun MarkdownText(
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
                 }
+
                 trimmedLine.startsWith("## ") -> {
                     // Encabezado H2
                     Text(
@@ -893,6 +893,7 @@ fun MarkdownText(
                         modifier = Modifier.padding(vertical = 6.dp)
                     )
                 }
+
                 trimmedLine.startsWith("### ") -> {
                     // Encabezado H3
                     Text(
@@ -902,6 +903,7 @@ fun MarkdownText(
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
+
                 trimmedLine.startsWith("- ") || trimmedLine.startsWith("* ") -> {
                     // Lista no ordenada
                     Row(
@@ -952,6 +954,7 @@ fun MarkdownText(
                         )
                     }
                 }
+
                 trimmedLine.startsWith("> ") -> {
                     // Cita
                     Surface(
@@ -971,6 +974,7 @@ fun MarkdownText(
                         )
                     }
                 }
+
                 trimmedLine.startsWith("```") -> {
                     // Bloque de código - simplemente lo mostramos como texto monoespaciado
                     // En una implementación completa, manejarías múltiples líneas
@@ -984,6 +988,7 @@ fun MarkdownText(
                         )
                     }
                 }
+
                 trimmedLine.startsWith("---") -> {
                     // Separador horizontal
                     Divider(
@@ -993,6 +998,7 @@ fun MarkdownText(
                         color = MaterialTheme.colorScheme.outline
                     )
                 }
+
                 trimmedLine.isNotEmpty() -> {
                     // Texto normal
                     val annotatedString = buildAnnotatedString {
@@ -1055,6 +1061,7 @@ fun MarkdownText(
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
                 }
+
                 else -> {
                     // Línea vacía - espacio
                     Spacer(modifier = Modifier.height(4.dp))
@@ -1064,9 +1071,7 @@ fun MarkdownText(
     }
 }
 
-/**
- * Botón de preferencia que muestra un modal con el changelog
- */
+/** Botón de preferencia que muestra un modal con el changelog */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangelogButtonWithPopup(
@@ -1107,9 +1112,7 @@ fun ChangelogButtonWithPopup(
     }
 }
 
-/**
- * Tarjeta que muestra el changelog con formato Markdown
- */
+/** Tarjeta que muestra el changelog con formato Markdown */
 @Composable
 fun AutoChangelogCard(
     viewModel: ChangelogViewModel,
@@ -1154,6 +1157,7 @@ fun AutoChangelogCard(
                         CircularProgressIndicator()
                     }
                 }
+
                 uiState.error != null -> {
                     Column {
                         Text(
@@ -1168,9 +1172,11 @@ fun AutoChangelogCard(
                         }
                     }
                 }
+
                 uiState.changes.isEmpty() -> {
                     Text(stringResource(R.string.no_changes))
                 }
+
                 else -> {
                     // Renderizar el markdown
                     MarkdownText(
@@ -1183,9 +1189,7 @@ fun AutoChangelogCard(
     }
 }
 
-/**
- * Pantalla principal de changelog
- */
+/** Pantalla principal de changelog */
 @Composable
 fun ChangelogScreen(viewModel: ChangelogViewModel = viewModel()) {
     AutoChangelogCard(
@@ -1199,7 +1203,7 @@ fun ChangelogScreen(viewModel: ChangelogViewModel = viewModel()) {
 fun TranslatePreference(uriHandler: UriHandler) {
     var showDialog by remember { mutableStateOf(false) }
 
-   PreferenceEntry(
+    PreferenceEntry(
         title = { Text(stringResource(R.string.Translate)) },
         icon = { Icon(painterResource(R.drawable.translate), null) },
         onClick = { showDialog = true }

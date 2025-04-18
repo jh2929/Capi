@@ -291,7 +291,8 @@ fun ContentSettings(
 }
 
 /**
- * Enhanced LocaleManager for handling locale changes in Jetpack Compose applications.
+ * Enhanced LocaleManager for handling locale changes in Jetpack Compose
+ * applications.
  */
 class LocaleManager(private val context: Context) {
 
@@ -308,7 +309,8 @@ class LocaleManager(private val context: Context) {
         )
 
         // Singleton instance
-        @Volatile private var instance: LocaleManager? = null
+        @Volatile
+        private var instance: LocaleManager? = null
 
         fun getInstance(context: Context): LocaleManager {
             return instance ?: synchronized(this) {
@@ -323,16 +325,13 @@ class LocaleManager(private val context: Context) {
     private val _currentLanguage = MutableStateFlow(getSelectedLanguageCode())
     val currentLanguage: StateFlow<String> = _currentLanguage
 
-    /**
-     * Get the currently selected language code
-     */
+    /** Get the currently selected language code */
     fun getSelectedLanguageCode(): String {
-        return sharedPreferences.getString(PREF_LANGUAGE_KEY, getSystemLanguageCode()) ?: getSystemLanguageCode()
+        return sharedPreferences.getString(PREF_LANGUAGE_KEY, getSystemLanguageCode())
+            ?: getSystemLanguageCode()
     }
 
-    /**
-     * Get the system default language code
-     */
+    /** Get the system default language code */
     private fun getSystemLanguageCode(): String {
         val localeList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             ConfigurationCompat.getLocales(Resources.getSystem().configuration)
@@ -345,6 +344,7 @@ class LocaleManager(private val context: Context) {
 
     /**
      * Update the locale synchronously (for Compose compatibility)
+     *
      * @param languageCode The language code to set
      * @return true if successful, false otherwise
      */
@@ -380,9 +380,7 @@ class LocaleManager(private val context: Context) {
         }
     }
 
-    /**
-     * Apply locale to a context
-     */
+    /** Apply locale to a context */
     fun applyLocaleToContext(baseContext: Context): Context {
         val languageCode = getSelectedLanguageCode()
         val locale = createLocaleFromCode(languageCode)
@@ -405,9 +403,7 @@ class LocaleManager(private val context: Context) {
         }
     }
 
-    /**
-     * Creates a Locale object from a language code
-     */
+    /** Creates a Locale object from a language code */
     private fun createLocaleFromCode(languageCode: String): Locale {
         return when {
             languageCode == "zh-CN" -> Locale.SIMPLIFIED_CHINESE
@@ -451,9 +447,7 @@ class LocaleManager(private val context: Context) {
         }
     }
 
-    /**
-     * Get the appropriate script for complex languages
-     */
+    /** Get the appropriate script for complex languages */
     private fun getScriptForLanguage(languageCode: String): String {
         return when (languageCode.substringBefore("-")) {
             "hi", "mr" -> "Deva" // Devanagari
@@ -476,9 +470,7 @@ class LocaleManager(private val context: Context) {
         }
     }
 
-    /**
-     * Set locale for Android N and above
-     */
+    /** Set locale for Android N and above */
     private fun setLocaleApi24(config: Configuration, locale: Locale) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             val localeList = LocaleList(locale)
@@ -487,20 +479,16 @@ class LocaleManager(private val context: Context) {
         }
     }
 
-    /**
-     * Set locale for Android versions below N
-     */
+    /** Set locale for Android versions below N */
     @Suppress("DEPRECATION")
     private fun setLocaleLegacy(config: Configuration, locale: Locale) {
         config.locale = locale
     }
 
+    /** Restart the app to apply language changes */
     /**
-     * Restart the app to apply language changes
-     */
-    /**
-     * Restart the app to apply language changes
-     * Versión corregida para evitar cierres inesperados
+     * Restart the app to apply language changes Versión corregida para evitar
+     * cierres inesperados
      */
     fun restartApp(context: Context) {
         try {
@@ -552,8 +540,8 @@ class LocaleManager(private val context: Context) {
 }
 
 /**
- * Dictionary mapping language codes to their display names
- * Extended with more languages and native names
+ * Dictionary mapping language codes to their display names Extended with
+ * more languages and native names
  */
 val LanguageCodeToName = mapOf(
     "ar" to "Arabic (العربية)",
@@ -621,8 +609,8 @@ fun rememberLanguageState(
 }
 
 /**
- * Base Application class that applies the saved locale
- * Extend your Application class from this one
+ * Base Application class that applies the saved locale Extend your
+ * Application class from this one
  */
 abstract class ComposeLocaleAwareApplication : android.app.Application() {
     override fun attachBaseContext(base: Context) {

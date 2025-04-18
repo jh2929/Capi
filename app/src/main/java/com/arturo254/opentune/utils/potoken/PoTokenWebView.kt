@@ -66,7 +66,11 @@ class PoTokenWebView private constructor(
                     Log.e(TAG, "This WebView implementation is broken: $fmt")
 
                     onInitializationErrorCloseAndCancel(exception)
-                    popAllPoTokenContinuations().forEach { (_, cont) -> cont.resumeWithException(exception) }
+                    popAllPoTokenContinuations().forEach { (_, cont) ->
+                        cont.resumeWithException(
+                            exception
+                        )
+                    }
                 }
                 return super.onConsoleMessage(m)
             }
@@ -74,9 +78,9 @@ class PoTokenWebView private constructor(
     }
 
     /**
-     * Must be called right after instantiating [PoTokenWebView] to perform the actual
-     * initialization. This will asynchronously go through all the steps needed to load BotGuard,
-     * run it, and obtain an `integrityToken`.
+     * Must be called right after instantiating [PoTokenWebView] to perform the
+     * actual initialization. This will asynchronously go through all the steps
+     * needed to load BotGuard, run it, and obtain an `integrityToken`.
      */
     private fun loadHtmlAndObtainBotguard() {
         Log.d(TAG, "loadHtmlAndObtainBotguard() called")
@@ -87,14 +91,16 @@ class PoTokenWebView private constructor(
             }
 
             // calls downloadAndRunBotguard() when the page has finished loading
-            val data = html.replaceFirst("</script>", "\n$JS_INTERFACE.downloadAndRunBotguard()</script>")
+            val data =
+                html.replaceFirst("</script>", "\n$JS_INTERFACE.downloadAndRunBotguard()</script>")
             webView.loadDataWithBaseURL("https://www.youtube.com", data, "text/html", "utf-8", null)
         }
     }
 
     /**
-     * Called during initialization by the JavaScript snippet appended to the HTML page content in
-     * [loadHtmlAndObtainBotguard] after the WebView content has been loaded.
+     * Called during initialization by the JavaScript snippet appended to the
+     * HTML page content in [loadHtmlAndObtainBotguard] after the WebView
+     * content has been loaded.
      */
     @JavascriptInterface
     fun downloadAndRunBotguard() {
@@ -135,8 +141,9 @@ class PoTokenWebView private constructor(
     }
 
     /**
-     * Called during initialization by the JavaScript snippet from [downloadAndRunBotguard] after
-     * obtaining the BotGuard execution output [botguardResponse].
+     * Called during initialization by the JavaScript snippet from
+     * [downloadAndRunBotguard] after obtaining the BotGuard execution output
+     * [botguardResponse].
      */
     @JavascriptInterface
     fun onRunBotguardResult(botguardResponse: String) {
@@ -149,7 +156,8 @@ class PoTokenWebView private constructor(
             val (integrityToken, expirationTimeInSeconds) = parseIntegrityTokenData(responseBody)
 
             // leave 10 minutes of margin just to be sure
-            expirationInstant = Instant.now().plusSeconds(expirationTimeInSeconds).minus(10, ChronoUnit.MINUTES)
+            expirationInstant =
+                Instant.now().plusSeconds(expirationTimeInSeconds).minus(10, ChronoUnit.MINUTES)
 
             webView.evaluateJavascript("this.integrityToken = $integrityToken") {
                 Log.d(TAG, "initialization finished, expiration=${expirationTimeInSeconds}s")
@@ -182,8 +190,8 @@ class PoTokenWebView private constructor(
     }
 
     /**
-     * Called by the JavaScript snippet from [generatePoToken] when an error occurs in calling the
-     * JavaScript `obtainPoToken()` function.
+     * Called by the JavaScript snippet from [generatePoToken] when an error
+     * occurs in calling the JavaScript `obtainPoToken()` function.
      */
     @JavascriptInterface
     fun onObtainPoTokenError(identifier: String, error: String) {
@@ -194,12 +202,16 @@ class PoTokenWebView private constructor(
     }
 
     /**
-     * Called by the JavaScript snippet from [generatePoToken] with the original identifier and the
-     * result of the JavaScript `obtainPoToken()` function.
+     * Called by the JavaScript snippet from [generatePoToken] with the
+     * original identifier and the result of the JavaScript `obtainPoToken()`
+     * function.
      */
     @JavascriptInterface
     fun onObtainPoTokenResult(identifier: String, poTokenU8: String) {
-        Log.d(TAG, "Generated poToken (before decoding): identifier=$identifier poTokenU8=$poTokenU8")
+        Log.d(
+            TAG,
+            "Generated poToken (before decoding): identifier=$identifier poTokenU8=$poTokenU8"
+        )
         val poToken = try {
             u8ToBase64(poTokenU8)
         } catch (t: Throwable) {
@@ -217,26 +229,28 @@ class PoTokenWebView private constructor(
 
     //region Handling multiple emitters
     /**
-     * Adds the ([identifier], [continuation]) pair to the [poTokenContinuations] list. This makes
-     * it so that multiple poToken requests can be generated in parallel, and the results will be
-     * notified to the right continuations.
+     * Adds the ([identifier], [continuation]) pair to the
+     * [poTokenContinuations] list. This makes it so that multiple poToken
+     * requests can be generated in parallel, and the results will be notified
+     * to the right continuations.
      */
     private fun addPoTokenEmitter(identifier: String, continuation: Continuation<String>) {
         poTokenContinuations[identifier] = continuation
     }
 
     /**
-     * Extracts and removes from the [poTokenContinuations] list a [Continuation] based on its
-     * [identifier]. The continuation is supposed to be used immediately after to either signal a
-     * success or an error.
+     * Extracts and removes from the [poTokenContinuations] list a
+     * [Continuation] based on its [identifier]. The continuation is supposed
+     * to be used immediately after to either signal a success or an error.
      */
     private fun popPoTokenContinuation(identifier: String): Continuation<String>? {
         return poTokenContinuations.remove(identifier)
     }
 
     /**
-     * Clears [poTokenContinuations] and returns its previous contents. The continuations are supposed
-     * to be used immediately after to either signal a success or an error.
+     * Clears [poTokenContinuations] and returns its previous contents. The
+     * continuations are supposed to be used immediately after to either signal
+     * a success or an error.
      */
     private fun popAllPoTokenContinuations(): Map<String, Continuation<String>> {
         val result = poTokenContinuations.toMap()
@@ -247,12 +261,13 @@ class PoTokenWebView private constructor(
 
     //region Utils
     /**
-     * Makes a POST request to [url] with the given [data] by setting the correct headers. Calls
-     * [onInitializationErrorCloseAndCancel] in case of any network errors and also if the response
-     * does not have HTTP code 200, therefore this is supposed to be used only during
-     * initialization. Calls [handleResponseBody] with the response body if the response is
-     * successful. The request is performed in the background and a disposable is added to
-     * [disposables].
+     * Makes a POST request to [url] with the given [data] by setting the
+     * correct headers. Calls [onInitializationErrorCloseAndCancel] in case
+     * of any network errors and also if the response does not have HTTP code
+     * 200, therefore this is supposed to be used only during initialization.
+     * Calls [handleResponseBody] with the response body if the response is
+     * successful. The request is performed in the background and a disposable
+     * is added to [disposables].
      */
     private fun makeBotguardServiceRequest(
         url: String,
@@ -262,13 +277,15 @@ class PoTokenWebView private constructor(
         scope.launch(exceptionHandler) {
             val requestBuilder = okhttp3.Request.Builder()
                 .post(data.toRequestBody())
-                .headers(mapOf(
-                    "User-Agent" to USER_AGENT,
-                    "Accept" to "application/json",
-                    "Content-Type" to "application/json+protobuf",
-                    "x-goog-api-key" to GOOGLE_API_KEY,
-                    "x-user-agent" to "grpc-web-javascript/0.1",
-                ).toHeaders())
+                .headers(
+                    mapOf(
+                        "User-Agent" to USER_AGENT,
+                        "Accept" to "application/json",
+                        "Content-Type" to "application/json+protobuf",
+                        "x-goog-api-key" to GOOGLE_API_KEY,
+                        "x-user-agent" to "grpc-web-javascript/0.1",
+                    ).toHeaders()
+                )
                 .url(url)
             val response = withContext(Dispatchers.IO) {
                 httpClient.newCall(requestBuilder.build()).execute()
@@ -286,17 +303,15 @@ class PoTokenWebView private constructor(
     }
 
     /**
-     * Handles any error happening during initialization, releasing resources and sending the error
-     * to [continuation].
+     * Handles any error happening during initialization, releasing resources
+     * and sending the error to [continuation].
      */
     private fun onInitializationErrorCloseAndCancel(error: Throwable) {
         close()
         continuation.resumeWithException(error)
     }
 
-    /**
-     * Releases all [webView] resources.
-     */
+    /** Releases all [webView] resources. */
     @MainThread
     fun close() {
         scope.cancel()

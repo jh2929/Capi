@@ -33,14 +33,14 @@ fun CreatePlaylistDialog(
     onDismiss: () -> Unit,
     initialTextFieldValue: String? = null,
     allowSyncing: Boolean = true,
-){
+) {
     val database = LocalDatabase.current
     val coroutineScope = rememberCoroutineScope()
     var syncedPlaylist by remember { mutableStateOf(false) }
     TextFieldDialog(
         icon = { Icon(painter = painterResource(R.drawable.add), contentDescription = null) },
         title = { Text(text = stringResource(R.string.create_playlist)) },
-        initialTextFieldValue = TextFieldValue(initialTextFieldValue?: ""),
+        initialTextFieldValue = TextFieldValue(initialTextFieldValue ?: ""),
         onDismiss = onDismiss,
         onDone = { playlistName ->
             coroutineScope.launch(Dispatchers.IO) {
@@ -60,7 +60,7 @@ fun CreatePlaylistDialog(
             }
         },
         extraContent = {
-            if (allowSyncing){
+            if (allowSyncing) {
                 Row(
                     modifier = Modifier.padding(vertical = 16.dp, horizontal = 40.dp)
                 ) {

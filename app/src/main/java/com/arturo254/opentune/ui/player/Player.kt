@@ -153,7 +153,10 @@ fun BottomSheetPlayer(
     val playerConnection = LocalPlayerConnection.current ?: return
 
 
-    val playerTextAlignment by rememberEnumPreference(PlayerTextAlignmentKey, PlayerTextAlignment.SIDED)
+    val playerTextAlignment by rememberEnumPreference(
+        PlayerTextAlignmentKey,
+        PlayerTextAlignment.SIDED
+    )
 
     val playerBackground by rememberEnumPreference(
         key = PlayerBackgroundStyleKey,
@@ -247,7 +250,7 @@ fun BottomSheetPlayer(
                                 ).drawable as? BitmapDrawable
                             )?.bitmap?.extractGradientColors(
                             darkTheme =
-                            darkTheme == DarkMode.ON || (darkTheme == DarkMode.AUTO && isSystemInDarkTheme),
+                                darkTheme == DarkMode.ON || (darkTheme == DarkMode.AUTO && isSystemInDarkTheme),
                         )
 
                 result?.let {
@@ -502,7 +505,12 @@ fun BottomSheetPlayer(
                         stringResource(R.string.loudness) to currentFormat?.loudnessDb?.let { "$it dB" },
                         stringResource(R.string.volume) to "${(playerConnection.player.volume * 100).toInt()}%",
                         stringResource(R.string.file_size) to
-                                currentFormat?.contentLength?.let { Formatter.formatShortFileSize(context, it) },
+                                currentFormat?.contentLength?.let {
+                                    Formatter.formatShortFileSize(
+                                        context,
+                                        it
+                                    )
+                                },
                     ).forEach { (label, text) ->
                         val displayText = text ?: stringResource(R.string.unknown)
                         Text(
@@ -518,7 +526,8 @@ fun BottomSheetPlayer(
                                     indication = null,
                                     onClick = {
                                         clipboardManager.setText(AnnotatedString(displayText))
-                                        Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT)
+                                            .show()
                                     },
                                 ),
                         )
@@ -531,7 +540,8 @@ fun BottomSheetPlayer(
 
     val queueSheetState =
         rememberBottomSheetState(
-            dismissedBound = QueuePeekHeight + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding(),
+            dismissedBound = QueuePeekHeight + WindowInsets.systemBars.asPaddingValues()
+                .calculateBottomPadding(),
             expandedBound = state.expandedBound,
         )
 
@@ -874,10 +884,10 @@ fun BottomSheetPlayer(
                         ),
                         modifier = Modifier.padding(horizontal = PlayerHorizontalPadding),
                         squigglesSpec =
-                        SquigglySlider.SquigglesSpec(
-                            amplitude = if (isPlaying) (2.dp).coerceAtLeast(2.dp) else 0.dp,
-                            strokeWidth = 3.dp,
-                        ),
+                            SquigglySlider.SquigglesSpec(
+                                amplitude = if (isPlaying) (2.dp).coerceAtLeast(2.dp) else 0.dp,
+                                strokeWidth = 3.dp,
+                            ),
                     )
                 }
 
@@ -918,9 +928,9 @@ fun BottomSheetPlayer(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
                 modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = PlayerHorizontalPadding + 4.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = PlayerHorizontalPadding + 4.dp),
             ) {
                 Text(
                     text = makeTimeString(sliderPosition ?: position),
@@ -944,9 +954,9 @@ fun BottomSheetPlayer(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = PlayerHorizontalPadding),
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = PlayerHorizontalPadding),
             ) {
                 Box(modifier = Modifier.weight(1f)) {
                     ResizableIconButton(
@@ -973,9 +983,9 @@ fun BottomSheetPlayer(
                         enabled = canSkipPrevious,
                         color = TextBackgroundColor,
                         modifier =
-                        Modifier
-                            .size(32.dp)
-                            .align(Alignment.Center),
+                            Modifier
+                                .size(32.dp)
+                                .align(Alignment.Center),
                         onClick = playerConnection::seekToPrevious,
                     )
                 }
@@ -984,38 +994,38 @@ fun BottomSheetPlayer(
 
                 Box(
                     modifier =
-                    Modifier
-                        .size(72.dp)
-                        .clip(RoundedCornerShape(playPauseRoundness))
-                        .background(textButtonColor)
-                        .clickable {
-                            if (playbackState == STATE_ENDED) {
-                                playerConnection.player.seekTo(0, 0)
-                                playerConnection.player.playWhenReady = true
-                            } else {
-                                playerConnection.player.togglePlayPause()
-                            }
-                        },
+                        Modifier
+                            .size(72.dp)
+                            .clip(RoundedCornerShape(playPauseRoundness))
+                            .background(textButtonColor)
+                            .clickable {
+                                if (playbackState == STATE_ENDED) {
+                                    playerConnection.player.seekTo(0, 0)
+                                    playerConnection.player.playWhenReady = true
+                                } else {
+                                    playerConnection.player.togglePlayPause()
+                                }
+                            },
                 ) {
                     Image(
                         painter =
-                        painterResource(
-                            if (playbackState ==
-                                STATE_ENDED
-                            ) {
-                                R.drawable.replay
-                            } else if (isPlaying) {
-                                R.drawable.pause
-                            } else {
-                                R.drawable.play
-                            },
-                        ),
+                            painterResource(
+                                if (playbackState ==
+                                    STATE_ENDED
+                                ) {
+                                    R.drawable.replay
+                                } else if (isPlaying) {
+                                    R.drawable.pause
+                                } else {
+                                    R.drawable.play
+                                },
+                            ),
                         contentDescription = null,
                         colorFilter = ColorFilter.tint(iconButtonColor),
                         modifier =
-                        Modifier
-                            .align(Alignment.Center)
-                            .size(36.dp),
+                            Modifier
+                                .align(Alignment.Center)
+                                .size(36.dp),
                     )
                 }
 
@@ -1027,9 +1037,9 @@ fun BottomSheetPlayer(
                         enabled = canSkipNext,
                         color = TextBackgroundColor,
                         modifier =
-                        Modifier
-                            .size(32.dp)
-                            .align(Alignment.Center),
+                            Modifier
+                                .size(32.dp)
+                                .align(Alignment.Center),
                         onClick = playerConnection::seekToNext,
                     )
                 }
@@ -1039,10 +1049,10 @@ fun BottomSheetPlayer(
                         icon = if (currentSong?.song?.liked == true) R.drawable.favorite else R.drawable.favorite_border,
                         color = if (currentSong?.song?.liked == true) MaterialTheme.colorScheme.error else TextBackgroundColor,
                         modifier =
-                        Modifier
-                            .size(32.dp)
-                            .padding(4.dp)
-                            .align(Alignment.Center),
+                            Modifier
+                                .size(32.dp)
+                                .padding(4.dp)
+                                .align(Alignment.Center),
                         onClick = playerConnection::toggleLike,
                     )
                 }
@@ -1090,9 +1100,9 @@ fun BottomSheetPlayer(
             Configuration.ORIENTATION_LANDSCAPE -> {
                 Row(
                     modifier =
-                    Modifier
-                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                        .padding(bottom = queueSheetState.collapsedBound + 48.dp),
+                        Modifier
+                            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
+                            .padding(bottom = queueSheetState.collapsedBound + 48.dp),
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,
@@ -1105,14 +1115,14 @@ fun BottomSheetPlayer(
                             modifier = Modifier.size(thumbnailSize),
                             color = TextBackgroundColor,
 
-                        )
+                            )
                     }
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier =
-                        Modifier
-                            .weight(1f)
-                            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
+                            Modifier
+                                .weight(1f)
+                                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
                     ) {
                         Spacer(Modifier.weight(1f))
 
@@ -1129,9 +1139,9 @@ fun BottomSheetPlayer(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier =
-                    Modifier
-                        .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
-                        .padding(bottom = queueSheetState.collapsedBound),
+                        Modifier
+                            .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal))
+                            .padding(bottom = queueSheetState.collapsedBound),
                 ) {
                     Box(
                         contentAlignment = Alignment.Center,
@@ -1158,11 +1168,11 @@ fun BottomSheetPlayer(
             playerBottomSheetState = state,
             navController = navController,
             backgroundColor =
-            if (useBlackBackground) {
-                Color.Black
-            } else {
-                MaterialTheme.colorScheme.surfaceContainer
-            },
+                if (useBlackBackground) {
+                    Color.Black
+                } else {
+                    MaterialTheme.colorScheme.surfaceContainer
+                },
             onBackgroundColor = onBackgroundColor,
             TextBackgroundColor = TextBackgroundColor,
         )

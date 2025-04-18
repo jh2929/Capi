@@ -84,9 +84,9 @@ fun ExploreScreen(
 
                 LazyRow(
                     contentPadding =
-                    WindowInsets.systemBars
-                        .only(WindowInsetsSides.Horizontal)
-                        .asPaddingValues(),
+                        WindowInsets.systemBars
+                            .only(WindowInsetsSides.Horizontal)
+                            .asPaddingValues(),
                 ) {
                     items(
                         items = newReleaseAlbums,
@@ -98,23 +98,23 @@ fun ExploreScreen(
                             isPlaying = isPlaying,
                             coroutineScope = coroutineScope,
                             modifier =
-                            Modifier
-                                .combinedClickable(
-                                    onClick = {
-                                        navController.navigate("album/${album.id}")
-                                    },
-                                    onLongClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        menuState.show {
-                                            YouTubeAlbumMenu(
-                                                albumItem = album,
-                                                navController = navController,
-                                                onDismiss = menuState::dismiss,
-                                            )
-                                        }
-                                    },
-                                )
-                                .animateItem(),
+                                Modifier
+                                    .combinedClickable(
+                                        onClick = {
+                                            navController.navigate("album/${album.id}")
+                                        },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            menuState.show {
+                                                YouTubeAlbumMenu(
+                                                    albumItem = album,
+                                                    navController = navController,
+                                                    onDismiss = menuState::dismiss,
+                                                )
+                                            }
+                                        },
+                                    )
+                                    .animateItem(),
                         )
                     }
                 }
@@ -140,9 +140,9 @@ fun ExploreScreen(
                                 navController.navigate("youtube_browse/${it.endpoint.browseId}?params=${it.endpoint.params}")
                             },
                             modifier =
-                            Modifier
-                                .padding(6.dp)
-                                .width(180.dp),
+                                Modifier
+                                    .padding(6.dp)
+                                    .width(180.dp),
                         )
                     }
                 }
@@ -159,9 +159,9 @@ fun ExploreScreen(
                     TextPlaceholder(
                         height = 36.dp,
                         modifier =
-                        Modifier
-                            .padding(vertical = 12.dp, horizontal = 12.dp)
-                            .width(250.dp),
+                            Modifier
+                                .padding(vertical = 12.dp, horizontal = 12.dp)
+                                .width(250.dp),
                     )
                     Row {
                         repeat(2) {
@@ -171,9 +171,9 @@ fun ExploreScreen(
                     TextPlaceholder(
                         height = 36.dp,
                         modifier =
-                        Modifier
-                            .padding(vertical = 12.dp, horizontal = 12.dp)
-                            .width(250.dp),
+                            Modifier
+                                .padding(vertical = 12.dp, horizontal = 12.dp)
+                                .width(250.dp),
                     )
                     repeat(4) {
                         Row {
@@ -181,9 +181,9 @@ fun ExploreScreen(
                                 TextPlaceholder(
                                     height = MoodAndGenresButtonHeight,
                                     modifier =
-                                    Modifier
-                                        .padding(horizontal = 6.dp)
-                                        .width(200.dp),
+                                        Modifier
+                                            .padding(horizontal = 6.dp)
+                                            .width(200.dp),
                                 )
                             }
                         }

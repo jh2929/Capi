@@ -191,26 +191,26 @@ fun OnlinePlaylistScreen(
                         item {
                             Column(
                                 modifier =
-                                Modifier
-                                    .padding(12.dp)
-                                    .animateItem(),
+                                    Modifier
+                                        .padding(12.dp)
+                                        .animateItem(),
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .size(AlbumThumbnailSize)
-                                        .clip(RoundedCornerShape(ThumbnailCornerRadius))
-                                        .fillMaxWidth(),
-                                ) {
-                                    AsyncImage(
-                                        model = playlist.thumbnail,
-                                        contentDescription = null,
+                                        contentAlignment = Alignment.Center,
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(ThumbnailCornerRadius)),
+                                            .size(AlbumThumbnailSize)
+                                            .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                                            .fillMaxWidth(),
+                                    ) {
+                                        AsyncImage(
+                                            model = playlist.thumbnail,
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(ThumbnailCornerRadius)),
                                         )
                                     }
 
@@ -232,11 +232,11 @@ fun OnlinePlaylistScreen(
                                                 buildAnnotatedString {
                                                     withStyle(
                                                         style =
-                                                        MaterialTheme.typography.titleMedium
-                                                            .copy(
-                                                                fontWeight = FontWeight.Normal,
-                                                                color = MaterialTheme.colorScheme.onBackground,
-                                                            ).toSpanStyle(),
+                                                            MaterialTheme.typography.titleMedium
+                                                                .copy(
+                                                                    fontWeight = FontWeight.Normal,
+                                                                    color = MaterialTheme.colorScheme.onBackground,
+                                                                ).toSpanStyle(),
                                                     ) {
                                                         if (artist.id != null) {
                                                             val link =
@@ -406,42 +406,42 @@ fun OnlinePlaylistScreen(
                                 }
                             },
                             modifier =
-                            Modifier
-                                .combinedClickable(
-                                    enabled = !hideExplicit || !song.item.second.explicit,
-                                    onClick = {
-                                        if (!selection) {
-                                            if (song.item.second.id == mediaMetadata?.id) {
-                                                playerConnection.player.togglePlayPause()
+                                Modifier
+                                    .combinedClickable(
+                                        enabled = !hideExplicit || !song.item.second.explicit,
+                                        onClick = {
+                                            if (!selection) {
+                                                if (song.item.second.id == mediaMetadata?.id) {
+                                                    playerConnection.player.togglePlayPause()
+                                                } else {
+                                                    playerConnection.service.getAutomix(playlistId = playlist.id)
+                                                    playerConnection.playQueue(
+                                                        YouTubeQueue(
+                                                            song.item.second.endpoint
+                                                                ?: WatchEndpoint(
+                                                                    videoId =
+                                                                        song.item.second
+                                                                            .id,
+                                                                ),
+                                                            song.item.second.toMediaMetadata(),
+                                                        ),
+                                                    )
+                                                }
                                             } else {
-                                                playerConnection.service.getAutomix(playlistId = playlist.id)
-                                                playerConnection.playQueue(
-                                                    YouTubeQueue(
-                                                        song.item.second.endpoint
-                                                            ?: WatchEndpoint(
-                                                                videoId =
-                                                                song.item.second
-                                                                    .id,
-                                                            ),
-                                                        song.item.second.toMediaMetadata(),
-                                                    ),
-                                                )
+                                                song.isSelected = !song.isSelected
                                             }
-                                        } else {
-                                            song.isSelected = !song.isSelected
-                                        }
-                                    },
-                                    onLongClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        if (!selection) {
-                                            selection = true
-                                        }
-                                        wrappedSongs.forEach { it.isSelected = false }
-                                        song.isSelected = true
-                                    },
-                                )
-                                .alpha(if (hideExplicit && song.item.second.explicit) 0.3f else 1f)
-                                .animateItem(),
+                                        },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            if (!selection) {
+                                                selection = true
+                                            }
+                                            wrappedSongs.forEach { it.isSelected = false }
+                                            song.isSelected = true
+                                        },
+                                    )
+                                    .alpha(if (hideExplicit && song.item.second.explicit) 0.3f else 1f)
+                                    .animateItem(),
                         )
                     }
                 } else {
@@ -451,10 +451,10 @@ fun OnlinePlaylistScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Spacer(
                                         modifier =
-                                        Modifier
-                                            .size(AlbumThumbnailSize)
-                                            .clip(RoundedCornerShape(ThumbnailCornerRadius))
-                                            .background(MaterialTheme.colorScheme.onSurface),
+                                            Modifier
+                                                .size(AlbumThumbnailSize)
+                                                .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                                                .background(MaterialTheme.colorScheme.onSurface),
                                     )
 
                                     Spacer(Modifier.width(16.dp))
@@ -600,9 +600,9 @@ fun OnlinePlaylistScreen(
         SnackbarHost(
             hostState = snackbarHostState,
             modifier =
-            Modifier
-                .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime))
-                .align(Alignment.BottomCenter),
+                Modifier
+                    .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime))
+                    .align(Alignment.BottomCenter),
         )
     }
 }

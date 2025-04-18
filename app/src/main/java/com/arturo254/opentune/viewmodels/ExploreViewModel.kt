@@ -47,19 +47,19 @@ constructor(
                 explorePage.value =
                     page.copy(
                         newReleaseAlbums =
-                        page.newReleaseAlbums
-                            .sortedBy { album ->
-                                val artistIds = album.artists.orEmpty().mapNotNull { it.id }
-                                val firstArtistKey =
-                                    artistIds.firstNotNullOfOrNull { artistId ->
-                                        if (artistId in favouriteArtists.values) {
-                                            favouriteArtists.entries.firstOrNull { it.value == artistId }?.key
-                                        } else {
-                                            artists.entries.firstOrNull { it.value == artistId }?.key
-                                        }
-                                    } ?: Int.MAX_VALUE
-                                firstArtistKey
-                            }.filterExplicit(context.dataStore.get(HideExplicitKey, false)),
+                            page.newReleaseAlbums
+                                .sortedBy { album ->
+                                    val artistIds = album.artists.orEmpty().mapNotNull { it.id }
+                                    val firstArtistKey =
+                                        artistIds.firstNotNullOfOrNull { artistId ->
+                                            if (artistId in favouriteArtists.values) {
+                                                favouriteArtists.entries.firstOrNull { it.value == artistId }?.key
+                                            } else {
+                                                artists.entries.firstOrNull { it.value == artistId }?.key
+                                            }
+                                        } ?: Int.MAX_VALUE
+                                    firstArtistKey
+                                }.filterExplicit(context.dataStore.get(HideExplicitKey, false)),
                     )
             }.onFailure {
                 reportException(it)

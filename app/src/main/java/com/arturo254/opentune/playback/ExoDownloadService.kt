@@ -73,7 +73,8 @@ class ExoDownloadService : DownloadService(
 
 
     /**
-     * This helper will outlive the lifespan of a single instance of [ExoDownloadService]
+     * This helper will outlive the lifespan of a single instance of
+     * [ExoDownloadService]
      */
     class TerminalStateNotificationHelper(
         private val context: Context,

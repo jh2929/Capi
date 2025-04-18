@@ -198,7 +198,10 @@ fun AboutScreen(
             Image(
                 painter = painterResource(R.drawable.opentune_monochrome),
                 contentDescription = null,
-                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onBackground, BlendMode.SrcIn),
+                colorFilter = ColorFilter.tint(
+                    MaterialTheme.colorScheme.onBackground,
+                    BlendMode.SrcIn
+                ),
                 modifier = Modifier
                     .matchParentSize()
                     .clickable { }
@@ -424,7 +427,6 @@ fun UserCards(uriHandler: UriHandler) {
 //        )
     }
 }
-
 
 
 @Composable

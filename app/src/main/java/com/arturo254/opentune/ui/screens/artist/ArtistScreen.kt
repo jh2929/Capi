@@ -394,12 +394,19 @@ fun ArtistScreen(
                                                                 )
 
                                                             is AlbumItem -> navController.navigate("album/${item.id}")
-                                                            is ArtistItem -> navController.navigate("artist/${item.id}")
-                                                            is PlaylistItem -> navController.navigate("online_playlist/${item.id}")
+                                                            is ArtistItem -> navController.navigate(
+                                                                "artist/${item.id}"
+                                                            )
+
+                                                            is PlaylistItem -> navController.navigate(
+                                                                "online_playlist/${item.id}"
+                                                            )
                                                         }
                                                     },
                                                     onLongClick = {
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        haptic.performHapticFeedback(
+                                                            HapticFeedbackType.LongPress
+                                                        )
                                                         menuState.show {
                                                             when (item) {
                                                                 is SongItem ->
@@ -506,7 +513,8 @@ fun ArtistScreen(
             IconButton(
                 onClick = {
                     viewModel.artistPage?.artist?.shareLink?.let { link ->
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val clipboard =
+                            context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         val clip = ClipData.newPlainText("Artist Link", link)
                         clipboard.setPrimaryClip(clip)
                         Toast.makeText(context, R.string.link_copied, Toast.LENGTH_SHORT).show()

@@ -19,18 +19,21 @@ object YTPlayerUtils {
         .build()
 
     /**
-     * The main client is used for metadata and initial streams.
-     * Do not use other clients for this because it can result in inconsistent metadata.
-     * For example other clients can have different normalization targets (loudnessDb).
+     * The main client is used for metadata and initial streams. Do not use
+     * other clients for this because it can result in inconsistent metadata.
+     * For example other clients can have different normalization targets
+     * (loudnessDb).
      *
-     * [com.arturo254.innertube.models.YouTubeClient.WEB_REMIX] should be preferred here because currently it is the only client which provides:
+     * [com.arturo254.innertube.models.YouTubeClient.WEB_REMIX] should be
+     * preferred here because currently it is the only client which provides:
      * - the correct metadata (like loudnessDb)
      * - premium formats
      */
     private val MAIN_CLIENT: YouTubeClient = WEB_REMIX
 
     /**
-     * Clients used for fallback streams in case the streams of the main client do not work.
+     * Clients used for fallback streams in case the streams of the main client
+     * do not work.
      */
     private val STREAM_FALLBACK_CLIENTS: Array<YouTubeClient> = arrayOf(
         TVHTML5_SIMPLY_EMBEDDED_PLAYER,
@@ -47,9 +50,9 @@ object YTPlayerUtils {
     )
 
     /**
-     * Custom player response intended to use for playback.
-     * Metadata like audioConfig and videoDetails are from [MAIN_CLIENT].
-     * Format & stream can be from [MAIN_CLIENT] or [STREAM_FALLBACK_CLIENTS].
+     * Custom player response intended to use for playback. Metadata like
+     * audioConfig and videoDetails are from [MAIN_CLIENT]. Format & stream can
+     * be from [MAIN_CLIENT] or [STREAM_FALLBACK_CLIENTS].
      */
     suspend fun playerResponseForPlayback(
         videoId: String,
@@ -59,10 +62,10 @@ object YTPlayerUtils {
         connectivityManager: ConnectivityManager,
     ): Result<PlaybackData> = runCatching {
         /**
-         * This is required for some clients to get working streams however
-         * it should not be forced for the [MAIN_CLIENT] because the response of the [MAIN_CLIENT]
-         * is required even if the streams won't work from this client.
-         * This is why it is allowed to be null.
+         * This is required for some clients to get working streams however it
+         * should not be forced for the [MAIN_CLIENT] because the response of the
+         * [MAIN_CLIENT] is required even if the streams won't work from this
+         * client. This is why it is allowed to be null.
          */
         val signatureTimestamp = getSignatureTimestampOrNull(videoId)
         val mainPlayerResponse =
@@ -145,8 +148,8 @@ object YTPlayerUtils {
     }
 
     /**
-     * Simple player response intended to use for metadata only.
-     * Stream URLs of this response might not work so don't use them.
+     * Simple player response intended to use for metadata only. Stream URLs of
+     * this response might not work so don't use them.
      */
     suspend fun playerResponseForMetadata(
         videoId: String,
@@ -177,9 +180,9 @@ object YTPlayerUtils {
         }
 
     /**
-     * Checks if the stream url returns a successful status.
-     * If this returns true the url is likely to work.
-     * If this returns false the url might cause an error during playback.
+     * Checks if the stream url returns a successful status. If this returns
+     * true the url is likely to work. If this returns false the url might
+     * cause an error during playback.
      */
     private fun validateStatus(url: String): Boolean {
         try {
@@ -195,7 +198,8 @@ object YTPlayerUtils {
     }
 
     /**
-     * Wrapper around the [NewPipeUtils.getSignatureTimestamp] function which reports exceptions
+     * Wrapper around the [NewPipeUtils.getSignatureTimestamp] function which
+     * reports exceptions
      */
     private fun getSignatureTimestampOrNull(
         videoId: String
@@ -208,7 +212,8 @@ object YTPlayerUtils {
     }
 
     /**
-     * Wrapper around the [NewPipeUtils.getStreamUrl] function which reports exceptions
+     * Wrapper around the [NewPipeUtils.getStreamUrl] function which reports
+     * exceptions
      */
     private fun findUrlOrNull(
         format: PlayerResponse.StreamingData.Format,

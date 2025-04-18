@@ -1,17 +1,42 @@
 package com.arturo254.opentune.ui.screens.playlist
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,7 +44,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -42,7 +66,10 @@ import com.arturo254.opentune.db.entities.Song
 import com.arturo254.opentune.extensions.toMediaItem
 import com.arturo254.opentune.extensions.togglePlayPause
 import com.arturo254.opentune.playback.queues.ListQueue
-import com.arturo254.opentune.ui.component.*
+import com.arturo254.opentune.ui.component.EmptyPlaceholder
+import com.arturo254.opentune.ui.component.IconButton
+import com.arturo254.opentune.ui.component.LocalMenuState
+import com.arturo254.opentune.ui.component.SongListItem
 import com.arturo254.opentune.ui.menu.SelectionSongMenu
 import com.arturo254.opentune.ui.menu.SongMenu
 import com.arturo254.opentune.ui.utils.ItemWrapper
@@ -215,7 +242,9 @@ fun CachePlaylistScreen(
                     }
                 }
 
-                itemsIndexed(filteredSongs, key = { _, song -> song.item.id }) { index, songWrapper ->
+                itemsIndexed(
+                    filteredSongs,
+                    key = { _, song -> song.item.id }) { index, songWrapper ->
                     SongListItem(
                         song = songWrapper.item,
                         isActive = songWrapper.item.id == mediaMetadata?.id,
@@ -283,6 +312,7 @@ fun CachePlaylistScreen(
                             style = MaterialTheme.typography.titleLarge
                         )
                     }
+
                     isSearching -> {
                         TextField(
                             value = query,
@@ -308,6 +338,7 @@ fun CachePlaylistScreen(
                                 .focusRequester(focusRequester)
                         )
                     }
+
                     else -> {
                         Text(
                             stringResource(R.string.cached_playlist),
@@ -324,9 +355,11 @@ fun CachePlaylistScreen(
                             query = TextFieldValue()
                             focusManager.clearFocus()
                         }
+
                         selection -> {
                             selection = false
                         }
+
                         else -> {
                             navController.navigateUp()
                         }
@@ -365,7 +398,8 @@ fun CachePlaylistScreen(
                     IconButton(onClick = {
                         menuState.show {
                             SelectionSongMenu(
-                                songSelection = wrappedSongs.filter { it.isSelected }.map { it.item },
+                                songSelection = wrappedSongs.filter { it.isSelected }
+                                    .map { it.item },
                                 onDismiss = menuState::dismiss,
                                 clearAction = { selection = false }
                             )

@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -22,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -30,7 +28,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.arturo254.innertube.models.WatchEndpoint
@@ -38,8 +35,8 @@ import com.arturo254.opentune.LocalPlayerAwareWindowInsets
 import com.arturo254.opentune.LocalPlayerConnection
 import com.arturo254.opentune.R
 import com.arturo254.opentune.constants.StatPeriod
-import com.arturo254.opentune.extensions.togglePlayPause
 import com.arturo254.opentune.extensions.toMediaItem
+import com.arturo254.opentune.extensions.togglePlayPause
 import com.arturo254.opentune.models.toMediaMetadata
 import com.arturo254.opentune.playback.queues.ListQueue
 import com.arturo254.opentune.playback.queues.YouTubeQueue
@@ -399,7 +396,8 @@ fun StatsScreen(
                     playerConnection.playQueue(
                         ListQueue(
                             title = context.getString(R.string.most_played_songs),
-                            items = mostPlayedSongs.map { it.toMediaMetadata().toMediaItem() }.shuffled()
+                            items = mostPlayedSongs.map { it.toMediaMetadata().toMediaItem() }
+                                .shuffled()
                         )
                     )
                 }

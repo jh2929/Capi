@@ -56,14 +56,14 @@ constructor(
                         query = query,
                         filter = filter,
                         map =
-                        list.groupBy {
-                            when (it) {
-                                is Song -> LocalFilter.SONG
-                                is Album -> LocalFilter.ALBUM
-                                is Artist -> LocalFilter.ARTIST
-                                is Playlist -> LocalFilter.PLAYLIST
-                            }
-                        },
+                            list.groupBy {
+                                when (it) {
+                                    is Song -> LocalFilter.SONG
+                                    is Album -> LocalFilter.ALBUM
+                                    is Artist -> LocalFilter.ARTIST
+                                    is Playlist -> LocalFilter.PLAYLIST
+                                }
+                            },
                     )
                 }
             }

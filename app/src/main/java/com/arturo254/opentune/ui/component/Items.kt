@@ -1,5 +1,3 @@
-
-
 package com.arturo254.opentune.ui.component
 
 import android.annotation.SuppressLint
@@ -53,7 +51,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
@@ -101,7 +98,6 @@ import com.arturo254.opentune.playback.queues.LocalAlbumRadio
 import com.arturo254.opentune.ui.theme.extractThemeColor
 import com.arturo254.opentune.utils.joinByBullet
 import com.arturo254.opentune.utils.makeTimeString
-import com.arturo254.opentune.utils.rememberPreference
 import com.arturo254.opentune.utils.reportException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -230,7 +226,8 @@ fun GridItem(
                     Modifier.fillMaxWidth()
                 } else {
                     Modifier.height(GridThumbnailHeight)
-                }.aspectRatio(thumbnailRatio)
+                }
+                    .aspectRatio(thumbnailRatio)
                     .clip(RoundedCornerShape(27.dp)),
         ) {
             thumbnailContent()
@@ -412,6 +409,7 @@ fun SongListItem(
                                 playerConnection.addToQueue(listOf(song.toMediaItem()))
                             }
                         }
+
                         else -> {
                             swipeStartTime = System.currentTimeMillis()
                         }
@@ -551,7 +549,7 @@ fun SongListItem(
                 isActive = isActive,
             )
         }
-    }else{
+    } else {
         ListItem(
             title = song.song.title,
             subtitle =
@@ -1530,6 +1528,7 @@ fun MediaMetadataListItem(
     modifier = modifier,
     isActive = isActive,
 )
+
 @ExperimentalMaterial3Api
 @Composable
 fun YouTubeListItem(
@@ -1618,10 +1617,12 @@ fun YouTubeListItem(
                         item.artists.joinToString { it.name },
                         makeTimeString(item.duration?.times(1000L))
                     )
+
                     is AlbumItem -> joinByBullet(
                         item.artists?.joinToString { it.name },
                         item.year?.toString()
                     )
+
                     is ArtistItem -> null
                     is PlaylistItem -> joinByBullet(item.author?.name, item.songCountText)
                 },
@@ -1632,7 +1633,9 @@ fun YouTubeListItem(
                     modifier = Modifier.size(ListThumbnailSize),
                 ) {
                     val thumbnailShape =
-                        if (item is ArtistItem) CircleShape else RoundedCornerShape(ThumbnailCornerRadius)
+                        if (item is ArtistItem) CircleShape else RoundedCornerShape(
+                            ThumbnailCornerRadius
+                        )
                     if (albumIndex != null) {
                         AnimatedVisibility(
                             visible = !isActive,
@@ -1723,10 +1726,12 @@ fun YouTubeListItem(
                         SwipeToDismissBoxValue.StartToEnd, SwipeToDismissBoxValue.EndToStart -> {
                             val swipeEndTime = System.currentTimeMillis()
                             if (swipeEndTime - swipeStartTime > 1000 && item is SongItem) {
-                                Toast.makeText(context, R.string.added_to_queue, Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, R.string.added_to_queue, Toast.LENGTH_SHORT)
+                                    .show()
                                 playerConnection.addToQueue(listOf(item.toMediaItem()))
                             }
                         }
+
                         else -> {
                             swipeStartTime = System.currentTimeMillis()
                         }
@@ -1780,6 +1785,7 @@ fun YouTubeListItem(
         ListItemContent()
     }
 }
+
 @SuppressLint("SuspiciousIndentation")
 @Composable
 fun YouTubeGridItem(
@@ -2042,6 +2048,7 @@ fun YouTubeGridItem(
         }
     }
 }
+
 @Composable
 fun YouTubeSmallGridItem(
     item: YTItem,

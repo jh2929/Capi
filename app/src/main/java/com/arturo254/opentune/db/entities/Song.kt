@@ -15,11 +15,11 @@ constructor(
         entityColumn = "id",
         parentColumn = "id",
         associateBy =
-        Junction(
-            value = SortedSongArtistMap::class,
-            parentColumn = "songId",
-            entityColumn = "artistId",
-        ),
+            Junction(
+                value = SortedSongArtistMap::class,
+                parentColumn = "songId",
+                entityColumn = "artistId",
+            ),
     )
     val artists: List<ArtistEntity>,
     @Relation(
@@ -27,11 +27,11 @@ constructor(
         entityColumn = "id",
         parentColumn = "id",
         associateBy =
-        Junction(
-            value = SongAlbumMap::class,
-            parentColumn = "songId",
-            entityColumn = "albumId",
-        ),
+            Junction(
+                value = SongAlbumMap::class,
+                parentColumn = "songId",
+                entityColumn = "albumId",
+            ),
     )
     val album: AlbumEntity? = null,
 ) : LocalItem() {

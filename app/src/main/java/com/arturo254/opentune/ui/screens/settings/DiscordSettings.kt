@@ -90,7 +90,10 @@ fun DiscordSettings(
         }
     }
 
-    val (discordRPC, onDiscordRPCChange) = rememberPreference(key = EnableDiscordRPCKey, defaultValue = true)
+    val (discordRPC, onDiscordRPCChange) = rememberPreference(
+        key = EnableDiscordRPCKey,
+        defaultValue = true
+    )
     val isLoggedIn = remember(discordToken) { discordToken != "" }
 
     Column(
@@ -98,7 +101,13 @@ fun DiscordSettings(
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
             .verticalScroll(rememberScrollState()),
     ) {
-        Spacer(Modifier.windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top)))
+        Spacer(
+            Modifier.windowInsetsPadding(
+                LocalPlayerAwareWindowInsets.current.only(
+                    WindowInsetsSides.Top
+                )
+            )
+        )
 
         // Account Section
         ElevatedCard(
@@ -351,7 +360,10 @@ fun RichPresence(song: Song?) {
             OutlinedButton(
                 enabled = song != null,
                 onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://music.youtube.com/watch?v=${song?.id}"))
+                    val intent = Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://music.youtube.com/watch?v=${song?.id}")
+                    )
                     context.startActivity(intent)
                 },
                 modifier = Modifier.fillMaxWidth(),
@@ -367,7 +379,10 @@ fun RichPresence(song: Song?) {
 
             OutlinedButton(
                 onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Arturo254/OpenTune"))
+                    val intent = Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://github.com/Arturo254/OpenTune")
+                    )
                     context.startActivity(intent)
                 },
                 modifier = Modifier.fillMaxWidth(),

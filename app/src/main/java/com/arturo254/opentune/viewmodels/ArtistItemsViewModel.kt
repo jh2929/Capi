@@ -63,9 +63,9 @@ constructor(
                     itemsPage.update {
                         ItemsPage(
                             items =
-                            (oldItemsPage.items + artistItemsContinuationPage.items)
-                                .distinctBy { it.id }
-                                .filterExplicit(context.dataStore.get(HideExplicitKey, false)),
+                                (oldItemsPage.items + artistItemsContinuationPage.items)
+                                    .distinctBy { it.id }
+                                    .filterExplicit(context.dataStore.get(HideExplicitKey, false)),
                             continuation = artistItemsContinuationPage.continuation,
                         )
                     }

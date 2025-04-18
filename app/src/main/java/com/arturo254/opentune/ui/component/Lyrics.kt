@@ -172,14 +172,10 @@ fun Lyrics(
     val lazyListState = rememberLazyListState()
 
     LaunchedEffect(currentLineIndex, lastPreviewTime) {
-        /**
-         * Count number of new lines in a lyric
-         */
+        /** Count number of new lines in a lyric */
         fun countNewLine(str: String) = str.count { it == '\n' }
 
-        /**
-         * Calculate the lyric offset Based on how many lines (\n chars)
-         */
+        /** Calculate the lyric offset Based on how many lines (\n chars) */
         fun calculateOffset() = with(density) {
             if (landscapeOffset) {
                 16.dp.toPx()
@@ -194,10 +190,12 @@ fun Lyrics(
             deferredCurrentLineIndex = currentLineIndex
             if (lastPreviewTime == 0L) {
                 if (isSeeking) {
-                    lazyListState.scrollToItem(currentLineIndex,
+                    lazyListState.scrollToItem(
+                        currentLineIndex,
                         with(density) { 36.dp.toPx().toInt() } + calculateOffset())
                 } else {
-                    lazyListState.animateScrollToItem(currentLineIndex,
+                    lazyListState.animateScrollToItem(
+                        currentLineIndex,
                         with(density) { 36.dp.toPx().toInt() } + calculateOffset())
                 }
             }

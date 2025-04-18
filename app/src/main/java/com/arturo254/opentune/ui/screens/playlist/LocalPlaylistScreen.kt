@@ -562,32 +562,32 @@ fun LocalPlaylistScreen(
                                     }
                                 },
                                 modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .combinedClickable(
-                                        onClick = {
-                                            if (song.song.id == mediaMetadata?.id) {
-                                                playerConnection.player.togglePlayPause()
-                                            } else {
-                                                playerConnection.playQueue(
-                                                    ListQueue(
-                                                        title = playlist!!.playlist.name,
-                                                        items = songs.map { it.song.toMediaItem() },
-                                                        startIndex = songs.indexOfFirst { it.map.id == song.map.id },
-                                                    ),
-                                                )
-                                            }
-                                        },
-                                        onLongClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            if (!selection) {
-                                                selection = true
-                                            }
-                                            wrappedSongs.forEach { it.isSelected = false }
-                                            wrappedSongs.find { it.item.map.id == song.map.id }?.isSelected =
-                                                true
-                                        },
-                                    )
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = {
+                                                if (song.song.id == mediaMetadata?.id) {
+                                                    playerConnection.player.togglePlayPause()
+                                                } else {
+                                                    playerConnection.playQueue(
+                                                        ListQueue(
+                                                            title = playlist!!.playlist.name,
+                                                            items = songs.map { it.song.toMediaItem() },
+                                                            startIndex = songs.indexOfFirst { it.map.id == song.map.id },
+                                                        ),
+                                                    )
+                                                }
+                                            },
+                                            onLongClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                if (!selection) {
+                                                    selection = true
+                                                }
+                                                wrappedSongs.forEach { it.isSelected = false }
+                                                wrappedSongs.find { it.item.map.id == song.map.id }?.isSelected =
+                                                    true
+                                            },
+                                        )
                             )
                         }
 
@@ -699,35 +699,35 @@ fun LocalPlaylistScreen(
                                 },
                                 isSelected = songWrapper.isSelected && selection,
                                 modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .combinedClickable(
-                                        onClick = {
-                                            if (!selection) {
-                                                if (songWrapper.item.song.id == mediaMetadata?.id) {
-                                                    playerConnection.player.togglePlayPause()
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .combinedClickable(
+                                            onClick = {
+                                                if (!selection) {
+                                                    if (songWrapper.item.song.id == mediaMetadata?.id) {
+                                                        playerConnection.player.togglePlayPause()
+                                                    } else {
+                                                        playerConnection.playQueue(
+                                                            ListQueue(
+                                                                title = playlist!!.playlist.name,
+                                                                items = songs.map { it.song.toMediaItem() },
+                                                                startIndex = index,
+                                                            ),
+                                                        )
+                                                    }
                                                 } else {
-                                                    playerConnection.playQueue(
-                                                        ListQueue(
-                                                            title = playlist!!.playlist.name,
-                                                            items = songs.map { it.song.toMediaItem() },
-                                                            startIndex = index,
-                                                        ),
-                                                    )
+                                                    songWrapper.isSelected = !songWrapper.isSelected
                                                 }
-                                            } else {
-                                                songWrapper.isSelected = !songWrapper.isSelected
-                                            }
-                                        },
-                                        onLongClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            if (!selection) {
-                                                selection = true
-                                            }
-                                            wrappedSongs.forEach { it.isSelected = false }
-                                            songWrapper.isSelected = true
-                                        },
-                                    ),
+                                            },
+                                            onLongClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                if (!selection) {
+                                                    selection = true
+                                                }
+                                                wrappedSongs.forEach { it.isSelected = false }
+                                                songWrapper.isSelected = true
+                                            },
+                                        ),
                             )
                         }
 
@@ -866,9 +866,9 @@ fun LocalPlaylistScreen(
         SnackbarHost(
             hostState = snackbarHostState,
             modifier =
-            Modifier
-                .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime))
-                .align(Alignment.BottomCenter),
+                Modifier
+                    .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime))
+                    .align(Alignment.BottomCenter),
         )
     }
 }
@@ -947,9 +947,9 @@ fun LocalPlaylistHeader(
             } else if (playlist.thumbnails.size > 1) {
                 Box(
                     modifier =
-                    Modifier
-                        .size(AlbumThumbnailSize)
-                        .clip(RoundedCornerShape(ThumbnailCornerRadius)),
+                        Modifier
+                            .size(AlbumThumbnailSize)
+                            .clip(RoundedCornerShape(ThumbnailCornerRadius)),
                 ) {
                     listOf(
                         Alignment.TopStart,
@@ -962,14 +962,14 @@ fun LocalPlaylistHeader(
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier =
-                            Modifier
-                                .align(alignment)
-                                .size(AlbumThumbnailSize / 2),
+                                Modifier
+                                    .align(alignment)
+                                    .size(AlbumThumbnailSize / 2),
                         )
                     }
                 }
             }
-  
+
             Column(
                 verticalArrangement = Arrangement.Center,
             ) {
@@ -983,18 +983,18 @@ fun LocalPlaylistHeader(
 
                 Text(
                     text =
-                    if (playlist.songCount == 0 && playlist.playlist.remoteSongCount != null)
-                        pluralStringResource(
-                            R.plurals.n_song,
-                            playlist.playlist.remoteSongCount,
-                            playlist.playlist.remoteSongCount
-                        )
-                    else
-                        pluralStringResource(
-                            R.plurals.n_song,
-                            playlist.songCount,
-                            playlist.songCount
-                        ),
+                        if (playlist.songCount == 0 && playlist.playlist.remoteSongCount != null)
+                            pluralStringResource(
+                                R.plurals.n_song,
+                                playlist.playlist.remoteSongCount,
+                                playlist.playlist.remoteSongCount
+                            )
+                        else
+                            pluralStringResource(
+                                R.plurals.n_song,
+                                playlist.songCount,
+                                playlist.songCount
+                            ),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Normal,
                 )

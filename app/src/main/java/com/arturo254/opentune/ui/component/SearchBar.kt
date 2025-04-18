@@ -98,7 +98,7 @@ fun TopSearch(
     colors: SearchBarColors =
         SearchBarDefaults.colors(
             containerColor =
-            MaterialTheme.colorScheme.surfaceContainer
+                MaterialTheme.colorScheme.surfaceContainer
         ),
     tonalElevation: Dp = TonalElevation,
     windowInsets: WindowInsets = WindowInsets.systemBars,
@@ -109,10 +109,10 @@ fun TopSearch(
     val animationProgress: Float by animateFloatAsState(
         targetValue = if (active) 1f else 0f,
         animationSpec =
-        tween(
-            durationMillis = AnimationDurationMillis,
-            easing = MotionTokens.EasingLegacyCubicBezier,
-        ),
+            tween(
+                durationMillis = AnimationDurationMillis,
+                easing = MotionTokens.EasingLegacyCubicBezier,
+            ),
         label = "",
     )
 
@@ -153,10 +153,10 @@ fun TopSearch(
 
     BoxWithConstraints(
         modifier =
-        modifier
-            .offset {
-                IntOffset(x = 0, y = 0)
-            },
+            modifier
+                .offset {
+                    IntOffset(x = 0, y = 0)
+                },
         propagateMinConstraints = true,
     ) {
         val height: Dp
@@ -201,12 +201,13 @@ fun TopSearch(
             contentColor = contentColorFor(colors.containerColor),
             tonalElevation = tonalElevation,
             modifier =
-            Modifier
-                .padding(
-                    top = animatedSurfaceTopPadding,
-                    start = startPadding,
-                    end = endPadding,
-                ).size(width = width, height = height),
+                Modifier
+                    .padding(
+                        top = animatedSurfaceTopPadding,
+                        start = startPadding,
+                        end = endPadding,
+                    )
+                    .size(width = width, height = height),
         ) {
             Column {
                 SearchBarInputField(
@@ -269,9 +270,9 @@ private fun SearchBarInputField(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
-        modifier
-            .fillMaxWidth()
-            .height(InputFieldHeight),
+            modifier
+                .fillMaxWidth()
+                .height(InputFieldHeight),
     ) {
         if (leadingIcon != null) {
             Spacer(Modifier.width(SearchBarIconOffsetX))
@@ -282,31 +283,33 @@ private fun SearchBarInputField(
             value = query,
             onValueChange = onQueryChange,
             modifier =
-            Modifier
-                .weight(1f)
-                .focusRequester(focusRequester)
-                .pointerInput(Unit) {
-                    awaitEachGesture {
-                        // Must be PointerEventPass.Initial to observe events before the text field
-                        // consumes them in the Main pass
-                        awaitFirstDown(pass = PointerEventPass.Initial)
-                        val upEvent = waitForUpOrCancellation(pass = PointerEventPass.Initial)
-                        if (upEvent != null) {
-                            onActiveChange(true)
+                Modifier
+                    .weight(1f)
+                    .focusRequester(focusRequester)
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            // Must be PointerEventPass.Initial to observe events before the text field
+                            // consumes them in the Main pass
+                            awaitFirstDown(pass = PointerEventPass.Initial)
+                            val upEvent = waitForUpOrCancellation(pass = PointerEventPass.Initial)
+                            if (upEvent != null) {
+                                onActiveChange(true)
+                            }
                         }
                     }
-                }.semantics {
-                    contentDescription = searchSemantics
-                    if (active) {
-                        stateDescription = suggestionsAvailableSemantics
+                    .semantics {
+                        contentDescription = searchSemantics
+                        if (active) {
+                            stateDescription = suggestionsAvailableSemantics
+                        }
                     }
-                }.onKeyEvent {
-                    if (it.key == Key.Enter) {
-                        onSearch(query.text)
-                        return@onKeyEvent true
-                    }
-                    false
-                },
+                    .onKeyEvent {
+                        if (it.key == Key.Enter) {
+                            onSearch(query.text)
+                            return@onKeyEvent true
+                        }
+                        false
+                    },
             enabled = enabled,
             singleLine = true,
             textStyle = LocalTextStyle.current.merge(TextStyle(color = textColor)),

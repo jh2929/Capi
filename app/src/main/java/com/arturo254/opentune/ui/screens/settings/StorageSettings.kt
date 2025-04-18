@@ -159,21 +159,21 @@ fun StorageSettings(
             LinearProgressIndicator(
                 progress = { playerCacheProgress },
                 modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
             )
 
             Text(
                 text =
-                stringResource(
-                    R.string.size_used,
-                    "${formatFileSize(playerCacheSize)} / ${
-                        formatFileSize(
-                            maxSongCacheSize * 1024 * 1024L,
-                        )
-                    }",
-                ),
+                    stringResource(
+                        R.string.size_used,
+                        "${formatFileSize(playerCacheSize)} / ${
+                            formatFileSize(
+                                maxSongCacheSize * 1024 * 1024L,
+                            )
+                        }",
+                    ),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
             )
@@ -207,9 +207,9 @@ fun StorageSettings(
         LinearProgressIndicator(
             progress = { imageCacheProgress },
             modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
         )
 
         Text(

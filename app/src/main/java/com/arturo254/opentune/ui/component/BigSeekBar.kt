@@ -37,7 +37,8 @@ fun BigSeekBar(
             .clip(RoundedCornerShape(16.dp))
             .onPlaced {
                 width = it.size.width.toFloat()
-            }.pointerInput(progressProvider) {
+            }
+            .pointerInput(progressProvider) {
                 detectHorizontalDragGestures { _, dragAmount ->
                     onProgressChange(
                         (progressProvider() + dragAmount * 1.2f / width).coerceIn(

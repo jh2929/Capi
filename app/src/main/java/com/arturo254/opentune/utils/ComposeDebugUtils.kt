@@ -20,8 +20,9 @@ import kotlinx.coroutines.delay
 import kotlin.math.min
 
 /**
- * A [Modifier] that draws a border around elements that are recomposing. The border increases in
- * size and interpolates from red to green as more recompositions occur before a timeout.
+ * A [Modifier] that draws a border around elements that are recomposing.
+ * The border increases in size and interpolates from red to green as more
+ * recompositions occur before a timeout.
  */
 @Stable
 fun Modifier.recomposeHighlighter(): Modifier = this.then(recomposeModifier)

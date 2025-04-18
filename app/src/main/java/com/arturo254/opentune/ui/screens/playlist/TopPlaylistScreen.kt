@@ -236,18 +236,18 @@ fun TopPlaylistScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .size(AlbumThumbnailSize)
-                                        .clip(RoundedCornerShape(ThumbnailCornerRadius))
-                                        .fillMaxWidth(),
-                                ) {
-                                    AsyncImage(
-                                        model = songs!![0].song.thumbnailUrl,
-                                        contentDescription = null,
+                                        contentAlignment = Alignment.Center,
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(ThumbnailCornerRadius)),
+                                            .size(AlbumThumbnailSize)
+                                            .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                                            .fillMaxWidth(),
+                                    ) {
+                                        AsyncImage(
+                                            model = songs!![0].song.thumbnailUrl,
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(ThumbnailCornerRadius)),
                                         )
                                     }
                                     Column(
@@ -263,11 +263,11 @@ fun TopPlaylistScreen(
 
                                         Text(
                                             text =
-                                            pluralStringResource(
-                                                R.plurals.n_song,
-                                                songs!!.size,
-                                                songs!!.size,
-                                            ),
+                                                pluralStringResource(
+                                                    R.plurals.n_song,
+                                                    songs!!.size,
+                                                    songs!!.size,
+                                                ),
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Normal,
                                         )
@@ -479,36 +479,36 @@ fun TopPlaylistScreen(
                             },
                             isSelected = songWrapper.isSelected && selection,
                             modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .combinedClickable(
-                                    onClick = {
-                                        if (!selection) {
-                                            if (songWrapper.item.song.id == mediaMetadata?.id) {
-                                                playerConnection.player.togglePlayPause()
+                                Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (!selection) {
+                                                if (songWrapper.item.song.id == mediaMetadata?.id) {
+                                                    playerConnection.player.togglePlayPause()
+                                                } else {
+                                                    playerConnection.playQueue(
+                                                        ListQueue(
+                                                            title = name,
+                                                            items = filteredSongs.map { it.item.toMediaItem() },
+                                                            startIndex = index,
+                                                        ),
+                                                    )
+                                                }
                                             } else {
-                                                playerConnection.playQueue(
-                                                    ListQueue(
-                                                        title = name,
-                                                        items = filteredSongs.map { it.item.toMediaItem() },
-                                                        startIndex = index,
-                                                    ),
-                                                )
+                                                songWrapper.isSelected = !songWrapper.isSelected
                                             }
-                                        } else {
-                                            songWrapper.isSelected = !songWrapper.isSelected
-                                        }
-                                    },
-                                    onLongClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        if (!selection) {
-                                            selection = true
-                                        }
-                                        wrappedSongs?.forEach { it.isSelected = false }
-                                        songWrapper.isSelected = true
-                                    },
-                                )
-                                .animateItem()
+                                        },
+                                        onLongClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            if (!selection) {
+                                                selection = true
+                                            }
+                                            wrappedSongs?.forEach { it.isSelected = false }
+                                            songWrapper.isSelected = true
+                                        },
+                                    )
+                                    .animateItem()
                         )
                     }
                 }

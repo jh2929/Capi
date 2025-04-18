@@ -67,22 +67,22 @@ fun AccountScreen(
                 item = item,
                 fillMaxWidth = true,
                 modifier =
-                Modifier
-                    .combinedClickable(
-                        onClick = {
-                            navController.navigate("online_playlist/${item.id}")
-                        },
-                        onLongClick = {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            menuState.show {
-                                YouTubePlaylistMenu(
-                                    playlist = item,
-                                    coroutineScope = coroutineScope,
-                                    onDismiss = menuState::dismiss,
-                                )
-                            }
-                        },
-                    ),
+                    Modifier
+                        .combinedClickable(
+                            onClick = {
+                                navController.navigate("online_playlist/${item.id}")
+                            },
+                            onLongClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                menuState.show {
+                                    YouTubePlaylistMenu(
+                                        playlist = item,
+                                        coroutineScope = coroutineScope,
+                                        onDismiss = menuState::dismiss,
+                                    )
+                                }
+                            },
+                        ),
             )
         }
 

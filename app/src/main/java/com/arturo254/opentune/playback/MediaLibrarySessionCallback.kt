@@ -226,14 +226,14 @@ constructor(
                             parentId.startsWith("${MusicService.ARTIST}/") ->
                                 database.artistSongsInAA(parentId.removePrefix("${MusicService.ARTIST}/"))
                                     .first().map {
-                                    it.toMediaItem(parentId)
-                                }
+                                        it.toMediaItem(parentId)
+                                    }
 
                             parentId.startsWith("${MusicService.ALBUM}/") ->
                                 database.albumSongs(parentId.removePrefix("${MusicService.ALBUM}/"))
                                     .first().map {
-                                    it.toMediaItem(parentId)
-                                }
+                                        it.toMediaItem(parentId)
+                                    }
 
                             parentId.startsWith("${MusicService.PLAYLIST}/") ->
                                 when (val playlistId =

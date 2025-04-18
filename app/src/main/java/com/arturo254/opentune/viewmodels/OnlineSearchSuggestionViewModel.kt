@@ -52,20 +52,20 @@ constructor(
                                 SearchSuggestionViewState(
                                     history = history,
                                     suggestions =
-                                    result
-                                        ?.queries
-                                        ?.filter { query ->
-                                            history.none { it.query == query }
-                                        }.orEmpty(),
+                                        result
+                                            ?.queries
+                                            ?.filter { query ->
+                                                history.none { it.query == query }
+                                            }.orEmpty(),
                                     items =
-                                    result
-                                        ?.recommendedItems
-                                        ?.filterExplicit(
-                                            context.dataStore.get(
-                                                HideExplicitKey,
-                                                false,
-                                            ),
-                                        ).orEmpty(),
+                                        result
+                                            ?.recommendedItems
+                                            ?.filterExplicit(
+                                                context.dataStore.get(
+                                                    HideExplicitKey,
+                                                    false,
+                                                ),
+                                            ).orEmpty(),
                                 )
                             }
                     }

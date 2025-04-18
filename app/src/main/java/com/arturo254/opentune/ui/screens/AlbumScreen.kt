@@ -234,11 +234,11 @@ fun AlbumScreen(
                                 buildAnnotatedString {
                                     withStyle(
                                         style =
-                                        MaterialTheme.typography.titleMedium
-                                            .copy(
-                                                fontWeight = FontWeight.Normal,
-                                                color = MaterialTheme.colorScheme.onBackground,
-                                            ).toSpanStyle(),
+                                            MaterialTheme.typography.titleMedium
+                                                .copy(
+                                                    fontWeight = FontWeight.Normal,
+                                                    color = MaterialTheme.colorScheme.onBackground,
+                                                ).toSpanStyle(),
                                     ) {
                                         albumWithSongs.artists.fastForEachIndexed { index, artist ->
                                             pushStringAnnotation(artist.id, artist.name)
@@ -275,24 +275,24 @@ fun AlbumScreen(
                                 ) {
                                     Icon(
                                         painter =
-                                        painterResource(
+                                            painterResource(
+                                                if (albumWithSongs.album.bookmarkedAt !=
+                                                    null
+                                                ) {
+                                                    R.drawable.favorite
+                                                } else {
+                                                    R.drawable.favorite_border
+                                                },
+                                            ),
+                                        contentDescription = null,
+                                        tint =
                                             if (albumWithSongs.album.bookmarkedAt !=
                                                 null
                                             ) {
-                                                R.drawable.favorite
+                                                MaterialTheme.colorScheme.error
                                             } else {
-                                                R.drawable.favorite_border
+                                                LocalContentColor.current
                                             },
-                                        ),
-                                        contentDescription = null,
-                                        tint =
-                                        if (albumWithSongs.album.bookmarkedAt !=
-                                            null
-                                        ) {
-                                            MaterialTheme.colorScheme.error
-                                        } else {
-                                            LocalContentColor.current
-                                        },
                                     )
                                 }
 
@@ -464,34 +464,37 @@ fun AlbumScreen(
                         },
                         isSelected = songWrapper.isSelected && selection,
                         modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .combinedClickable(
-                                onClick = {
-                                    if (!selection) {
-                                        if (songWrapper.item.id == mediaMetadata?.id) {
-                                            playerConnection.player.togglePlayPause()
+                            Modifier
+                                .fillMaxWidth()
+                                .combinedClickable(
+                                    onClick = {
+                                        if (!selection) {
+                                            if (songWrapper.item.id == mediaMetadata?.id) {
+                                                playerConnection.player.togglePlayPause()
+                                            } else {
+                                                playerConnection.service.getAutomix(playlistId)
+                                                playerConnection.playQueue(
+                                                    LocalAlbumRadio(
+                                                        albumWithSongs,
+                                                        startIndex = index
+                                                    ),
+                                                )
+                                            }
                                         } else {
-                                            playerConnection.service.getAutomix(playlistId)
-                                            playerConnection.playQueue(
-                                                LocalAlbumRadio(albumWithSongs, startIndex = index),
-                                            )
+                                            songWrapper.isSelected = !songWrapper.isSelected
                                         }
-                                    } else {
-                                        songWrapper.isSelected = !songWrapper.isSelected
-                                    }
-                                },
-                                onLongClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    if (!selection) {
-                                        selection = true
-                                    }
-                                    wrappedSongs.forEach {
-                                        it.isSelected = false
-                                    } // Clear previous selections
-                                    songWrapper.isSelected = true // Select the current item
-                                },
-                            ),
+                                    },
+                                    onLongClick = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        if (!selection) {
+                                            selection = true
+                                        }
+                                        wrappedSongs.forEach {
+                                            it.isSelected = false
+                                        } // Clear previous selections
+                                        songWrapper.isSelected = true // Select the current item
+                                    },
+                                ),
                     )
                 }
             }
@@ -514,21 +517,21 @@ fun AlbumScreen(
                                 isPlaying = isPlaying,
                                 coroutineScope = scope,
                                 modifier =
-                                Modifier
-                                    .combinedClickable(
-                                        onClick = { navController.navigate("album/${item.id}") },
-                                        onLongClick = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            menuState.show {
-                                                YouTubeAlbumMenu(
-                                                    albumItem = item,
-                                                    navController = navController,
-                                                    onDismiss = menuState::dismiss,
-                                                )
-                                            }
-                                        },
-                                    )
-                                    .animateItem(),
+                                    Modifier
+                                        .combinedClickable(
+                                            onClick = { navController.navigate("album/${item.id}") },
+                                            onLongClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                menuState.show {
+                                                    YouTubeAlbumMenu(
+                                                        albumItem = item,
+                                                        navController = navController,
+                                                        onDismiss = menuState::dismiss,
+                                                    )
+                                                }
+                                            },
+                                        )
+                                        .animateItem(),
                             )
                         }
                     }
@@ -541,10 +544,10 @@ fun AlbumScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Spacer(
                                 modifier =
-                                Modifier
-                                    .size(AlbumThumbnailSize)
-                                    .clip(RoundedCornerShape(ThumbnailCornerRadius))
-                                    .background(MaterialTheme.colorScheme.onSurface),
+                                    Modifier
+                                        .size(AlbumThumbnailSize)
+                                        .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                                        .background(MaterialTheme.colorScheme.onSurface),
                             )
 
                             Spacer(Modifier.width(16.dp))
@@ -668,7 +671,7 @@ suspend fun saveAlbumImageToGallery(context: Context, imageUrl: String, albumTit
             val bitmap = drawable.toBitmap()
 
             // Usar el título del álbum para el nombre del archivo
-            val displayName = "${albumTitle.replace(" " , "_")}.png"
+            val displayName = "${albumTitle.replace(" ", "_")}.png"
             val mimeType = "image/png" // Tipo MIME para PNG
 
 

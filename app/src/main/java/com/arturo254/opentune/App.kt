@@ -95,7 +95,8 @@ class App : Application(), ImageLoaderFactory {
                         ?.takeIf { it != "null" } // Previously visitorData was sometimes saved as "null" due to a bug
                         ?: YouTube.visitorData().onFailure {
                             withContext(Dispatchers.Main) {
-                                Toast.makeText(this@App, "Failed to get visitorData.", LENGTH_SHORT).show()
+                                Toast.makeText(this@App, "Failed to get visitorData.", LENGTH_SHORT)
+                                    .show()
                             }
                             reportException(it)
                         }.getOrNull()?.also { newVisitorData ->

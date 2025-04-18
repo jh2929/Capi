@@ -55,13 +55,17 @@ fun LoginScreen(navController: NavController) {
 
     AndroidView(
         modifier =
-        Modifier
-            .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
-            .fillMaxSize(),
+            Modifier
+                .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
+                .fillMaxSize(),
         factory = { context ->
             WebView(context).apply {
                 webViewClient = object : WebViewClient() {
-                    override fun onPageStarted(view: WebView, url: String, favicon: android.graphics.Bitmap?) {
+                    override fun onPageStarted(
+                        view: WebView,
+                        url: String,
+                        favicon: android.graphics.Bitmap?
+                    ) {
 //                        Timber.tag("WebView").d("Page started: $url") // Uncomment this line to debug WebView
                         super.onPageStarted(view, url, favicon)
                     }
@@ -70,17 +74,20 @@ fun LoginScreen(navController: NavController) {
                         Timber.tag("WebView").d("Page finished: $url")
                         if (url != null && url.startsWith(YOUTUBE_MUSIC_URL)) {
                             val youTubeCookieString = CookieManager.getInstance().getCookie(url)
-                            innerTubeCookie = if ("SAPISID" in parseCookieString(youTubeCookieString)) youTubeCookieString else ""
+                            innerTubeCookie =
+                                if ("SAPISID" in parseCookieString(youTubeCookieString)) youTubeCookieString else ""
                             if (innerTubeCookie.isNotEmpty()) {
                                 GlobalScope.launch {
                                     YouTube.accountInfo().onSuccess {
                                         accountName = it.name
                                         accountEmail = it.email.orEmpty()
                                         accountChannelHandle = it.channelHandle.orEmpty()
-                                        Timber.tag("WebView").d("Account info retrieved: $accountName, $accountEmail, $accountChannelHandle")
+                                        Timber.tag("WebView")
+                                            .d("Account info retrieved: $accountName, $accountEmail, $accountChannelHandle")
                                     }.onFailure {
                                         reportException(it)
-                                        Timber.tag("WebView").e(it, "Failed to retrieve account info")
+                                        Timber.tag("WebView")
+                                            .e(it, "Failed to retrieve account info")
                                     }
                                 }
                             } else {
@@ -90,7 +97,10 @@ fun LoginScreen(navController: NavController) {
                         }
                     }
 
-                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+                    override fun shouldOverrideUrlLoading(
+                        view: WebView,
+                        request: WebResourceRequest
+                    ): Boolean {
                         val url = request.url.toString()
                         Timber.tag("WebView").d("Loading URL: $url")
                         return super.shouldOverrideUrlLoading(view, request)
@@ -109,7 +119,8 @@ fun LoginScreen(navController: NavController) {
                         fun onRetrieveVisitorData(newVisitorData: String?) {
                             if (innerTubeCookie == "") {
                                 visitorData = ""
-                                Timber.tag("WebView").e("InnerTube cookie is empty, cannot retrieve visitor data")
+                                Timber.tag("WebView")
+                                    .e("InnerTube cookie is empty, cannot retrieve visitor data")
                                 return
                             }
 

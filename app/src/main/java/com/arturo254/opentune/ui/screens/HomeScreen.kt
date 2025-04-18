@@ -109,6 +109,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.min
 import kotlin.random.Random
+
 // El codigo original de la aplicacion pertenece a : Arturo Cervantes Galindo
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -759,6 +760,7 @@ fun HomeScreen(
                                     playerConnection.playQueue(LocalAlbumRadio(it))
                                 }
                             }
+
                             is Artist -> {}
                             is Playlist -> {}
                         }
@@ -769,6 +771,7 @@ fun HomeScreen(
                             is ArtistItem -> luckyItem.radioEndpoint?.let {
                                 playerConnection.playQueue(YouTubeQueue(it))
                             }
+
                             is PlaylistItem -> luckyItem.playEndpoint?.let {
                                 playerConnection.playQueue(YouTubeQueue(it))
                             }

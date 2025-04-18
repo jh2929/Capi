@@ -34,17 +34,23 @@ class PoTokenGenerator {
                     webViewBadImpl = true
                     null
                 }
+
                 else -> throw e // includes PoTokenException
             }
         }
     }
 
     /**
-     * @param forceRecreate whether to force the recreation of [webPoTokenGenerator], to be used in
-     * case the current [webPoTokenGenerator] threw an error last time
-     * [PoTokenWebView.generatePoToken] was called
+     * @param forceRecreate whether to force the recreation of
+     *    [webPoTokenGenerator], to be used in case the current
+     *    [webPoTokenGenerator] threw an error last time
+     *    [PoTokenWebView.generatePoToken] was called
      */
-    private suspend fun getWebClientPoToken(videoId: String, sessionId: String, forceRecreate: Boolean): PoTokenResult {
+    private suspend fun getWebClientPoToken(
+        videoId: String,
+        sessionId: String,
+        forceRecreate: Boolean
+    ): PoTokenResult {
         Log.d(TAG, "Web poToken requested: $videoId, $sessionId")
 
         val (poTokenGenerator, streamingPot, hasBeenRecreated) =
@@ -64,7 +70,8 @@ class PoTokenGenerator {
 
                     // The streaming poToken needs to be generated exactly once before generating
                     // any other (player) tokens.
-                    webPoTokenStreamingPot = webPoTokenGenerator!!.generatePoToken(webPoTokenSessionId!!)
+                    webPoTokenStreamingPot =
+                        webPoTokenGenerator!!.generatePoToken(webPoTokenSessionId!!)
                 }
 
                 Triple(webPoTokenGenerator!!, webPoTokenStreamingPot!!, shouldRecreate)
@@ -85,7 +92,11 @@ class PoTokenGenerator {
                 // this might happen for example if the app goes in the background and the WebView
                 // content is lost
                 Log.e(TAG, "Failed to obtain poToken, retrying", throwable)
-                return getWebClientPoToken(videoId = videoId, sessionId = sessionId, forceRecreate = true)
+                return getWebClientPoToken(
+                    videoId = videoId,
+                    sessionId = sessionId,
+                    forceRecreate = true
+                )
             }
         }
 

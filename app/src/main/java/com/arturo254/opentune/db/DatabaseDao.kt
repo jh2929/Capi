@@ -428,8 +428,10 @@ interface DatabaseDao {
 
     @Query("SELECT sum(count) from playCount WHERE song = :songId")
     fun getLifetimePlayCount(songId: String?): Flow<Int>
+
     @Query("SELECT sum(count) from playCount WHERE song = :songId AND year = :year")
     fun getPlayCountByYear(songId: String?, year: Int): Flow<Int>
+
     @Query("SELECT count from playCount WHERE song = :songId AND year = :year AND month = :month")
     fun getPlayCountByMonth(songId: String?, year: Int, month: Int): Flow<Int>
 
@@ -629,8 +631,8 @@ interface DatabaseDao {
 
     @Transaction
     suspend fun updateArtistSongsCount(artistId: String) {
-    val count = getSongCountForArtist(artistId)
-    updateArtistSongCount(artistId, count)
+        val count = getSongCountForArtist(artistId)
+        updateArtistSongCount(artistId, count)
     }
 
     @Query("SELECT COUNT(*) FROM song_artist_map WHERE artistId = :artistId")
@@ -948,9 +950,7 @@ interface DatabaseDao {
     @Query("UPDATE playCount SET count = count + 1 WHERE song = :songId AND year = :year AND month = :month")
     fun incrementPlayCount(songId: String, year: Int, month: Int)
 
-    /**
-     * Increment by one the play count with today's year and month.
-     */
+    /** Increment by one the play count with today's year and month. */
     fun incrementPlayCount(songId: String) {
         val time = LocalDateTime.now().atOffset(ZoneOffset.UTC)
         var oldCount: Int

@@ -52,13 +52,14 @@ fun PreferenceEntry(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
-        modifier
-            .fillMaxWidth()
-            .clickable(
-                enabled = isEnabled && onClick != null,
-                onClick = onClick ?: {},
-            ).alpha(if (isEnabled) 1f else 0.5f)
-            .padding(horizontal = 16.dp, vertical = 16.dp),
+            modifier
+                .fillMaxWidth()
+                .clickable(
+                    enabled = isEnabled && onClick != null,
+                    onClick = onClick ?: {},
+                )
+                .alpha(if (isEnabled) 1f else 0.5f)
+                .padding(horizontal = 16.dp, vertical = 16.dp),
     ) {
         if (icon != null) {
             Box(
@@ -119,12 +120,13 @@ fun <T> ListPreference(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            showDialog = false
-                            onValueSelected(value)
-                        }.padding(horizontal = 16.dp, vertical = 12.dp),
+                        Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showDialog = false
+                                onValueSelected(value)
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                 ) {
                     RadioButton(
                         selected = value == selectedValue,
@@ -217,10 +219,10 @@ fun EditTextPreference(
     if (showDialog) {
         TextFieldDialog(
             initialTextFieldValue =
-            TextFieldValue(
-                text = value,
-                selection = TextRange(value.length),
-            ),
+                TextFieldValue(
+                    text = value,
+                    selection = TextRange(value.length),
+                ),
             singleLine = singleLine,
             isInputValid = isInputValid,
             onDone = onValueChange,

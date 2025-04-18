@@ -130,7 +130,13 @@ fun BackupAndRestore(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Spacer(Modifier.windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Top)))
+        Spacer(
+            Modifier.windowInsetsPadding(
+                LocalPlayerAwareWindowInsets.current.only(
+                    WindowInsetsSides.Top
+                )
+            )
+        )
         Spacer(modifier = Modifier.height(8.dp))
 
         // Sección de información
@@ -140,7 +146,11 @@ fun BackupAndRestore(
         ActionSection(
             onBackupClick = {
                 val formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
-                backupLauncher.launch("${context.getString(R.string.app_name)}_${LocalDateTime.now().format(formatter)}.backup")
+                backupLauncher.launch(
+                    "${context.getString(R.string.app_name)}_${
+                        LocalDateTime.now().format(formatter)
+                    }.backup"
+                )
             },
             onRestoreClick = {
                 restoreLauncher.launch(arrayOf("application/octet-stream"))
@@ -313,9 +323,11 @@ private fun UploadStatusSection(
                 }
             }
         }
+
         is UploadStatus.Success -> {
             SuccessCard(fileUrl = uploadStatus.fileUrl, onCopyClick = onCopyClick)
         }
+
         is UploadStatus.Failure -> {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -343,7 +355,9 @@ private fun UploadStatusSection(
                 }
             }
         }
-        null -> { /* No status to show */ }
+
+        null -> { /* No status to show */
+        }
     }
 }
 
@@ -418,7 +432,11 @@ private fun SuccessCard(fileUrl: String, onCopyClick: () -> Unit) {
     }
 }
 
-suspend fun uploadBackupToFilebin(context: Context, uri: Uri, progressCallback: (Float) -> Unit = {}): String? {
+suspend fun uploadBackupToFilebin(
+    context: Context,
+    uri: Uri,
+    progressCallback: (Float) -> Unit = {}
+): String? {
     return withContext(Dispatchers.IO) {
         val tempFile = File(context.cacheDir, "temp_backup_${System.currentTimeMillis()}.backup")
 
@@ -445,7 +463,8 @@ suspend fun uploadBackupToFilebin(context: Context, uri: Uri, progressCallback: 
 
             // Crear RequestBody con monitoreo de progreso
             val fileRequestBody = object : RequestBody() {
-                override fun contentType(): MediaType? = "application/octet-stream".toMediaTypeOrNull()
+                override fun contentType(): MediaType? =
+                    "application/octet-stream".toMediaTypeOrNull()
 
                 override fun contentLength(): Long = tempFile.length()
 

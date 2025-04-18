@@ -102,10 +102,10 @@ fun LibraryArtistsScreen(
             )
             ChipsRow(
                 chips =
-                listOf(
-                    ArtistFilter.LIKED to stringResource(R.string.filter_liked),
-                    ArtistFilter.LIBRARY to stringResource(R.string.filter_library)
-                ),
+                    listOf(
+                        ArtistFilter.LIKED to stringResource(R.string.filter_liked),
+                        ArtistFilter.LIBRARY to stringResource(R.string.filter_library)
+                    ),
                 currentValue = filter,
                 onValueUpdate = {
                     filter = it
@@ -178,12 +178,12 @@ fun LibraryArtistsScreen(
             ) {
                 Icon(
                     painter =
-                    painterResource(
-                        when (viewType) {
-                            LibraryViewType.LIST -> R.drawable.list
-                            LibraryViewType.GRID -> R.drawable.grid_view
-                        },
-                    ),
+                        painterResource(
+                            when (viewType) {
+                                LibraryViewType.LIST -> R.drawable.list
+                                LibraryViewType.GRID -> R.drawable.grid_view
+                            },
+                        ),
                     contentDescription = null,
                 )
             }
@@ -244,9 +244,9 @@ fun LibraryArtistsScreen(
                 LazyVerticalGrid(
                     state = lazyGridState,
                     columns =
-                    GridCells.Adaptive(
-                        minSize = GridThumbnailHeight + if (gridItemSize == GridItemSize.BIG) 24.dp else (-24).dp,
-                    ),
+                        GridCells.Adaptive(
+                            minSize = GridThumbnailHeight + if (gridItemSize == GridItemSize.BIG) 24.dp else (-24).dp,
+                        ),
                     contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
                 ) {
                     item(

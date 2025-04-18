@@ -42,15 +42,15 @@ constructor(
                         fromTimeStamp = statToPeriod(selection, t),
                         limit = -1,
                         toTimeStamp =
-                        if (selection == OptionStats.CONTINUOUS || t == 0) {
-                            LocalDateTime
-                                .now()
-                                .toInstant(
-                                    ZoneOffset.UTC,
-                                ).toEpochMilli()
-                        } else {
-                            statToPeriod(selection, t - 1)
-                        },
+                            if (selection == OptionStats.CONTINUOUS || t == 0) {
+                                LocalDateTime
+                                    .now()
+                                    .toInstant(
+                                        ZoneOffset.UTC,
+                                    ).toEpochMilli()
+                            } else {
+                                statToPeriod(selection, t - 1)
+                            },
                     )
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -65,15 +65,15 @@ constructor(
                         fromTimeStamp = statToPeriod(selection, t),
                         limit = -1,
                         toTimeStamp =
-                        if (selection == OptionStats.CONTINUOUS || t == 0) {
-                            LocalDateTime
-                                .now()
-                                .toInstant(
-                                    ZoneOffset.UTC,
-                                ).toEpochMilli()
-                        } else {
-                            statToPeriod(selection, t - 1)
-                        },
+                            if (selection == OptionStats.CONTINUOUS || t == 0) {
+                                LocalDateTime
+                                    .now()
+                                    .toInstant(
+                                        ZoneOffset.UTC,
+                                    ).toEpochMilli()
+                            } else {
+                                statToPeriod(selection, t - 1)
+                            },
                     )
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -88,15 +88,15 @@ constructor(
                         statToPeriod(selection, t),
                         limit = -1,
                         toTimeStamp =
-                        if (selection == OptionStats.CONTINUOUS || t == 0) {
-                            LocalDateTime
-                                .now()
-                                .toInstant(
-                                    ZoneOffset.UTC,
-                                ).toEpochMilli()
-                        } else {
-                            statToPeriod(selection, t - 1)
-                        },
+                            if (selection == OptionStats.CONTINUOUS || t == 0) {
+                                LocalDateTime
+                                    .now()
+                                    .toInstant(
+                                        ZoneOffset.UTC,
+                                    ).toEpochMilli()
+                            } else {
+                                statToPeriod(selection, t - 1)
+                            },
                     ).map { artists ->
                         artists.filter { it.artist.isYouTubeArtist }
                     }
@@ -112,15 +112,15 @@ constructor(
                     statToPeriod(selection, t),
                     limit = -1,
                     toTimeStamp =
-                    if (selection == OptionStats.CONTINUOUS || t == 0) {
-                        LocalDateTime
-                            .now()
-                            .toInstant(
-                                ZoneOffset.UTC,
-                            ).toEpochMilli()
-                    } else {
-                        statToPeriod(selection, t - 1)
-                    },
+                        if (selection == OptionStats.CONTINUOUS || t == 0) {
+                            LocalDateTime
+                                .now()
+                                .toInstant(
+                                    ZoneOffset.UTC,
+                                ).toEpochMilli()
+                        } else {
+                            statToPeriod(selection, t - 1)
+                        },
                 )
             }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 

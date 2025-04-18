@@ -67,7 +67,8 @@ import com.arturo254.opentune.ui.menu.YouTubeSongMenu
 import com.arturo254.opentune.viewmodels.OnlineSearchSuggestionViewModel
 import kotlinx.coroutines.flow.drop
 
-@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class,
+@OptIn(
+    ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class,
     ExperimentalMaterial3Api::class
 )
 @Composable
@@ -215,7 +216,10 @@ fun OnlineSearchScreen(
                                             playerConnection.player.togglePlayPause()
                                         } else {
                                             playerConnection.playQueue(
-                                                YouTubeQueue(WatchEndpoint(videoId = item.id), item.toMediaMetadata()),
+                                                YouTubeQueue(
+                                                    WatchEndpoint(videoId = item.id),
+                                                    item.toMediaMetadata()
+                                                ),
                                             )
                                             onDismiss()
                                         }
@@ -270,7 +274,8 @@ fun OnlineSearchScreen(
                                     }
                                 }
                             },
-                        ).animateItemPlacement(),
+                        )
+                        .animateItemPlacement(),
             )
         }
     }
