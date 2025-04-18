@@ -206,6 +206,9 @@ fun NavGraphBuilder.navigationBuilder(
     ) {
         CachePlaylistScreen(navController, scrollBehavior)
     }
+
+
+
     composable(
         route = "top_playlist/{top}",
         arguments =
@@ -233,6 +236,8 @@ fun NavGraphBuilder.navigationBuilder(
     ) {
         YouTubeBrowseScreen(navController)
     }
+
+
     composable("settings") {
         val latestVersion by mutableLongStateOf(BuildConfig.VERSION_CODE.toLong())
         SettingsScreen(latestVersion, navController, scrollBehavior)
@@ -271,3 +276,4 @@ fun NavGraphBuilder.navigationBuilder(
         LoginScreen(navController)
     }
 }
+

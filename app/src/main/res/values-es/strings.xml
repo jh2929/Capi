@@ -394,7 +394,7 @@
     <string name="history_duration">Duración del historial</string>
     <string name="contributors">Colaboradores</string>
     <string name="Donate">Donar</string>
-    <string name="Telegramchanel">Telegrama Chanel</string>
+    <string name="Telegramchanel">Canal de Telegram</string>
     <string name="contribution">Contribución</string>
     <string name="Hi">Hola</string>
     <string name="NewVersion">Nueva Versión</string>
@@ -413,8 +413,8 @@
     <string name="unmute">Anular silencio</string>
     <string name="mute">Silencio</string>
     <string name="explore">Explorar</string>
-    <string name="custom_avatar">Avatar personalizado (BETA)</string>
-    <string name="custom_avatar_beta">Avatar personalizado (BETA)</string>
+    <string name="custom_avatar">Avatar personalizado</string>
+    <string name="custom_avatar_beta">"Avatar personalizado "</string>
     <string name="select_image">Seleccionar imagen</string>
     <string name="default_avatar">Avatar por defecto</string>
     <string name="restore_default_avatar">Restaurar avatar por defecto</string>
@@ -450,4 +450,8 @@
     <string name="info_title">Información</string>
     <string name="info_description">Esta sección proporciona detalles clave sobre el proceso de copia de seguridad y restauración, incluyendo la seguridad de sus datos y cómo garantizar que su información permanezca segura y sea fácilmente accesible.</string>
     <string name="redireccion">Redireccion</string>
+    <string name="Version">Versión</string>
+    <string name="notification">Activar notificaciones</string>
+    <string name="cached_playlist">En caché</string>
+    <string name="added_to_queue">Añadido a la cola</string>
 </resources>

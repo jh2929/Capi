@@ -413,8 +413,8 @@
     <string name="unmute">Desmutar</string>
     <string name="mute">Silenciar</string>
     <string name="explore">Explorar</string>
-    <string name="custom_avatar">Avatar personalizado (BETA)</string>
-    <string name="custom_avatar_beta">Avatar personalizado (BETA)</string>
+    <string name="custom_avatar">Avatar personalizado</string>
+    <string name="custom_avatar_beta">"Avatar personalizado "</string>
     <string name="select_image">Selecionar imagem</string>
     <string name="default_avatar">Avatar padrão</string>
     <string name="restore_default_avatar">Restaurar avatar padrão</string>

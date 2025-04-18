@@ -516,9 +516,6 @@ fun AppearanceSettings(
         )
 
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Agregamos nuestro composable personalizado
         CustomAvatarSelector()
     }
 
@@ -582,23 +579,21 @@ fun ThumbnailCornerRadiusSelectorButton(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 56.dp),
-        shape = MaterialTheme.shapes.medium,
+            .heightIn(min = 56.dp)
+        .clip(RoundedCornerShape(26.dp)),
+        shadowElevation = 10.dp,
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         onClick = { showDialog = true }
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.line_curve),
                 contentDescription = null,
                 modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(
@@ -680,6 +675,7 @@ fun ThumbnailCornerRadiusModal(
                 modifier = Modifier
                     .fillMaxWidth(dialogWidth)
                     .wrapContentHeight()
+                    .clip(RoundedCornerShape(30.dp))
                     .padding(16.dp),
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surface,

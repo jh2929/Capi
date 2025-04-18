@@ -404,10 +404,10 @@ fun UserCards(uriHandler: UriHandler) {
         )
 
         UserCard(
-            imageUrl = "https://avatars.githubusercontent.com/u/40720048?v=4",
-            name = "ϟ AlessandroGalvan",
-            role = "Search Bar Playlist",
-            onClick = { uriHandler.openUri("https://github.com/AlessandroGalvan") }
+            imageUrl = "https://avatars.githubusercontent.com/u/205341163?v=4",
+            name = "ϟ Xamax-code",
+            role = "Code Refactor",
+            onClick = { uriHandler.openUri("https://github.com/xamax-code") }
         )
         UserCard(
             imageUrl = "https://avatars.githubusercontent.com/u/106829560?v=4",

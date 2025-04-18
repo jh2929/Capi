@@ -193,6 +193,8 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.days
 
+// El codigo original de la aplicacion pertenece a : Arturo Cervantes Galindo (Arturo254) Cualquier parecido es copia y pega de mi codigo original
+
 @Suppress("DEPRECATION", "ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE")
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -849,7 +851,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                     NavigationBar(
                                         modifier = Modifier
-                                            .clip(RoundedCornerShape(22.dp))
+                                            .clip(RoundedCornerShape(15.dp))
                                             .align(Alignment.BottomCenter)
                                             .offset {
                                                 if (navigationBarHeight == 0.dp) {
