@@ -1,45 +1,52 @@
 # OpenTune
 
 <div align="center">
-  <img src="https://github.com/user-attachments/assets/0d3db989-fefa-4381-bf0c-8bd5ebdabd7b" alt="Icono de OpenTune" width="200"/>
+  <img src="https://github.com/Arturo254/OpenTune/blob/master/fastlane/metadata/android/en-US/images/featureGraphic.png" alt="Banner de OpenTune" width="100%"/>
   
-  ### Un cliente elegante de YouTube Music con Material Design 3 para Android
+  ### Cliente avanzado de YouTube Music con Material Design 3 para Android
   
-  [![Última versión](https://img.shields.io/github/v/release/Arturo254/InnerTune?style=for-the-badge&logo=github&color=blue)](https://github.com/Arturo254/OpenTune/releases)
-  [![Licencia](https://img.shields.io/github/license/Arturo254/OpenTune?style=for-the-badge&logo=gnu&color=green)](https://github.com/Arturo254/OpenTune/blob/main/LICENSE)
-  [![Crowdin](https://badges.crowdin.net/opentune/localized.svg)](https://crowdin.com/project/opentune)
+  [![Última versión](https://img.shields.io/github/v/release/Arturo254/InnerTune?style=flat-square&logo=github&color=0D1117&labelColor=161B22)](https://github.com/Arturo254/OpenTune/releases)
+  [![Licencia](https://img.shields.io/github/license/Arturo254/OpenTune?style=flat-square&logo=gnu&color=2B3137&labelColor=161B22)](https://github.com/Arturo254/OpenTune/blob/main/LICENSE)
+  [![Estado de traducción](https://badges.crowdin.net/opentune/localized.svg)](https://crowdin.com/project/opentune)
+  [![Android](https://img.shields.io/badge/Platform-Android%206.0+-3DDC84.svg?style=flat-square&logo=android&logoColor=white&labelColor=161B22)](https://www.android.com)
 </div>
 
-## Índice
+<br>
 
-- [Introducción](#introducción)
-- [Tecnologías](#tecnologías)
-- [Características](#características-principales)
+## Índice de contenidos
+
+- [Visión general](#visión-general)
+- [Stack tecnológico](#stack-tecnológico)
+- [Características principales](#características-principales)
 - [Documentación](#documentación)
 - [Instalación](#instalación)
-- [Compilación](#guía-de-compilación)
+- [Compilación](#compilación-desde-código-fuente)
 - [Contribuciones](#contribuciones)
-- [Financiación](#apoyo-al-proyecto)
+- [Financiación](#apoyo-al-desarrollo)
 - [Licencia](#licencia)
 
-## Introducción
+<br>
 
-**OpenTune** es un cliente avanzado de YouTube Music diseñado específicamente para dispositivos Android. Ofrece una experiencia fluida y altamente personalizable con una interfaz moderna basada en Material Design 3, permitiéndote explorar, reproducir y gestionar tu música favorita de manera óptima.
+## Visión general
+
+**OpenTune** es un cliente de YouTube Music de código abierto diseñado específicamente para dispositivos Android. Proporciona una experiencia de usuario superior con una interfaz moderna que implementa Material Design 3, ofreciendo funcionalidades avanzadas para explorar, reproducir y gestionar contenido musical sin las limitaciones de la aplicación oficial.
 
 > [!NOTE]  
-> OpenTune es un proyecto de código abierto y no está afiliado oficialmente con YouTube ni Google.
+> OpenTune es un proyecto independiente y no está afiliado, patrocinado ni respaldado por YouTube o Google.
 
-## Tecnologías
+<br>
+
+## Stack tecnológico
 
 <div align="center">
   <a href="https://kotlinlang.org/">
     <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin"/>
   </a>
-  <a href="https://flutter.dev/">
-    <img src="https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white" alt="Flutter"/>
-  </a>
   <a href="https://developer.android.com/jetpack/compose">
-    <img src="https://img.shields.io/badge/Jetpack%20Compose-03DAC5?style=for-the-badge&logo=jetpack&logoColor=black" alt="Jetpack Compose"/>
+    <img src="https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose"/>
+  </a>
+  <a href="https://material.io/design/material-you">
+    <img src="https://img.shields.io/badge/Material%20Design%203-757575?style=for-the-badge&logo=materialdesign&logoColor=white" alt="Material Design 3"/>
   </a>
   <a href="https://www.python.org/">
     <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python"/>
@@ -49,188 +56,215 @@
   </a>
 </div>
 
-## Características Principales
+<br>
 
-| Funcionalidad | Descripción |
-|:-------------:|:------------|
-| **Reproducción sin anuncios** | Disfruta de YouTube y YouTube Music sin interrupciones publicitarias |
-| **Reproducción en segundo plano** | Continúa escuchando mientras utilizas otras aplicaciones |
-| **Búsqueda avanzada** | Encuentra fácilmente canciones, videos, álbumes y listas de reproducción |
-| **Inicio de sesión integrado** | Accede a tu cuenta para sincronizar preferencias y biblioteca |
-| **Gestión de biblioteca** | Organiza y administra completamente tu colección musical |
-| **Modo sin conexión** | Descarga y almacena música para escucharla sin internet |
-| **Letras sincronizadas** | Visualiza la letra de las canciones al ritmo de la música |
-| **Omisión de silencios** | Función inteligente para saltar segmentos sin audio |
-| **Normalización de audio** | Equilibra el volumen entre diferentes canciones |
-| **Control de tempo y tono** | Ajusta la velocidad de reproducción y tono según tus preferencias |
-| **Tema dinámico** | Interfaz que se adapta a los colores de las portadas de álbumes |
-| **Soporte multiidioma** | Disponible en múltiples idiomas para usuarios globales |
-| **Compatibilidad con Android Auto** | Integración con sistemas de infoentretenimiento vehicular |
-| **Material Design 3** | Diseño moderno siguiendo las últimas directrices de Google |
-| **Descarga de portadas** | Guarda las imágenes de álbumes en alta calidad |
+## Características principales
+
+| Categoría | Funcionalidad | Descripción |
+|:----------|:--------------|:------------|
+| **Experiencia básica** | Reproducción sin anuncios | Disfruta de música sin interrupciones publicitarias |
+| | Reproducción en segundo plano | Continúa escuchando mientras usas otras aplicaciones |
+| | Búsqueda avanzada | Encuentra rápidamente canciones, vídeos, álbumes y listas de reproducción |
+| **Cuenta y biblioteca** | Inicio de sesión integrado | Accede a tu cuenta para sincronizar preferencias y colecciones |
+| | Gestión de biblioteca | Organiza y administra completamente tu colección musical |
+| | Modo sin conexión | Descarga contenido para escuchar sin conexión a internet |
+| **Características de audio** | Letras sincronizadas | Visualiza letra de canciones perfectamente sincronizada |
+| | Omisión inteligente de silencios | Salta automáticamente segmentos sin audio |
+| | Normalización de volumen | Equilibra el nivel sonoro entre diferentes pistas |
+| | Control de tempo y tono | Ajusta velocidad y tono de reproducción según preferencias |
+| **Personalización** | Tema dinámico | Interfaz que se adapta a los colores de portadas de álbumes |
+| | Soporte multiidioma | Disponible en numerosos idiomas para usuarios globales |
+| **Integración** | Compatibilidad con Android Auto | Integración con sistemas de infoentretenimiento vehicular |
+| | Material Design 3 | Diseño alineado con las últimas directrices de diseño de Google |
+| | Exportación de portadas | Guarda imágenes de álbumes en alta resolución |
 
 > [!TIP]
-> Para una experiencia óptima, te recomendamos activar la normalización de audio y el tema dinámico en los ajustes de la aplicación.
+> Para maximizar tu experiencia con OpenTune, activa la normalización de audio en los ajustes y prueba el tema dinámico que adapta la interfaz a los colores de tus álbumes favoritos.
+
+<br>
 
 ## Documentación
 
-Para obtener información detallada sobre la instalación, configuración y uso de OpenTune, consulta nuestra documentación completa:
+Para información detallada sobre configuración, funcionalidades avanzadas y guías de uso, consulta nuestra documentación oficial:
 
-[**Guía Oficial (GitBook)**](https://opentune.gitbook.io/)
+[<img src="https://img.shields.io/badge/Documentación-GitBook-4285F4?style=for-the-badge&logo=gitbook&logoColor=white">](https://opentune.gitbook.io/)
+
+<br>
 
 ## Instalación
 
-### Requisitos del Sistema
+### Requisitos del sistema
 
-- Android 6.0 (Marshmallow) o superior
-- Mínimo 10 MB de espacio de almacenamiento
-- Conexión a Internet (para streaming)
+| Componente | Requisito mínimo |
+|:-----------|:-----------------|
+| Sistema operativo | Android 6.0 (Marshmallow) o superior |
+| Espacio de almacenamiento | 10 MB disponibles |
+| Conectividad | Conexión a Internet para streaming |
 
-### Métodos de Instalación
+### Métodos de instalación
 
 #### Desde GitHub Releases
 
-1. Ve a la sección de [Releases](https://github.com/Arturo254/OpenTune/releases) en GitHub
-2. Ve a la seccion de Descargas
-3. Descarga el apk en su ultima version 
-4. Habilita la instalación desde fuentes desconocidas en la configuración de tu dispositivo
-5. Instala el APK descargado
+1. Navega a la sección de [Releases](https://github.com/Arturo254/OpenTune/releases) en GitHub
+2. Localiza la sección de Descargas
+3. Descarga el archivo APK de la última versión estable
+4. Habilita "Instalación desde fuentes desconocidas" en la configuración de seguridad de tu dispositivo
+5. Abre el archivo APK descargado para completar la instalación
 
-#### Desde la pagina Oficial
+#### Desde la página oficial
 
-1. Ve a la web ofical de [OpenTune](https://opentune.netlify.app/) en tu navegador
-2. Descarga el archivo APK más reciente
-3. Habilita la instalación desde fuentes desconocidas en la configuración de tu dispositivo
-4. Instala el APK descargado
+1. Visita el sitio web oficial de [OpenTune](https://opentune.netlify.app/)
+2. Selecciona la opción de descarga para Android
+3. Habilita "Instalación desde fuentes desconocidas" en la configuración de seguridad de tu dispositivo
+4. Instala el archivo APK descargado
 
-#### Desde F-Droid
+#### Desde F-Droid (Próximamente)
 
-Próximamente disponible en el repositorio de F-Droid.
+La aplicación estará disponible en el repositorio de F-Droid en el futuro cercano.
 
 > [!IMPORTANT]  
-> Por razones de seguridad, descarga la aplicación únicamente desde fuentes oficiales mencionadas anteriormente.
+> Por motivos de seguridad, se recomienda obtener la aplicación exclusivamente a través de los canales oficiales mencionados anteriormente. Evita descargar APKs de fuentes no verificadas.
 
-## Guía de Compilación
+<br>
 
-### Requisitos Previos
+## Compilación desde código fuente
 
-Para compilar OpenTune correctamente, necesitarás:
+### Requisitos previos
 
-- **Gradle** (versión 7.5+)
-- **Kotlin** (versión 1.7+)
-- **Android Studio** (2022.1+)
-- **JDK** (versión 11 o superior)
-- **Android SDK** (API nivel 33 recomendado)
+| Herramienta | Versión recomendada |
+|:------------|:--------------------|
+| Gradle | 7.5 o superior |
+| Kotlin | 1.7 o superior |
+| Android Studio | 2022.1 o superior |
+| JDK | 11 o superior |
+| Android SDK | API nivel 33 (Android 13) |
 
-### Preparación del Entorno
+### Preparación del entorno
 
 ```bash
 # Clonar el repositorio
 git clone https://github.com/Arturo254/OpenTune.git
 
-# Acceder al directorio
+# Acceder al directorio del proyecto
 cd OpenTune
 
 # Actualizar submódulos (si existen)
 git submodule update --init --recursive
 ```
 
-### Métodos de Compilación
+### Métodos de compilación
 
-#### Usando Android Studio
+<details>
+<summary><b>Compilación con Android Studio</b></summary>
 
 1. Abre Android Studio
 2. Selecciona "Open an existing Android Studio project"
-3. Navega hasta el directorio de OpenTune y selecciónalo
+3. Navega y selecciona el directorio OpenTune
 4. Espera a que el proyecto sincronice y los índices se construyan
 5. Selecciona Build > Build Bundle(s) / APK(s) > Build APK(s)
+</details>
 
-#### Usando Línea de Comandos
+<details>
+<summary><b>Compilación por línea de comandos</b></summary>
 
 ```bash
-# Compilación de versión de producción
+# Compilar versión de producción
 ./gradlew assembleRelease
 
-# Compilación de versión de depuración
+# Compilar versión de depuración
 ./gradlew assembleDebug
 
-# Compilación completa (incluye pruebas y dependencias)
+# Compilación completa con pruebas
 ./gradlew build
 
 # Ejecutar pruebas unitarias
 ./gradlew test
 ```
+</details>
 
 > [!NOTE]  
-> Los archivos APK compilados se encontrarán en `app/build/outputs/apk/`.
+> Los archivos APK compilados se encontrarán en el directorio `app/build/outputs/apk/`.
+
+<br>
 
 ## Contribuciones
 
-### Código de Conducta
+### Código de conducta
 
-Todos los colaboradores deben adherirse a nuestro código de conducta que promueve un entorno inclusivo, respetuoso y constructivo. Antes de contribuir, por favor lee el [Código de Conducta](https://github.com/Arturo254/OpenTune/blob/master/CODE_OF_CONDUCT.md) completo.
+Todos los participantes en este proyecto deben adherirse a nuestro código de conducta que promueve un entorno inclusivo, respetuoso y constructivo. Consulta el [Código de Conducta completo](https://github.com/Arturo254/OpenTune/blob/master/CODE_OF_CONDUCT.md) antes de contribuir.
 
 ### Traducción
 
-Si deseas ayudar a traducir OpenTune a tu idioma o mejorar las traducciones existentes, puedes:
+Si deseas ayudar a traducir OpenTune a tu idioma o mejorar las traducciones existentes, puedes participar de las siguientes formas:
 
-1. Unirte a nuestro proyecto en [POEditor](https://poeditor.com/join/project/208BwCVazA) (RECOMENDADO)
-2. 1. Unirte a nuestro proyecto en [Crowdin](https://crowdin.com/project/opentune)
-3. Contactar directamente al desarrollador:
-   - **Email**: [cervantesarturo254@gmail.com](mailto:cervantesarturo254@gmail.com)
-     
-### Grupos Oficiales de Telegram:
+1. [POEditor](https://poeditor.com/join/project/208BwCVazA) (Recomendado)
+2. [Crowdin](https://crowdin.com/project/opentune)
+3. Contacto directo con el desarrollador:
+   - Email: [cervantesarturo254@gmail.com](mailto:cervantesarturo254@gmail.com)
 
- [Chat](https://t.me/OpenTune_chat)
+### Canales oficiales de comunicación
 
- [Actualizaciones/Avisos](https://t.me/opentune_updates)
+| Canal | Enlace |
+|:------|:-------|
+| Chat de Telegram | [OpenTune Chat](https://t.me/OpenTune_chat) |
+| Canal de actualizaciones | [OpenTune Updates](https://t.me/opentune_updates) |
 
-### Desarrollo
+### Flujo de trabajo para desarrollo
 
-Para contribuir al código:
+<details>
+<summary><b>Proceso para contribuir al código</b></summary>
 
 1. Revisa las [issues abiertas](https://github.com/Arturo254/OpenTune/issues) o crea una nueva describiendo el problema o característica
-2. Haz un fork del repositorio
+2. Realiza un fork del repositorio
 3. Crea una rama para tu característica (`git checkout -b feature/nueva-caracteristica`)
-4. Implementa tus cambios siguiendo las convenciones de código
-5. Asegúrate de que tu código pasa todas las pruebas (`./gradlew test`)
-6. Realiza tus commits (`git commit -m 'feat: añadir nueva característica'`)
-7. Haz push a la rama (`git push origin feature/nueva-caracteristica`)
-8. Abre un Pull Request detallando los cambios realizados
+4. Implementa tus cambios siguiendo las convenciones de código del proyecto
+5. Verifica que el código pasa todas las pruebas (`./gradlew test`)
+6. Realiza commits con mensajes descriptivos (`git commit -m 'feat: añadir nueva característica'`)
+7. Sube los cambios a tu fork (`git push origin feature/nueva-caracteristica`)
+8. Abre un Pull Request detallando los cambios realizados y referenciando la issue correspondiente
+</details>
 
 > [!TIP]
-> Revisa nuestras [directrices de contribución](https://github.com/Arturo254/OpenTune/blob/master/CONTRIBUTING.md) para obtener información más detallada sobre el proceso de desarrollo.
+> Revisa nuestras [directrices de contribución](https://github.com/Arturo254/OpenTune/blob/master/CONTRIBUTING.md) para obtener información más detallada sobre el proceso de desarrollo, estándares de código y flujo de trabajo.
 
-## Apoyo al Proyecto
+<br>
 
-Si disfrutas usando **OpenTune** y quieres apoyar su desarrollo continuo, considera hacer una donación. Tu contribución será fundamental para:
+## Apoyo al desarrollo
 
-- Mejorar la aplicación con nuevas características
-- Corregir errores y optimizar el rendimiento
+Si encuentras valor en **OpenTune** y deseas contribuir a su desarrollo continuo, considera realizar una donación. Tu apoyo financiero nos permite:
+
+- Implementar nuevas características y mejoras
+- Resolver problemas y optimizar el rendimiento
 - Mantener la infraestructura del proyecto
-- Apoyar la dedicación de los desarrolladores
+- Dedicar más tiempo al desarrollo y mantenimiento
 
-### Opciones de Donación
+### Métodos de donación
 
-Puedes realizar tu aportación a través de:
-
-- **PayPal**: [Arturo Cervantes](https://www.paypal.com/paypalme/ArturoCervantes254)
-- **GitHub Sponsors**: [Sponsors](https://github.com/sponsors/Arturo254)
+<div align="center">
+  <a href="https://github.com/sponsors/Arturo254">
+    <img src="https://img.shields.io/badge/GitHub_Sponsors-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Sponsors">
+  </a>
+</div>
 
 > [!NOTE]  
-> Las donaciones son completamente opcionales. OpenTune siempre será gratuito y de código abierto.
+> Las donaciones son completamente opcionales. OpenTune siempre será gratuito y de código abierto, independientemente del apoyo financiero recibido.
+
+<br>
 
 ## Licencia
 
-**Copyright © 2024**
+**Copyright © 2025**
 
 Este programa es software libre: puedes redistribuirlo y/o modificarlo bajo los términos de la Licencia Pública General GNU publicada por la Free Software Foundation, ya sea la versión 3 de la Licencia o (a tu elección) cualquier versión posterior.
 
 Este programa se distribuye con la esperanza de que sea útil, pero **SIN NINGUNA GARANTÍA**, ni siquiera la garantía implícita de COMERCIABILIDAD o IDONEIDAD PARA UN PROPÓSITO PARTICULAR. Consulta la [Licencia Pública General de GNU](https://github.com/Arturo254/OpenTune/blob/main/LICENSE) para obtener más detalles.
 
+> [!CAUTION]
+> Cualquier uso comercial no autorizado de este software o sus derivados constituye una violación de los términos de licencia.
+
 ---
 
 <div align="center">
   <p>© 2023-2024 Open Source Projects</p>
-  <p>Desarrollado por <a href="https://github.com/Arturo254">Arturo Cervantes</a></p>
+  <p>Desarrollado con pasión por <a href="https://github.com/Arturo254">Arturo Cervantes</a></p>
 </div>
