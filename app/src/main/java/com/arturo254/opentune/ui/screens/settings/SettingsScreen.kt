@@ -13,7 +13,10 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,12 +26,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -57,6 +64,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +72,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -84,6 +93,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
+import coil.request.ImageRequest
 import com.arturo254.innertube.utils.parseCookieString
 import com.arturo254.opentune.BuildConfig
 import com.arturo254.opentune.LocalPlayerAwareWindowInsets
@@ -108,6 +119,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
+import androidx.core.net.toUri
 
 
 @SuppressLint("ObsoleteSdkInt")
@@ -230,6 +242,15 @@ fun UpdateCard(latestVersion: String = "") {
                 Spacer(Modifier.height(3.dp))
                 Text(
                     text = "${stringResource(R.string.NewVersion)} $currentLatestVersion",
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = 17.sp,
+                        fontFamily = FontFamily.Monospace
+                    ),
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "${stringResource(R.string.warn)} $currentLatestVersion",
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontSize = 17.sp,
                         fontFamily = FontFamily.Monospace
@@ -520,144 +541,90 @@ fun SettingsScreen(
 //    var isBetaFunEnabled by remember { mutableStateOf(false) }
 
 
-    val backgroundImages = listOf(
-
-        R.drawable.cardbg,
-        R.drawable.cardbg2,
-        R.drawable.cardbg3,
-        R.drawable.cardbg4,
-        R.drawable.cardbg6,
-        R.drawable.cardbg7,
-        R.drawable.cardbg8,
-        R.drawable.cardbg9,
-        R.drawable.cardbg11,
-        R.drawable.cardbg12,
-        R.drawable.cardbg13,
-        R.drawable.cardbg14,
-        R.drawable.cardbg15,
-        R.drawable.cardbg16,
-        R.drawable.cardbg17,
-        R.drawable.cardbg18,
-        R.drawable.cardbg19,
-        R.drawable.cardbg20,
-        R.drawable.cardbg22,
-        R.drawable.cardbg23,
-        R.drawable.cardbg24,
-        R.drawable.cardbg25,
-        R.drawable.cardbg26,
-        R.drawable.cardbg27,
-        R.drawable.cardbg28,
-        R.drawable.cardbg29,
-
-
-        )
-    var currentImageIndex by remember { mutableIntStateOf((0..backgroundImages.lastIndex).random()) }
-    var previousImageIndex by remember { mutableIntStateOf(currentImageIndex) }
-    var isAnimating by remember { mutableStateOf(false) }
-
-    val alpha by animateFloatAsState(
-        targetValue = if (isAnimating) 0f else 1f,
-        animationSpec = tween(300),
-        finishedListener = {
-            if (isAnimating) {
-                previousImageIndex = currentImageIndex
-                isAnimating = false
-            }
-        }, label = ""
-    )
-
-    fun changeBackgroundImage() {
-        if (!isAnimating) {
-            isAnimating = true
-            currentImageIndex = (currentImageIndex + 1) % backgroundImages.size
-        }
-    }
 
     Column(
-        modifier = Modifier
-            .windowInsetsPadding(LocalPlayerAwareWindowInsets.current)
+        Modifier
+            .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
             .verticalScroll(rememberScrollState())
     ) {
-        Spacer(Modifier.height(20.dp))
-        Box(
-            modifier = Modifier
-                .height(220.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(color = Color.Transparent)
-                .clickable { changeBackgroundImage() }
-        ) {
-            // Imagen anterior que se desvanece
-            Image(
-                painter = painterResource(id = backgroundImages[previousImageIndex]),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blur(0.6.dp)
-                    .alpha(alpha)
+        Spacer(
+            Modifier.windowInsetsPadding(
+                LocalPlayerAwareWindowInsets.current.only(
+                    WindowInsetsSides.Top
+                )
             )
-
-            // Nueva imagen que aparece
-            Image(
-                painter = painterResource(id = backgroundImages[currentImageIndex]),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blur(0.6.dp)
-                    .alpha(1f - alpha)
-            )
-
-            val accountName by rememberPreference(AccountNameKey, "")
-            val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
-            val isLoggedIn = remember(innerTubeCookie) {
-                "SAPISID" in parseCookieString(innerTubeCookie)
-            }
-
-            PreferenceEntry(
-                title = {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                    ) {
-                        if (isLoggedIn) {
-                            Text(
-                                stringResource(R.string.Hi),
-                                color = Color.White,
-                                fontSize = 20.sp,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontFamily = FontFamily.SansSerif
-                            )
-                            Spacer(modifier = Modifier.height(3.dp))
-                            Text(
-                                accountName.replace("@", ""),
-                                color = Color.White,
-                                fontSize = 20.sp,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontFamily = FontFamily.Monospace
-                            )
-                        } else {
-                            Icon(
-                                painter = painterResource(R.drawable.opentune_monochrome),
-                                contentDescription = null,
-                                tint = Color.White,
-                            )
-                            Text(
-                                text = "OpenTune",
-                                color = Color.White,
-                                fontSize = 26.sp,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontFamily = FontFamily.Monospace
-                            )
-                        }
-                    }
-                },
-                description = null,
-                onClick = { changeBackgroundImage() },
-            )
+        )
+        val context = LocalContext.current
+        val avatarManager = remember { AvatarPreferenceManager(context) }
+        val customAvatarUri by avatarManager.getCustomAvatarUri.collectAsState(initial = null)
+        val accountName by rememberPreference(AccountNameKey, "")
+        val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
+        val isLoggedIn = remember(innerTubeCookie) {
+            "SAPISID" in parseCookieString(innerTubeCookie)
         }
 
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (isLoggedIn) {
+                // Avatar circular para usuario
+                Box(
+                    modifier = Modifier
+                        .size(112.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (customAvatarUri != null) {
+                        Image(
+                            painter = rememberAsyncImagePainter(
+                                ImageRequest.Builder(context)
+                                    .data(data = customAvatarUri!!.toUri())
+                                    .crossfade(true)
+                                    .build()
+                            ),
+                            contentDescription = "Avatar",
+                            modifier = Modifier
+                                .size(104.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        // Avatar con inicial del nombre si no hay imagen
+                        Text(
+                            text = accountName.first().toString().uppercase(),
+                            modifier = Modifier.align(Alignment.Center),
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
 
-        Spacer(Modifier.height(25.dp))
+                Text(
+                    text = accountName.replace("@", ""),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            } else {
+                // Logo para usuario no autenticado
+                Icon(
+                    painter = painterResource(R.drawable.opentune_monochrome),
+                    contentDescription = null,
+                    modifier = Modifier.size(56.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "OpenTune",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
 
         PreferenceEntry(
             title = { Text(stringResource(R.string.appearance)) },
@@ -862,7 +829,6 @@ class ChangelogViewModel : ViewModel() {
         }
 }
 
-/** Componente para renderizar Markdown en Jetpack Compose */
 @Composable
 fun MarkdownText(
     markdown: String,
@@ -873,6 +839,12 @@ fun MarkdownText(
     Column(modifier = modifier) {
         for (line in lines) {
             val trimmedLine = line.trim()
+
+            // Filtrar líneas que contienen imágenes (Markdown: ![alt text](url))
+            if (trimmedLine.matches(Regex("^!\\[.*?\\]\\(.*?\\)\$"))) {
+                continue // Omitir líneas que contienen imágenes
+            }
+
             when {
                 trimmedLine.startsWith("# ") -> {
                     // Encabezado H1
@@ -977,7 +949,6 @@ fun MarkdownText(
 
                 trimmedLine.startsWith("```") -> {
                     // Bloque de código - simplemente lo mostramos como texto monoespaciado
-                    // En una implementación completa, manejarías múltiples líneas
                     if (trimmedLine.length > 3) {
                         Text(
                             text = "Código: " + trimmedLine.substring(3),
@@ -1070,6 +1041,7 @@ fun MarkdownText(
         }
     }
 }
+
 
 /** Botón de preferencia que muestra un modal con el changelog */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1227,5 +1199,6 @@ fun TranslatePreference(uriHandler: UriHandler) {
         )
     }
 }
+
 
 

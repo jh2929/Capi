@@ -2,13 +2,9 @@ package com.arturo254.innertube.models.response
 
 import com.arturo254.innertube.models.ResponseContext
 import com.arturo254.innertube.models.Thumbnails
-import com.arturo254.innertube.utils.createUrl
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * PlayerResponse with [com.arturo254.innertube.models.YouTubeClient.WEB_REMIX] client
- */
 @Serializable
 data class PlayerResponse(
     val responseContext: ResponseContext,
@@ -65,8 +61,6 @@ data class PlayerResponse(
         ) {
             val isAudio: Boolean
                 get() = width == null
-
-            fun findUrl() = url?.let { createUrl(url = it) } ?: signatureCipher?.let { createUrl(cipher = it) }!!
         }
     }
 

@@ -107,7 +107,6 @@ fun BackupAndRestore(
             }
         }
 
-    // No modifico la TopAppBar como se solicitó
     TopAppBar(
         title = { Text(stringResource(R.string.backup_restore)) },
         navigationIcon = {
@@ -122,6 +121,7 @@ fun BackupAndRestore(
             }
         },
     )
+
 
     Column(
         modifier = Modifier

@@ -472,4 +472,5 @@
     <string name="notification">Activate Notifications</string>
     <string name="cached_playlist">Cached</string>
     <string name="added_to_queue">added to queue</string>
+    <string name="warn">Note: The APK is being downloaded from the official GitHub repository, not from F-Droid.</string>
 </resources>

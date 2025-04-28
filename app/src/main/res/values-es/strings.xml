@@ -408,7 +408,7 @@
     <string name="backup_link_title">¡Copia de seguridad cargada correctamente!</string>
     <string name="backup_link_description">Tu copia de seguridad estará disponible durante 14 días.</string>
     <string name="copy_link">Copiar enlace</string>
-    <string name="customize_thumbnail_corner_radius">Personalizar el radio de la esquina de la miniatura</string>
+    <string name="customize_thumbnail_corner_radius">Radio de esquina</string>
     <string name="corner_radius_label">Radio de la esquina: %1$s</string>
     <string name="unmute">Anular silencio</string>
     <string name="mute">Silencio</string>

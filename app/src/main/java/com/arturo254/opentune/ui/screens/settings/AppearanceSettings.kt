@@ -34,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -378,10 +379,28 @@ fun AppearanceSettings(
             title = stringResource(R.string.player),
         )
 
+        // Determinar las opciones disponibles según la versión de Android
+        val availableBackgroundStyles = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            enumValues<PlayerBackgroundStyle>().toList()
+        } else {
+            enumValues<PlayerBackgroundStyle>().filter {
+                it != PlayerBackgroundStyle.BLUR
+            }
+        }
+
+// También asegurarnos de que el valor seleccionado sea compatible
+        val safeSelectedValue = if (playerBackground == PlayerBackgroundStyle.BLUR &&
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            PlayerBackgroundStyle.DEFAULT // O cualquier otro valor por defecto
+        } else {
+            playerBackground
+        }
+
+// Usar el componente actualizado
         EnumListPreference(
             title = { Text(stringResource(R.string.player_background_style)) },
             icon = { Icon(painterResource(R.drawable.gradient), null) },
-            selectedValue = playerBackground,
+            selectedValue = safeSelectedValue,
             onValueSelected = onPlayerBackgroundChange,
             valueText = {
                 when (it) {
@@ -390,8 +409,9 @@ fun AppearanceSettings(
                     PlayerBackgroundStyle.BLUR -> stringResource(R.string.player_background_blur)
                 }
             },
+            values = availableBackgroundStyles
         )
-        Spacer(modifier = Modifier.width(8.dp))
+
         ThumbnailCornerRadiusSelectorButton(
             modifier = Modifier.padding(16.dp),
             onRadiusSelected = { selectedRadius ->
@@ -609,7 +629,7 @@ fun ThumbnailCornerRadiusSelectorButton(
             }
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
-                imageVector = Icons.Outlined.ArrowForward,
+                imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -642,8 +662,6 @@ fun ThumbnailCornerRadiusModal(
     val presetValues = listOf(0f, 8f, 16f, 24f, 32f, 40f)
     var customValue by remember { mutableStateOf("") }
     var isCustomSelected by remember { mutableStateOf(false) }
-
-    // Inicialización mejorada con validación de valores
     LaunchedEffect(Unit) {
         isCustomSelected = !presetValues.contains(initialRadius)
         if (isCustomSelected) {
@@ -659,7 +677,7 @@ fun ThumbnailCornerRadiusModal(
             usePlatformDefaultWidth = false
         )
     ) {
-        // Usar BoxWithConstraints para una mejor adaptación a diferentes tamaños de pantalla
+
         BoxWithConstraints {
             val screenWidth = maxWidth
             val dialogWidth = when {
@@ -720,6 +738,7 @@ fun ThumbnailCornerRadiusModal(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
                                 .padding(vertical = 8.dp),
                             contentAlignment = Alignment.Center

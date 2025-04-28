@@ -248,10 +248,7 @@ fun BottomSheetPlayer(
                                         .allowHardware(false)
                                         .build(),
                                 ).drawable as? BitmapDrawable
-                            )?.bitmap?.extractGradientColors(
-                            darkTheme =
-                                darkTheme == DarkMode.ON || (darkTheme == DarkMode.AUTO && isSystemInDarkTheme),
-                        )
+                            )?.bitmap?.extractGradientColors()
 
                 result?.let {
                     gradientColors = it
