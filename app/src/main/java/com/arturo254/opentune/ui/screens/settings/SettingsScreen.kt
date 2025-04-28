@@ -225,7 +225,7 @@ fun UpdateCard(latestVersion: String = "") {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .height(120.dp),
+                .height(170.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
             ),
@@ -240,30 +240,45 @@ fun UpdateCard(latestVersion: String = "") {
                 verticalArrangement = Arrangement.Center
             ) {
                 Spacer(Modifier.height(3.dp))
+
+                val newVersion = stringResource(R.string.NewVersion)
+                val tapToUpdate = stringResource(R.string.tap_to_update)
+                val warn = stringResource(R.string.warn)
+
+                // Línea principal: "NewVersion: currentLatestVersion"
                 Text(
-                    text = "${stringResource(R.string.NewVersion)} $currentLatestVersion",
+                    text = "$newVersion: $currentLatestVersion",
                     style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 17.sp,
+                        fontSize = 18.sp,
                         fontFamily = FontFamily.Monospace
                     ),
                     color = MaterialTheme.colorScheme.secondary,
                 )
+
                 Spacer(Modifier.height(8.dp))
+
+                // Advertencia
                 Text(
-                    text = "${stringResource(R.string.warn)} $currentLatestVersion",
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = 17.sp,
+                    text = "$warn ",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 16.sp,
                         fontFamily = FontFamily.Monospace
                     ),
-                    color = MaterialTheme.colorScheme.secondary,
+                    color = MaterialTheme.colorScheme.error,
                 )
+
                 Spacer(Modifier.height(8.dp))
+
+                // Tap to update (acción)
                 Text(
-                    text = stringResource(R.string.tap_to_update),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = tapToUpdate,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = 16.sp
+                    ),
+                    color = MaterialTheme.colorScheme.primary,
                 )
             }
+
         }
     }
 }

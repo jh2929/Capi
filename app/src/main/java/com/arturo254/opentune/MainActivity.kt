@@ -62,6 +62,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -80,9 +81,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -116,6 +122,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import coil.imageLoader
 import coil.request.ImageRequest
@@ -243,6 +250,7 @@ class MainActivity : ComponentActivity() {
         super.onStop()
     }
 
+    @SuppressLint("ImplicitSamInstance")
     override fun onDestroy() {
         super.onDestroy()
         if (dataStore.get(
@@ -263,6 +271,8 @@ class MainActivity : ComponentActivity() {
 
         val localeManager = LocaleManager(newBase)
         localeManager.updateLocale(savedLanguage)
+
+
 
         super.attachBaseContext(newBase)
     }
@@ -304,6 +314,7 @@ class MainActivity : ComponentActivity() {
 
             val enableDynamicTheme by rememberPreference(DynamicThemeKey, defaultValue = true)
             val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
+
             val pureBlack by rememberPreference(PureBlackKey, defaultValue = false)
             val isSystemInDarkTheme = isSystemInDarkTheme()
             val useDarkTheme =
@@ -663,45 +674,84 @@ class MainActivity : ComponentActivity() {
                         Scaffold(
                             topBar = {
                                 if (shouldShowTopBar) {
-                                    TopAppBar(
-                                        title = {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Image(
-                                                    painter = painterResource(R.drawable.opentune),
-                                                    contentDescription = "App Logo",
-                                                    modifier = Modifier
-                                                        .size(22.dp)
+                                    Box(modifier = Modifier.fillMaxWidth()) {
+                                        // Capa base con el color original
+                                        Box(
+                                            modifier = Modifier
+                                                .matchParentSize()
+                                                .background(MaterialTheme.colorScheme.surface)
+                                        )
+
+                                        // Fondo con blur usando mediaMetadata con gradiente de transparencia más suave
+                                        val playerConnection2 = LocalPlayerConnection.current ?: return@Box
+                                        val mediaMetadata by playerConnection2.mediaMetadata.collectAsState()
+                                        AsyncImage(
+                                            model = mediaMetadata?.thumbnailUrl,
+                                            contentDescription = null,
+                                            contentScale = ContentScale.FillBounds,
+                                            modifier = Modifier
+                                                .matchParentSize()
+                                                .blur(35.dp) // Se reduce el blur para mejorar la visibilidad
+                                                .alpha(0.6f) // Se aumenta la opacidad para que el fondo no se vea tan difuso
+                                                .drawWithContent {
+                                                    drawContent()
+                                                    // Añadir un gradiente que se desvanece suavemente en la parte inferior
+                                                    drawRect(
+                                                        brush = Brush.verticalGradient(
+                                                            colors = listOf(
+                                                                Color.Black.copy(alpha = 0.5f), // Acelera la transición de la opacidad
+                                                                Color.Transparent
+                                                            ),
+                                                            startY = 0f,
+                                                            endY = size.height * 0.6f // Aseguramos que el degradado no ocupe toda la altura
+                                                        ),
+                                                        blendMode = BlendMode.DstIn
+                                                    )
+                                                }
+                                        )
+
+                                        // TopAppBar con color transparente para que el fondo se vea detrás
+                                        TopAppBar(
+                                            title = {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Image(
+                                                        painter = painterResource(R.drawable.opentune),
+                                                        contentDescription = "App Logo",
+                                                        modifier = Modifier
+                                                            .size(22.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(
+                                                        text = "OpenTune",
+                                                        style = MaterialTheme.typography.titleLarge,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            },
+                                            actions = {
+                                                IconButton(onClick = { onActiveChange(true) }) {
+                                                    Icon(
+                                                        painter = painterResource(R.drawable.search),
+                                                        contentDescription = stringResource(R.string.search)
+                                                    )
+                                                }
+                                                ProfileIconWithUpdateBadge(
+                                                    currentVersion = BuildConfig.VERSION_NAME,
+                                                    onProfileClick = { navController.navigate("settings") }
                                                 )
                                                 Spacer(modifier = Modifier.width(8.dp))
-                                                Text(
-                                                    text = "OpenTune",
-                                                    style = MaterialTheme.typography.titleLarge,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            }
-                                        },
-                                        actions = {
-                                            IconButton(onClick = { onActiveChange(true) }) {
-                                                Icon(
-                                                    painter = painterResource(R.drawable.search),
-                                                    contentDescription = stringResource(R.string.search)
-                                                )
-                                            }
-                                            ProfileIconWithUpdateBadge(
-                                                currentVersion = BuildConfig.VERSION_NAME,
-                                                onProfileClick = { navController.navigate("settings") }
+                                            },
+                                            scrollBehavior = searchBarScrollBehavior,
+                                            colors = TopAppBarDefaults.topAppBarColors(
+                                                containerColor = Color.Transparent // Fondo transparente para que el fondo de blur sea visible
                                             )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                        },
-                                        scrollBehavior = searchBarScrollBehavior
-                                    )
+                                        )
+                                    }
                                 }
-                                if (active || navBackStackEntry?.destination?.route?.startsWith(
-                                        "search/"
-                                    ) == true
-                                ) {
+
+                                if (active || navBackStackEntry?.destination?.route?.startsWith("search/") == true) {
                                     TopSearch(
                                         query = query,
                                         onQueryChange = onQueryChange,
@@ -726,7 +776,6 @@ class MainActivity : ComponentActivity() {
                                                         !navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route } -> {
                                                             navController.navigateUp()
                                                         }
-
                                                         else -> onActiveChange(true)
                                                     }
                                                 },
@@ -736,7 +785,6 @@ class MainActivity : ComponentActivity() {
                                                         !navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route } -> {
                                                             navController.backToMain()
                                                         }
-
                                                         else -> {}
                                                     }
                                                 },
@@ -761,11 +809,7 @@ class MainActivity : ComponentActivity() {
                                                     if (query.text.isNotEmpty()) {
                                                         IconButton(
                                                             onClick = {
-                                                                onQueryChange(
-                                                                    TextFieldValue(
-                                                                        ""
-                                                                    )
-                                                                )
+                                                                onQueryChange(TextFieldValue(""))
                                                             },
                                                         ) {
                                                             Icon(
@@ -793,57 +837,45 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
                                         },
-                                        modifier =
-                                            Modifier
-                                                .focusRequester(searchBarFocusRequester)
-                                                .align(Alignment.TopCenter),
+                                        modifier = Modifier
+                                            .focusRequester(searchBarFocusRequester)
+                                            .align(Alignment.TopCenter),
                                         focusRequester = searchBarFocusRequester
                                     ) {
                                         Crossfade(
                                             targetState = searchSource,
                                             label = "",
-                                            modifier =
-                                                Modifier
-                                                    .fillMaxSize()
-                                                    .padding(bottom = if (!playerBottomSheetState.isDismissed) MiniPlayerHeight else 0.dp)
-                                                    .navigationBarsPadding(),
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(bottom = if (!playerBottomSheetState.isDismissed) MiniPlayerHeight else 0.dp)
+                                                .navigationBarsPadding(),
                                         ) { searchSource ->
                                             when (searchSource) {
-                                                SearchSource.LOCAL ->
-                                                    LocalSearchScreen(
-                                                        query = query.text,
-                                                        navController = navController,
-                                                        onDismiss = { onActiveChange(false) },
-                                                    )
-
-                                                SearchSource.ONLINE ->
-                                                    OnlineSearchScreen(
-                                                        query = query.text,
-                                                        onQueryChange = onQueryChange,
-                                                        navController = navController,
-                                                        onSearch = {
-                                                            navController.navigate(
-                                                                "search/${
-                                                                    URLEncoder.encode(
-                                                                        it,
-                                                                        "UTF-8"
-                                                                    )
-                                                                }"
-                                                            )
-                                                            if (dataStore[PauseSearchHistoryKey] != true) {
-                                                                database.query {
-                                                                    insert(SearchHistory(query = it))
-                                                                }
-                                                            }
-                                                        },
-                                                        onDismiss = { onActiveChange(false) },
-                                                    )
+                                                SearchSource.LOCAL -> LocalSearchScreen(
+                                                    query = query.text,
+                                                    navController = navController,
+                                                    onDismiss = { onActiveChange(false) },
+                                                )
+                                                SearchSource.ONLINE -> OnlineSearchScreen(
+                                                    query = query.text,
+                                                    onQueryChange = onQueryChange,
+                                                    navController = navController,
+                                                    onSearch = {
+                                                        navController.navigate(
+                                                            "search/${URLEncoder.encode(it, "UTF-8")}"
+                                                        )
+                                                        if (dataStore[PauseSearchHistoryKey] != true) {
+                                                            database.query { insert(SearchHistory(query = it)) }
+                                                        }
+                                                    },
+                                                    onDismiss = { onActiveChange(false) },
+                                                )
                                             }
                                         }
                                     }
                                 }
                             },
-                            bottomBar = {
+                                    bottomBar = {
                                 Box {
                                     BottomSheetPlayer(
                                         state = playerBottomSheetState,
@@ -1295,7 +1327,7 @@ fun ProfileIconWithUpdateBadge(
                 Image(
                     painter = rememberAsyncImagePainter(
                         ImageRequest.Builder(context)
-                            .data(data = Uri.parse(customAvatarUri))
+                            .data(data = customAvatarUri!!.toUri())
                             .crossfade(true)
                             .build()
                     ),
