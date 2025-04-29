@@ -7,10 +7,12 @@
     <string name="playlists">Playlists</string>
 
     <!-- Top bar -->
-    <plurals name="n_selected" tools:ignore="MissingQuantity">
-        <item quantity="one">% D sélectionné</item>
-        <item quantity="other">% D sélectionné</item>
+    <plurals name="n_selected">
+        <item quantity="one">%d sélectionné</item>
+        <item quantity="many">%d sélectionnés</item>
+        <item quantity="other">%d sélectionnés</item>
     </plurals>
+
 
     <!-- Home -->
     <string name="history">Histoire</string>
@@ -99,7 +101,7 @@
     <string name="play_next">Jouer ensuite</string>
     <string name="add_to_queue">Ajouter à la file d"attente</string>
     <string name="add_to_library">Ajouter à la bibliothèque</string>
-    <string name="remove_from_library">Supprimer de la bibliothèque</string>
+    <string name="remove_from_library">Retirer de la bibliothèque</string>
     <string name="remove_from_playlist">Supprimer de la playlist</string>
     <string name="download">Télécharger</string>
     <string name="downloading">Téléchargement</string>
@@ -126,7 +128,7 @@
     <string name="sort_by_name">Nom</string>
     <string name="sort_by_artist">Artiste</string>
     <string name="sort_by_year">Année</string>
-    <string name="sort_by_song_count">Compte de chant</string>
+    <string name="sort_by_song_count">Compter</string>
     <string name="sort_by_length">Longueur</string>
     <string name="sort_by_play_time">Temps de jouer</string>
     <string name="sort_by_custom">Commande personnalisée</string>
@@ -149,7 +151,7 @@
 
     <string name="edit_song">Modifier la chanson</string>
     <string name="song_title">Titre de la chanson</string>
-    <string name="song_artists">Artistes de chants</string>
+    <string name="song_artists">Artistes</string>
     <string name="error_song_title_empty">Le titre de la chanson ne peut pas être vide.</string>
     <string name="error_song_artist_empty">L"artiste de la chanson ne peut pas être vide.</string>
     <string name="save">Sauvegarder</string>
@@ -172,42 +174,64 @@
     <string name="duplicates_description_multiple">% D Les chansons sont déjà dans votre liste de lecture</string>
 
     <!-- Noun -->
-    <plurals name="n_song" tools:ignore="MissingQuantity">
-        <item quantity="one">% D Song</item>
-        <item quantity="other">% D Songs</item>
+    <plurals name="n_song">
+        <item quantity="one">%d chanson</item>
+        <item quantity="many">%d chansons</item>
+        <item quantity="other">%d chansons</item>
     </plurals>
-    <plurals name="n_artist" tools:ignore="MissingQuantity">
-        <item quantity="one">% D</item>
-        <item quantity="other">% artistes</item>
+
+    <plurals name="n_artist">
+        <item quantity="one">%d artiste</item>
+        <item quantity="many">%d artistes</item>
+        <item quantity="other">%d artistes</item>
     </plurals>
-    <plurals name="n_album" tools:ignore="MissingQuantity">
-        <item quantity="one">% D album</item>
-        <item quantity="other">% D albums</item>
+
+    <plurals name="n_album">
+        <item quantity="one">%d album</item>
+        <item quantity="many">%d albums</item>
+        <item quantity="other">%d albums</item>
     </plurals>
-    <plurals name="n_playlist" tools:ignore="MissingQuantity">
-        <item quantity="one">Playlist de% D</item>
-        <item quantity="other">% D Listes de lecture</item>
+
+    <plurals name="n_playlist">
+        <item quantity="one">Playlist de %d</item>
+        <item quantity="many">%d listes de lecture</item>
+        <item quantity="other">%d listes de lecture</item>
     </plurals>
-    <plurals name="n_week" tools:ignore="MissingQuantity">
-        <item quantity="one">% D Semaine</item>
-        <item quantity="other">% d semaines</item>
+
+    <plurals name="n_week">
+        <item quantity="one">%d semaine</item>
+        <item quantity="many">%d semaines</item>
+        <item quantity="other">%d semaines</item>
     </plurals>
-    <plurals name="n_month" tools:ignore="MissingQuantity">
-        <item quantity="one">% D mois</item>
-        <item quantity="other">% d mois</item>
+
+    <plurals name="n_month">
+        <item quantity="one">%d mois</item>
+        <item quantity="many">%d mois</item>
+        <item quantity="other">%d mois</item>
     </plurals>
-    <plurals name="n_year" tools:ignore="MissingQuantity">
-        <item quantity="one">% d année</item>
-        <item quantity="other">% d années</item>
+
+    <plurals name="n_year">
+        <item quantity="one">%d année</item>
+        <item quantity="many">%d années</item>
+        <item quantity="other">%d années</item>
     </plurals>
-    <plurals name="n_element" tools:ignore="MissingQuantity">
-        <item quantity="one">% d élément</item>
-        <item quantity="other">% d"éléments D</item>
+
+    <plurals name="n_element">
+        <item quantity="one">%d élément</item>
+        <item quantity="many">%d éléments</item>
+        <item quantity="other">%d éléments</item>
     </plurals>
-    <plurals name="n_time" tools:ignore="MissingQuantity">
-        <item quantity="one">% D Temps</item>
-        <item quantity="other">% d fois</item>
+
+    <plurals name="n_time">
+        <item quantity="one">%d fois</item>
+        <item quantity="many">%d fois</item>
+        <item quantity="other">%d fois</item>
     </plurals>
+
+
+
+
+
 
     <!-- Snackbar -->
     <string name="playlist_imported">Liste de lecture importée</string>
@@ -217,12 +241,13 @@
     <string name="undo">Défaire</string>
 
     <!-- Player -->
-    <string name="lyrics_not_found">Paroles introuvables</string>
+    <string name="lyrics_not_found">Paroles non trouvées</string>
     <string name="sleep_timer">Minuterie de sommeil</string>
     <string name="end_of_song">Fin de chanson</string>
-    <plurals name="minute" tools:ignore="MissingQuantity">
+    <plurals name="minute">
         <item quantity="one" tools:ignore="ImpliedQuantity">1 minute</item>
-        <item quantity="other">% d minutes</item>
+        <item quantity="many">%d minutes</item>
+        <item quantity="other">%d minutes</item>
     </plurals>
     <string name="error_no_stream">Pas de flux disponible</string>
     <string name="error_no_internet">Pas de connexion réseau</string>
@@ -273,7 +298,7 @@
     <string name="customize_navigation_tabs">Personnaliser les onglets de navigation</string>
     <string name="player">Joueur</string>
     <string name="player_text_alignment">Alignement du texte du joueur</string>
-    <string name="lyrics_text_position">Paroles</string>
+    <string name="lyrics_text_position">Paroles Position texte</string>
     <string name="sided">Côté</string>
     <string name="left">Gauche</string>
     <string name="center">Centre</string>
@@ -339,7 +364,7 @@
     <string name="skip_silence">Sauter le silence</string>
     <string name="audio_normalization">Normalisation audio</string>
     <string name="auto_skip_next_on_error">Auto passer à la chanson suivante lorsque l"erreur se produit</string>
-    <string name="auto_skip_next_on_error_desc">Assurez votre expérience de lecture continue</string>
+    <string name="auto_skip_next_on_error_desc">Assurez-vous votre expérience de lecture continue</string>
     <string name="stop_music_on_task_clear">Arrêter la musique sur la tâche claire</string>
     <string name="equalizer">Égaliseur</string>
 
@@ -347,7 +372,7 @@
     <string name="cache">Cache</string>
     <string name="image_cache">Cache d"image</string>
     <string name="song_cache">Cache de chanson</string>
-    <string name="max_cache_size">Taille du cache maximum</string>
+    <string name="max_cache_size">Taille maximale du cache</string>
     <string name="unlimited">Illimité</string>
     <string name="clear_all_downloads">Effacer tous les téléchargements</string>
     <string name="max_image_cache_size">Taille du cache d"image maximale</string>
@@ -364,7 +389,7 @@
     <string name="clear_listen_history_confirm">Êtes-vous sûr de vouloir effacer toute l"histoire de l"écoute?</string>
     <string name="pause_search_history">Historique de recherche de pause</string>
     <string name="clear_search_history">Historique de recherche claire</string>
-    <string name="clear_search_history_confirm">Êtes-vous sûr de vouloir effacer tous les histoires de recherche?</string>
+    <string name="clear_search_history_confirm">Êtes-vous sûr de vouloir effacer tout l"historique de la recherche?</string>
     <string name="disable_screenshot">Désactiver la capture d"écran</string>
     <string name="disable_screenshot_desc">Lorsque cette option est activée, les captures d"écran et la vue de l"application dans les récentes sont désactivées.</string>
 
@@ -424,14 +449,15 @@
     <string name="customize_thumbnail_corner_radius">Personnaliser le rayon du coin de la vignette</string>
     <string name="corner_radius_label">Rayon d"angle:% 1 $ s</string>
     <string name="unmute">Imutation</string>
-    <plurals name="seconds" tools:ignore="MissingQuantity">
+    <plurals name="seconds">
         <item quantity="one" tools:ignore="ImpliedQuantity">1 seconde</item>
-        <item quantity="other">% d secondes</item>
+        <item quantity="many">%d secondes</item>
+        <item quantity="other">%d secondes</item>
     </plurals>
     <string name="mute">Muet</string>
     <string name="explore">Explorer</string>
-    <string name="custom_avatar">Avatar personnalisé (bêta)</string>
-    <string name="custom_avatar_beta">Avatar personnalisé (bêta)</string>
+    <string name="custom_avatar">"Avatar personnalisé"</string>
+    <string name="custom_avatar_beta">Avatar personnalisé</string>
     <string name="select_image">Sélectionner l"image</string>
     <string name="default_avatar">Avatar par défaut</string>
     <string name="restore_default_avatar">Restaurer l"avatar par défaut</string>
@@ -454,7 +480,7 @@
     <string name="update_version">Mise à jour V% 1 $ S</string>
     <string name="download_question">Souhaitez-vous télécharger la nouvelle version?</string>
     <string name="downloadup">Télécharger</string>
-    <string name="downloadingup" tools:ignore="TypographyEllipsis">Télécharger la mise à jour ...</string>
+    <string name="downloadingup">Télécharger la mise à jour …</string>
     <string name="download_completed">Télécharger terminé</string>
     <string name="install">Installer</string>
     <string name="download_errorup">Erreur de téléchargement de la mise à jour</string>
@@ -467,5 +493,11 @@
     <string name="backup_description">Créez un fichier de sauvegarde de vos données actuelles</string>
     <string name="restore_description">Récupérez vos données à partir d"un fichier de sauvegarde</string>
     <string name="link_copied">Lien copié</string>
+    <string name="redireccion">Redirection</string>
+    <string name="Version">Version</string>
+    <string name="notification">Activer les notifications</string>
+    <string name="cached_playlist">Mis en cache</string>
+    <string name="added_to_queue">ajouté à la file d"attente</string>
+    <string name="warn">Remarque: L"APK est téléchargé à partir du référentiel officiel de GitHub, pas à partir de F-Droid.</string>
 </resources>
 
