@@ -851,10 +851,11 @@ class MainActivity : ComponentActivity() {
                                                 .navigationBarsPadding(),
                                         ) { searchSource ->
                                             when (searchSource) {
-                                                SearchSource.LOCAL -> LocalSearchScreen(
+                                                SearchSource.LOCAL ->  LocalSearchScreen(
                                                     query = query.text,
                                                     navController = navController,
                                                     onDismiss = { onActiveChange(false) },
+                                                    pureBlack = pureBlack,
                                                 )
                                                 SearchSource.ONLINE -> OnlineSearchScreen(
                                                     query = query.text,

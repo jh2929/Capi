@@ -12,6 +12,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.IconButtonColors
 import androidx.compose.material3.IconButtonDefaults
@@ -19,7 +20,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.ripple
-import androidx.compose.material3.tokens.IconButtonTokens
+import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -31,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 
 @Composable
 fun ResizableIconButton(
@@ -45,16 +47,14 @@ fun ResizableIconButton(
         painter = painterResource(icon),
         contentDescription = null,
         colorFilter = ColorFilter.tint(color),
-        modifier =
-            Modifier
-                .clickable(
-                    indication = indication ?: ripple(bounded = false),
-                    interactionSource = remember { MutableInteractionSource() },
-                    enabled = enabled,
-                    onClick = onClick,
-                )
-                .alpha(if (enabled) 1f else 0.5f)
-                .then(modifier),
+        modifier = modifier
+            .clickable(
+                indication = indication ?: ripple(bounded = false),
+                interactionSource = remember { MutableInteractionSource() },
+                enabled = enabled,
+                onClick = onClick,
+            )
+            .alpha(if (enabled) 1f else 0.5f),
     )
 }
 
@@ -70,27 +70,25 @@ fun IconButton(
     content: @Composable () -> Unit,
 ) {
     Box(
-        modifier =
-            modifier
-                .minimumInteractiveComponentSize()
-                .size(IconButtonTokens.StateLayerSize)
-                .clip(CircleShape)
-                .background(color = colors.containerColor(enabled))
-                .combinedClickable(
-                    onClick = onClick,
-                    onLongClick = onLongClick,
-                    enabled = enabled,
-                    role = Role.Button,
-                    interactionSource = interactionSource,
-                    indication =
-                        ripple(
-                            bounded = false,
-                            radius = IconButtonTokens.StateLayerSize / 2,
-                        ),
+        modifier = modifier
+            .minimumInteractiveComponentSize()
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .clip(CircleShape)
+            .background(color = colors.containerColor)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+                enabled = enabled,
+                role = Role.Button,
+                interactionSource = interactionSource,
+                indication = ripple(
+                    bounded = false,
+                    radius = 24.dp
                 ),
+            ),
         contentAlignment = Alignment.Center,
     ) {
-        val contentColor = colors.contentColor(enabled)
+        val contentColor = colors.contentColor
         CompositionLocalProvider(LocalContentColor provides contentColor, content = content)
     }
 }
