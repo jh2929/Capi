@@ -3,6 +3,7 @@ package com.arturo254.opentune.ui.component
 import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -304,16 +305,20 @@ fun Lyrics(
             )
         }
 
-        mediaMetadata?.let { mediaMetadata ->
-            // Botón de cierre en la esquina superior derecha
-            Box(
+        mediaMetadata?.let { mediaMetadata ->// Botones de cierre y menú alineados horizontalmente en la parte inferior
+            Row(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(end = 12.dp, top = 48.dp)
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 var showLyrics by rememberPreference(ShowLyricsKey, defaultValue = false)
+
+                // Botón de cierre alineado a la izquierda
                 IconButton(
-                    onClick = { showLyrics = !showLyrics },
+                    onClick = { showLyrics = !showLyrics }
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.close),
@@ -321,15 +326,8 @@ fun Lyrics(
                         tint = LocalContentColor.current
                     )
                 }
-            }
 
-// Botón de menú en la esquina inferior derecha
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 12.dp)
-
-            ) {
+                // Botón de menú alineado a la derecha
                 IconButton(
                     onClick = {
                         menuState.show {
@@ -348,6 +346,7 @@ fun Lyrics(
                     )
                 }
             }
+
         }
     }
 }
