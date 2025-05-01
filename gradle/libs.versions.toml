@@ -12,6 +12,7 @@ hilt = "2.55"
 ktor = "3.0.3"
 ksp = "2.1.0-1.0.29"
 kotlinxSerializationJson = "1.8.0"
+accompanistSystemuicontroller = "0.36.0"
 
 [libraries]
 annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
@@ -79,6 +80,7 @@ timber = { group = "com.jakewharton.timber", name = "timber", version = "5.0.1" 
 
 newpipe-extractor = { group = "com.github.TeamNewPipe", name = "NewPipeExtractor", version = "3a33cefbc014a820056d83076914544f29b82644" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+accompanist-systemuicontroller = { group = "com.google.accompanist", name = "accompanist-systemuicontroller", version.ref = "accompanistSystemuicontroller" }
 
 [plugins]
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

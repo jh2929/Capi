@@ -242,11 +242,9 @@ fun SongMenu(
         trailingContent = {
             IconButton(
                 onClick = {
-                    val s = song.song.toggleLike()
                     database.query {
-                        update(s)
+                        update(song.song.toggleLike())
                     }
-                    syncUtils.likeSong(s)
                 },
             ) {
                 Icon(

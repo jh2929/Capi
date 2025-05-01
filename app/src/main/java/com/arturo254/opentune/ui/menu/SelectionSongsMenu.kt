@@ -379,9 +379,7 @@ fun SelectionSongMenu(
                     database.query {
                         songSelection.forEach { song ->
                             if ((!allLiked && !song.song.liked) || allLiked) {
-                                val s = song.song.toggleLike()
-                                update(s)
-                                syncUtils.likeSong(s)
+                                update(song.song.toggleLike())
                             }
                         }
                     }

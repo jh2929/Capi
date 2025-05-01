@@ -78,13 +78,14 @@ import com.arturo254.opentune.db.entities.Playlist
 import com.arturo254.opentune.db.entities.Song
 import com.arturo254.opentune.extensions.togglePlayPause
 import com.arturo254.opentune.models.toMediaMetadata
+import com.arturo254.opentune.playback.queues.ListQueue
 import com.arturo254.opentune.playback.queues.LocalAlbumRadio
 import com.arturo254.opentune.playback.queues.YouTubeAlbumRadio
 import com.arturo254.opentune.playback.queues.YouTubeQueue
 import com.arturo254.opentune.ui.component.AlbumGridItem
 import com.arturo254.opentune.ui.component.ArtistGridItem
-import com.arturo254.opentune.ui.component.ChipsRow
 import com.arturo254.opentune.ui.component.HideOnScrollFAB
+import com.arturo254.opentune.ui.component.ChipsRow
 import com.arturo254.opentune.ui.component.LocalMenuState
 import com.arturo254.opentune.ui.component.NavigationTitle
 import com.arturo254.opentune.ui.component.SongGridItem
@@ -103,10 +104,8 @@ import com.arturo254.opentune.ui.menu.YouTubeSongMenu
 import com.arturo254.opentune.ui.utils.SnapLayoutInfoProvider
 import com.arturo254.opentune.utils.rememberPreference
 import com.arturo254.opentune.viewmodels.HomeViewModel
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.math.min
 import kotlin.random.Random
 
@@ -566,7 +565,7 @@ fun HomeScreen(
                 }
             }
 
-            homePage?.originalPage?.sections?.forEach {
+            homePage?.sections?.forEach {
                 item {
                     NavigationTitle(
                         title = it.title,
@@ -584,19 +583,6 @@ fun HomeScreen(
                                         .size(ListThumbnailSize)
                                         .clip(shape)
                                 )
-                            }
-                        },
-                        onClick = it.endpoint?.browseId?.let { browseId ->
-                            if (homePage?.browseContentAvailable?.get(browseId) == true) {
-                                {
-                                    when (browseId) {
-                                        "FEmusic_moods_and_genres" -> navController.navigate("mood_and_genres")
-                                        "FEmusic_charts" -> navController.navigate("charts_screen")
-                                        else -> navController.navigate("browse/$browseId")
-                                    }
-                                }
-                            } else {
-                                null
                             }
                         },
                         modifier = Modifier.animateItem()

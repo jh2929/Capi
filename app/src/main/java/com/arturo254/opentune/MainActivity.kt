@@ -38,8 +38,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
@@ -58,9 +60,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.contentColorFor
@@ -153,7 +157,9 @@ import com.arturo254.opentune.playback.MusicService.MusicBinder
 import com.arturo254.opentune.playback.PlayerConnection
 import com.arturo254.opentune.playback.queues.YouTubeQueue
 import com.arturo254.opentune.ui.component.BottomSheetMenu
+import com.arturo254.opentune.ui.component.BottomSheetPage
 import com.arturo254.opentune.ui.component.IconButton
+import com.arturo254.opentune.ui.component.LocalBottomSheetPageState
 import com.arturo254.opentune.ui.component.LocalMenuState
 import com.arturo254.opentune.ui.component.TopSearch
 import com.arturo254.opentune.ui.component.rememberBottomSheetState
@@ -362,14 +368,17 @@ class MainActivity : ComponentActivity() {
             ) {
                 BoxWithConstraints(
                     modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surface),
+                    Modifier
+                        .fillMaxSize()
+                        .background(
+                            if (pureBlack) Color.Black else MaterialTheme.colorScheme.surface
+                        )
                 ) {
                     val focusManager = LocalFocusManager.current
                     val density = LocalDensity.current
                     val windowsInsets = WindowInsets.systemBars
                     val bottomInset = with(density) { windowsInsets.getBottom(density).toDp() }
+                    val bottomInsetDp = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
 
                     val navController = rememberNavController()
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -664,7 +673,7 @@ class MainActivity : ComponentActivity() {
 
                     CompositionLocalProvider(
                         LocalDatabase provides database,
-                        LocalContentColor provides contentColorFor(MaterialTheme.colorScheme.surface),
+                        LocalContentColor provides if (pureBlack) Color.White else contentColorFor(MaterialTheme.colorScheme.surface),
                         LocalPlayerConnection provides playerConnection,
                         LocalPlayerAwareWindowInsets provides playerAwareWindowInsets,
                         LocalDownloadUtil provides downloadUtil,
@@ -809,7 +818,11 @@ class MainActivity : ComponentActivity() {
                                                     if (query.text.isNotEmpty()) {
                                                         IconButton(
                                                             onClick = {
-                                                                onQueryChange(TextFieldValue(""))
+                                                                onQueryChange(
+                                                                    TextFieldValue(
+                                                                        ""
+                                                                    )
+                                                                )
                                                             },
                                                         ) {
                                                             Icon(
@@ -837,40 +850,72 @@ class MainActivity : ComponentActivity() {
                                                 }
                                             }
                                         },
-                                        modifier = Modifier
+                                        modifier =
+                                        Modifier
                                             .focusRequester(searchBarFocusRequester)
                                             .align(Alignment.TopCenter),
-                                        focusRequester = searchBarFocusRequester
+                                        focusRequester = searchBarFocusRequester,
+                                        colors = if (pureBlack && active) {
+                                            SearchBarDefaults.colors(
+                                                containerColor = Color.Black,
+                                                dividerColor = Color.DarkGray,
+                                                inputFieldColors = TextFieldDefaults.colors(
+                                                    focusedTextColor = Color.White,
+                                                    unfocusedTextColor = Color.Gray,
+                                                    focusedContainerColor = Color.Transparent,
+                                                    unfocusedContainerColor = Color.Transparent,
+                                                    cursorColor = Color.White,
+                                                    focusedIndicatorColor = Color.Transparent,
+                                                    unfocusedIndicatorColor = Color.Transparent,
+                                                )
+                                            )
+                                        } else {
+                                            SearchBarDefaults.colors(
+                                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                                            )
+                                        }
                                     ) {
                                         Crossfade(
                                             targetState = searchSource,
                                             label = "",
-                                            modifier = Modifier
+                                            modifier =
+                                            Modifier
                                                 .fillMaxSize()
                                                 .padding(bottom = if (!playerBottomSheetState.isDismissed) MiniPlayerHeight else 0.dp)
                                                 .navigationBarsPadding(),
                                         ) { searchSource ->
                                             when (searchSource) {
-                                                SearchSource.LOCAL ->  LocalSearchScreen(
-                                                    query = query.text,
-                                                    navController = navController,
-                                                    onDismiss = { onActiveChange(false) },
-                                                    pureBlack = pureBlack,
-                                                )
-                                                SearchSource.ONLINE -> OnlineSearchScreen(
-                                                    query = query.text,
-                                                    onQueryChange = onQueryChange,
-                                                    navController = navController,
-                                                    onSearch = {
-                                                        navController.navigate(
-                                                            "search/${URLEncoder.encode(it, "UTF-8")}"
-                                                        )
-                                                        if (dataStore[PauseSearchHistoryKey] != true) {
-                                                            database.query { insert(SearchHistory(query = it)) }
-                                                        }
-                                                    },
-                                                    onDismiss = { onActiveChange(false) },
-                                                )
+                                                SearchSource.LOCAL ->
+                                                    LocalSearchScreen(
+                                                        query = query.text,
+                                                        navController = navController,
+                                                        onDismiss = { onActiveChange(false) },
+                                                        pureBlack = pureBlack,
+                                                    )
+
+                                                SearchSource.ONLINE ->
+                                                    OnlineSearchScreen(
+                                                        query = query.text,
+                                                        onQueryChange = onQueryChange,
+                                                        navController = navController,
+                                                        onSearch = {
+                                                            navController.navigate(
+                                                                "search/${
+                                                                    URLEncoder.encode(
+                                                                        it,
+                                                                        "UTF-8"
+                                                                    )
+                                                                }"
+                                                            )
+                                                            if (dataStore[PauseSearchHistoryKey] != true) {
+                                                                database.query {
+                                                                    insert(SearchHistory(query = it))
+                                                                }
+                                                            }
+                                                        },
+                                                        onDismiss = { onActiveChange(false) },
+
+                                                    )
                                             }
                                         }
                                     }
@@ -907,6 +952,8 @@ class MainActivity : ComponentActivity() {
                                                     )
                                                 }
                                             },
+                                        containerColor = if (pureBlack) Color.Black else MaterialTheme.colorScheme.surfaceContainer,
+                                        contentColor = if (pureBlack) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                     ) {
                                         var lastTapTime by remember { mutableLongStateOf(0L) }
                                         var lastTappedIcon by remember { mutableStateOf<Int?>(null) }
@@ -953,16 +1000,20 @@ class MainActivity : ComponentActivity() {
                                                         } else {
                                                             navigateToExplore = true
                                                             coroutineScope.launch {
-                                                                delay(300)
+                                                                delay(100)
                                                                 if (navigateToExplore) {
-                                                                    navigateToScreen(
-                                                                        navController,
-                                                                        screen
-                                                                    )
+                                                                        if (isSelected) {
+                                                                            navController.currentBackStackEntry?.savedStateHandle?.set(
+                                                                                "scrollToTop",
+                                                                                true
+                                                                            )
+                                                                        } else {
+                                                                            navigateToScreen(navController, screen)
+                                                                        }
+                                                                    }
                                                                 }
                                                             }
-                                                        }
-                                                    } else {
+                                                        } else {
                                                         if (isSelected) {
                                                             navController.currentBackStackEntry?.savedStateHandle?.set(
                                                                 "scrollToTop",
@@ -979,6 +1030,16 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
                                     }
+                                    Box(
+                                        modifier = Modifier
+                                           .background(
+                                               if (pureBlack) Color.Black
+                                               else MaterialTheme.colorScheme.surfaceContainer
+                                           )
+                                           .fillMaxWidth()
+                                           .align(Alignment.BottomCenter)
+                                           .height(bottomInsetDp)
+                                    )
                                 }
                             },
                             modifier = Modifier
@@ -1071,6 +1132,11 @@ class MainActivity : ComponentActivity() {
 
                         BottomSheetMenu(
                             state = LocalMenuState.current,
+                            modifier = Modifier.align(Alignment.BottomCenter)
+                        )
+
+                        BottomSheetPage(
+                            state = LocalBottomSheetPageState.current,
                             modifier = Modifier.align(Alignment.BottomCenter)
                         )
 

@@ -114,6 +114,7 @@ dependencies {
 
     implementation(libs.room.runtime)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.accompanist.systemuicontroller)
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
 
