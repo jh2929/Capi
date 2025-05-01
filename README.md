@@ -120,6 +120,13 @@ Para información detallada sobre configuración, funcionalidades avanzadas y gu
 
 #### Desde F-Droid (Próximamente)
 
+#### Desde OpenApk
+
+<div align="center">
+  <a href="https://www.openapk.net/opentune/com.Arturo254.opentune/">
+    <img src="https://private-user-images.githubusercontent.com/125956566/395609000-8e21cdf1-06be-47be-9e6d-e862c95738e6.png?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3NDYxMjIxNzAsIm5iZiI6MTc0NjEyMTg3MCwicGF0aCI6Ii8xMjU5NTY1NjYvMzk1NjA5MDAwLThlMjFjZGYxLTA2YmUtNDdiZS05ZTZkLWU4NjJjOTU3MzhlNi5wbmc_WC1BbXotQWxnb3JpdGhtPUFXUzQtSE1BQy1TSEEyNTYmWC1BbXotQ3JlZGVudGlhbD1BS0lBVkNPRFlMU0E1M1BRSzRaQSUyRjIwMjUwNTAxJTJGdXMtZWFzdC0xJTJGczMlMkZhd3M0X3JlcXVlc3QmWC1BbXotRGF0ZT0yMDI1MDUwMVQxNzUxMTBaJlgtQW16LUV4cGlyZXM9MzAwJlgtQW16LVNpZ25hdHVyZT1iMzQ1MWVlODUzMDc5MmE0OTdjNzE3YTQ0YzE2ZGFkOTIwNmI1ZDcxMjEwMzA0Y2FjOTEzMGVmYTU2NzRkMTU1JlgtQW16LVNpZ25lZEhlYWRlcnM9aG9zdCJ9.kkwnNH3MdC17p4Bn14ahzTM67Wwp4lfTYHesrHUMpmg" alt="Kotlin"/>
+  </a>
+
 La aplicación estará disponible en el repositorio de F-Droid en el futuro cercano.
 
 > [!IMPORTANT]  
