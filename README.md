@@ -258,6 +258,12 @@ Si encuentras valor en **OpenTune** y deseas contribuir a su desarrollo continuo
 
 <br>
 
+
+## Agradecimientos:
+
+- mostafaalagamy (MetroList):
+- Fabito02 (Por Apoyo incondicional desde el principio)
+
 ## Licencia
 
 **Copyright © 2025**
