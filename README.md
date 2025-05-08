@@ -118,7 +118,8 @@ Para información detallada sobre configuración, funcionalidades avanzadas y gu
 3. Habilita "Instalación desde fuentes desconocidas" en la configuración de seguridad de tu dispositivo
 4. Instala el archivo APK descargado
 
-#### Desde F-Droid (Próximamente)
+#### Desde F-Droid:
+[Descargar ↓](https://f-droid.org/es/packages/com.Arturo254.opentune/)
 
 #### Desde OpenApk
 
