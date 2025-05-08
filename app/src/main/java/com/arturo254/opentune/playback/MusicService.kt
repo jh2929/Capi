@@ -10,6 +10,7 @@ import android.net.ConnectivityManager
 import android.os.Binder
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -54,6 +55,7 @@ import com.arturo254.innertube.models.SongItem
 import com.arturo254.innertube.models.WatchEndpoint
 import com.arturo254.opentune.MainActivity
 import com.arturo254.opentune.R
+import com.arturo254.jossredconnect.JossRedClient
 import com.arturo254.opentune.constants.AudioNormalizationKey
 import com.arturo254.opentune.constants.AudioQualityKey
 import com.arturo254.opentune.constants.AutoLoadMoreKey
@@ -61,6 +63,7 @@ import com.arturo254.opentune.constants.AutoSkipNextOnErrorKey
 import com.arturo254.opentune.constants.DiscordTokenKey
 import com.arturo254.opentune.constants.EnableDiscordRPCKey
 import com.arturo254.opentune.constants.HideExplicitKey
+import com.arturo254.opentune.constants.HistoryDuration
 import com.arturo254.opentune.constants.MediaSessionConstants.CommandToggleLike
 import com.arturo254.opentune.constants.MediaSessionConstants.CommandToggleRepeatMode
 import com.arturo254.opentune.constants.MediaSessionConstants.CommandToggleShuffle
@@ -104,12 +107,14 @@ import com.arturo254.opentune.utils.get
 import com.arturo254.opentune.utils.isInternetAvailable
 import com.arturo254.opentune.utils.reportException
 import com.google.common.util.concurrent.MoreExecutors
+
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -126,13 +131,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import timber.log.Timber
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.time.LocalDateTime
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.math.min
 import kotlin.math.pow
@@ -630,7 +639,6 @@ class MusicService :
             }
         }
     }
-
     private fun openAudioEffectSession() {
         if (isAudioEffectSessionOpened) return
         isAudioEffectSessionOpened = true
@@ -782,67 +790,139 @@ class MusicService :
                 return@Factory dataSpec.withUri(it.first.toUri())
             }
 
-            // Check whether format exists so that users from older version can view format details
-            // There may be inconsistent between the downloaded file and the displayed info if user change audio quality frequently
-            val playedFormat = runBlocking(Dispatchers.IO) { database.format(mediaId).first() }
-            val playbackData = runBlocking(Dispatchers.IO) {
-                YTPlayerUtils.playerResponseForPlayback(
-                    mediaId,
-                    playedFormat = playedFormat,
-                    audioQuality = audioQuality,
-                    connectivityManager = connectivityManager,
-                )
-            }.getOrElse { throwable ->
-                when (throwable) {
-                    is PlaybackException -> throw throwable
-                    is ConnectException, is UnknownHostException -> {
-                        throw PlaybackException(
-                            getString(R.string.error_no_internet),
+            // Try YouTube first (primary source)
+            val ytLogTag = "YouTube"
+            try {
+                val playbackData = runBlocking(Dispatchers.IO) {
+                    YTPlayerUtils.playerResponseForPlayback(
+                        mediaId,
+                        audioQuality = audioQuality,
+                        connectivityManager = connectivityManager,
+                    )
+                }.getOrElse { throwable ->
+                    when (throwable) {
+                        is PlaybackException -> throw throwable
+
+                        is ConnectException, is UnknownHostException -> {
+                            throw PlaybackException(
+                                getString(R.string.error_no_internet),
+                                throwable,
+                                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED
+                            )
+                        }
+
+                        is SocketTimeoutException -> {
+                            throw PlaybackException(
+                                getString(R.string.error_timeout),
+                                throwable,
+                                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT
+                            )
+                        }
+
+                        else -> throw PlaybackException(
+                            getString(R.string.error_unknown),
                             throwable,
-                            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+                            PlaybackException.ERROR_CODE_REMOTE_ERROR
                         )
                     }
+                }
 
-                    is SocketTimeoutException -> {
-                        throw PlaybackException(
-                            getString(R.string.error_timeout),
-                            throwable,
-                            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
+                val format = playbackData.format
+
+                database.query {
+                    upsert(
+                        FormatEntity(
+                            id = mediaId,
+                            itag = format.itag,
+                            mimeType = format.mimeType.split(";")[0],
+                            codecs = format.mimeType.split("codecs=")[1].removeSurrounding("\""),
+                            bitrate = format.bitrate,
+                            sampleRate = format.audioSampleRate,
+                            contentLength = format.contentLength!!,
+                            loudnessDb = playbackData.audioConfig?.loudnessDb,
+                            playbackUrl = playbackData.streamUrl
                         )
-                    }
-
-                    else -> throw PlaybackException(
-                        getString(R.string.error_unknown),
-                        throwable,
-                        PlaybackException.ERROR_CODE_REMOTE_ERROR,
                     )
                 }
+                scope.launch(Dispatchers.IO) { recoverSong(mediaId, playbackData) }
+
+                val streamUrl = playbackData.streamUrl
+
+                songUrlCache[mediaId] =
+                    streamUrl to System.currentTimeMillis() + (playbackData.streamExpiresInSeconds * 1000L)
+                return@Factory dataSpec.withUri(streamUrl.toUri()).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
             }
+            catch (e: Exception) {
+                Timber.tag(ytLogTag).e(e, "YouTube playback error, trying JossRed as fallback")
 
-            val format = playbackData.format
+                // Check whether alternative source is enabled
+                val useAlternativeSource = runBlocking {
+                    dataStore.data.map { preferences ->
+                        val JossRedMultimedia = booleanPreferencesKey("JossRedMultimedia")
+                        preferences[JossRedMultimedia] ?: false
+                    }.first()
+                }
 
-            database.query {
-                upsert(
-                    FormatEntity(
-                        id = mediaId,
-                        itag = format.itag,
-                        mimeType = format.mimeType.split(";")[0],
-                        codecs = format.mimeType.split("codecs=")[1].removeSurrounding("\""),
-                        bitrate = format.bitrate,
-                        sampleRate = format.audioSampleRate,
-                        contentLength = format.contentLength!!,
-                        loudnessDb = playbackData.audioConfig?.loudnessDb,
-                        playbackUrl = playbackData.playbackTracking?.videostatsPlaybackUrl?.baseUrl
-                    )
-                )
+                // If alternative source is disabled, rethrow the exception
+                if (!useAlternativeSource) {
+                    throw e
+                }
+
+                // Alternative source: JossRed (fallback)
+                val JRlogTag = "JossRed"
+                try {
+                    val alternativeUrl = runCatching {
+                        runBlocking(Dispatchers.IO) {
+                            withTimeout(5000) {
+                                JossRedClient.getStreamingUrl(mediaId)
+                            }
+                        }
+                    }.getOrNull()
+
+                    if (alternativeUrl != null) {
+                        // Verify URL accessibility with a HEAD request
+                        val client = OkHttpClient.Builder()
+                            .connectTimeout(2, TimeUnit.SECONDS)
+                            .readTimeout(2, TimeUnit.SECONDS)
+                            .build()
+
+                        val request = Request.Builder()
+                            .url(alternativeUrl)
+                            .head()
+                            .build()
+
+                        try {
+                            val response = client.newCall(request).execute()
+                            if (response.isSuccessful) {
+                                Timber.tag(JRlogTag).i("Using JossRed URL as fallback: $alternativeUrl")
+                                scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
+                                return@Factory dataSpec.withUri(alternativeUrl.toUri())
+                            } else {
+                                Timber.tag(JRlogTag).w("JossRed URL unreachable (HTTP ${response.code}), throwing original error")
+                                throw e
+                            }
+                        } catch (jrException: Exception) {
+                            Timber.tag(JRlogTag).e(jrException, "Error verifying JossRed URL, throwing original error")
+                            throw e
+                        }
+                    } else {
+                        throw e
+                    }
+                } catch (jrException: Exception) {
+                    when (jrException) {
+                        is JossRedClient.JossRedException -> {
+                            Timber.tag(JRlogTag).w("JossRed error: ${jrException.message}, throwing original error")
+                        }
+                        is TimeoutCancellationException -> {
+                            Timber.tag(JRlogTag).w("JossRed timeout, throwing original error")
+                        }
+                        else -> {
+                            Timber.tag(JRlogTag).e(jrException, "JossRed error, throwing original error")
+                        }
+                    }
+                    throw e
+                }
             }
-            scope.launch(Dispatchers.IO) { recoverSong(mediaId, playbackData) }
-
-            val streamUrl = playbackData.streamUrl
-
-            songUrlCache[mediaId] =
-                streamUrl to System.currentTimeMillis() + (playbackData.streamExpiresInSeconds * 1000L)
-            dataSpec.withUri(streamUrl.toUri()).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
         }
     }
 
@@ -875,34 +955,41 @@ class MusicService :
 
     override fun onPlaybackStatsReady(
         eventTime: AnalyticsListener.EventTime,
-        playbackStats: PlaybackStats
+        playbackStats: PlaybackStats,
     ) {
-        val mediaItem =
-            eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
-        var minPlaybackDur = (dataStore.get(minPlaybackDurKey, 30).toFloat() / 100)
-        // ensure within bounds
-        if (minPlaybackDur >= 1f) {
-            minPlaybackDur = 0.99f // Ehhh 99 is good enough to avoid any rounding errors
-        } else if (minPlaybackDur < 0.01f) {
-            minPlaybackDur = 0.01f // Still want "spam skipping" to not count as plays
-        }
+        val mediaItem = eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
 
-        if (playbackStats.totalPlayTimeMs.toFloat() / ((mediaItem.metadata?.duration?.times(1000))
-                ?: -1) >= minPlaybackDur
-            && !dataStore.get(PauseListenHistoryKey, false)
+        if (playbackStats.totalPlayTimeMs >= (
+                    dataStore[HistoryDuration]?.times(1000f)
+                        ?: 30000f
+                    ) &&
+            !dataStore.get(PauseListenHistoryKey, false)
         ) {
             database.query {
-                incrementPlayCount(mediaItem.mediaId)
                 incrementTotalPlayTime(mediaItem.mediaId, playbackStats.totalPlayTimeMs)
                 try {
                     insert(
                         Event(
                             songId = mediaItem.mediaId,
                             timestamp = LocalDateTime.now(),
-                            playTime = playbackStats.totalPlayTimeMs
-                        )
+                            playTime = playbackStats.totalPlayTimeMs,
+                        ),
                     )
                 } catch (_: SQLException) {
+                }
+            }
+            val PauseRemoteListenHistoryKey = booleanPreferencesKey("pauseRemoteListenHistory")
+            if (!dataStore.get(PauseRemoteListenHistoryKey, false)) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val playbackUrl = database.format(mediaItem.mediaId).first()?.playbackUrl
+                        ?: YTPlayerUtils.playerResponseForMetadata(mediaItem.mediaId, null)
+                            .getOrNull()?.playbackTracking?.videostatsPlaybackUrl?.baseUrl
+                    playbackUrl?.let {
+                        YouTube.registerPlayback(null, playbackUrl)
+                            .onFailure {
+                                reportException(it)
+                            }
+                    }
                 }
             }
         }

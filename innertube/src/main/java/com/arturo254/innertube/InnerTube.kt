@@ -20,10 +20,6 @@ import kotlinx.serialization.json.Json
 import java.net.Proxy
 import java.util.*
 
-/**
- * Provide access to InnerTube endpoints.
- * For making HTTP requests, not parsing response.
- */
 class InnerTube {
     private var httpClient = createClient()
 
@@ -126,7 +122,6 @@ class InnerTube {
         videoId: String,
         playlistId: String?,
         signatureTimestamp: Int?,
-        webPlayerPot: String?,
     ) = httpClient.post("player") {
         ytClient(client, setLogin = true)
         setBody(
@@ -149,9 +144,6 @@ class InnerTube {
                         )
                     )
                 } else null,
-                serviceIntegrityDimensions = if (client.useWebPoTokens && webPlayerPot != null) {
-                    PlayerBody.ServiceIntegrityDimensions(webPlayerPot)
-                } else null
             )
         )
     }
@@ -469,4 +461,12 @@ class InnerTube {
             )
         )
     }
+
+    private suspend fun returnYouTubeDislike(videoId: String) =
+        httpClient.get("https://returnyoutubedislikeapi.com/Votes?videoId=$videoId") {
+            contentType(ContentType.Application.Json)
+        }
+
+
+
 }

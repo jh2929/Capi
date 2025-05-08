@@ -114,7 +114,6 @@ dependencies {
 
     implementation(libs.room.runtime)
     implementation(libs.kotlinx.serialization.json)
-    implementation(libs.accompanist.systemuicontroller)
     ksp(libs.room.compiler)
     implementation(libs.room.ktx)
 
@@ -128,6 +127,7 @@ dependencies {
     implementation(projects.kugou)
     implementation(projects.lrclib)
     implementation(projects.kizzy)
+    implementation(project(":jossredconnect"))
 
     implementation(libs.ktor.client.core)
 

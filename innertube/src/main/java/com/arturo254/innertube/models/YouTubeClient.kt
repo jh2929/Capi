@@ -12,37 +12,23 @@ data class YouTubeClient(
     val loginSupported: Boolean = false,
     val loginRequired: Boolean = false,
     val useSignatureTimestamp: Boolean = false,
-    val useWebPoTokens: Boolean = false,
     val isEmbedded: Boolean = false,
     // val origin: String? = null,
     // val referer: String? = null,
 ) {
-    fun toContext(locale: YouTubeLocale, visitorData: String?, dataSyncId: String?): Context {
-        /*
-         * HACK: This is a workaround to avoid breaking older installations that have a dataSyncId
-         * that contains "||" in it.
-         * Return null if the dataSyncId contains "||" to indicate that we should use the default
-         * user.
-         */
-        val onBehalfOfUser = if (dataSyncId?.contains("||") != true)
-            dataSyncId
-        else
-            null
-
-        return Context(
-            client = Context.Client(
-                clientName = clientName,
-                clientVersion = clientVersion,
-                osVersion = osVersion,
-                gl = locale.gl,
-                hl = locale.hl,
-                visitorData = visitorData
-            ),
-            user = Context.User(
-                onBehalfOfUser = onBehalfOfUser
-            ),
-        )
-    }
+    fun toContext(locale: YouTubeLocale, visitorData: String?, dataSyncId: String?) = Context(
+        client = Context.Client(
+            clientName = clientName,
+            clientVersion = clientVersion,
+            osVersion = osVersion,
+            gl = locale.gl,
+            hl = locale.hl,
+            visitorData = visitorData
+        ),
+        user = Context.User(
+            onBehalfOfUser = if (loginSupported) dataSyncId else null
+        ),
+    )
 
     companion object {
         /**
@@ -68,7 +54,6 @@ data class YouTubeClient(
             userAgent = USER_AGENT_WEB,
             loginSupported = true,
             useSignatureTimestamp = true,
-            useWebPoTokens = true,
         )
 
         val WEB_CREATOR = YouTubeClient(
@@ -98,6 +83,24 @@ data class YouTubeClient(
             clientId = "5",
             userAgent = "com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)",
             osVersion = "18.3.2.22D82",
+        )
+
+        val MOBILE = YouTubeClient(
+            clientName = "ANDROID",
+            clientVersion = "18.13.37",
+            clientId = "3",
+            userAgent = "com.google.android.youtube/18.13.37 (Linux; U; Android 13; Pixel 6)",
+            loginSupported = true,
+            useSignatureTimestamp = true
+        )
+
+        val ANDROID_VR_NO_AUTH = YouTubeClient(
+            clientName = "ANDROID_VR",
+            clientVersion = "1.61.48",
+            clientId = "28",
+            userAgent = "com.google.android.apps.youtube.vr.oculus/1.61.48 (Linux; U; Android 12; en_US; Oculus Quest 3; Build/SQ3A.220605.009.A1; Cronet/132.0.6808.3)",
+            loginSupported = false,
+            useSignatureTimestamp = false
         )
     }
 }

@@ -76,7 +76,6 @@ constructor(
             val playbackData = runBlocking(Dispatchers.IO) {
                 YTPlayerUtils.playerResponseForPlayback(
                     mediaId,
-                    playedFormat = playedFormat,
                     audioQuality = audioQuality,
                     connectivityManager = connectivityManager,
                 )
@@ -94,7 +93,7 @@ constructor(
                         sampleRate = format.audioSampleRate,
                         contentLength = format.contentLength!!,
                         loudnessDb = playbackData.audioConfig?.loudnessDb,
-                        playbackUrl = playbackData.playbackTracking?.videostatsPlaybackUrl?.baseUrl
+                        playbackUrl = playbackData.streamUrl
                     ),
                 )
             }
