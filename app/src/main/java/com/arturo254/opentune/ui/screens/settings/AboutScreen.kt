@@ -419,12 +419,12 @@ fun UserCards(uriHandler: UriHandler) {
             onClick = { uriHandler.openUri("https://github.com/Derpachi") }
         )
 
-//        UserCard(
-//            imageUrl = "https://avatars.githubusercontent.com/u/55490396?v=4",
-//            name = "「★」 JPGuillemin",
-//            role = "Icon designer",
-//            onClick = { uriHandler.openUri("https://github.com/JPGuillemin") }
-//        )
+        UserCard(
+            imageUrl = "https://avatars.githubusercontent.com/u/147309938?v=4",
+            name = "「★」 RightSideUpCak3",
+            role = "Language selector",
+            onClick = { uriHandler.openUri("https://github.com/RightSideUpCak3") }
+        )
     }
 }
 
