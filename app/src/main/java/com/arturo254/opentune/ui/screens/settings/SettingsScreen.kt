@@ -198,6 +198,8 @@ fun UpdateCard(latestVersion: String = "") {
     var currentLatestVersion by remember { mutableStateOf(latestVersion) }
     var showDownloadDialog by remember { mutableStateOf(false) }
 
+
+
     // Verificar actualizaciones al inicio
     LaunchedEffect(Unit) {
         val newVersion = checkForUpdates()
@@ -294,12 +296,15 @@ fun UpdateDownloadDialog(
     var downloadedApkUri by remember { mutableStateOf<Uri?>(null) }
     val downloadScope = rememberCoroutineScope()
 
-    // Solicitar permiso para instalar paquetes
     val installPermissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (downloadStatus == DownloadStatus.COMPLETED && downloadedApkUri != null) {
-            installApk(context, downloadedApkUri!!)
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        // Cuando vuelve de la pantalla de permisos, verificamos de nuevo si podemos instalar
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (context.packageManager.canRequestPackageInstalls() && downloadedApkUri != null) {
+                // Ahora que tenemos el permiso, procedemos con la instalación
+                installApk(context, downloadedApkUri!!)
+            }
         }
     }
 
@@ -378,18 +383,21 @@ fun UpdateDownloadDialog(
                             TextButton(onClick = onDismiss) {
                                 Text(stringResource(R.string.close))
                             }
+                            // Modifica solo la parte del botón de instalar en el caso COMPLETED
                             Button(onClick = {
                                 if (downloadedApkUri != null) {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                         if (!context.packageManager.canRequestPackageInstalls()) {
-                                            val intent =
-                                                Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-                                                    .setData(Uri.parse("package:${context.packageName}"))
+                                            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                                                .setData("package:${context.packageName}".toUri())
+
                                             installPermissionLauncher.launch(intent)
                                         } else {
+                                            // Pasar directamente el objeto Uri, no una cadena
                                             installApk(context, downloadedApkUri!!)
                                         }
                                     } else {
+                                        // Pasar directamente el objeto Uri, no una cadena
                                         installApk(context, downloadedApkUri!!)
                                     }
                                 }
@@ -440,7 +448,7 @@ suspend fun downloadApk(
         }
 
         // Configurar el DownloadManager
-        val request = DownloadManager.Request(Uri.parse(apkUrl))
+        val request = DownloadManager.Request(apkUrl.toUri())
             .setTitle("Descargando OpenTune v$version")
             .setDescription("Descargando actualización...")
             .setDestinationUri(Uri.fromFile(apkFile))
@@ -504,12 +512,26 @@ suspend fun downloadApk(
     }
 }
 
-fun installApk(context: Context, uri: Uri) {
-    val intent = Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(uri, "application/vnd.android.package-archive")
-        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+// Función corregida para instalar APK usando directamente la URI
+fun installApk(context: Context, apkUri: Uri) {
+    // Verificar y solicitar permiso para instalar APKs en Android 8+ (API 26+)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val pm = context.packageManager
+        val isAllowed = pm.canRequestPackageInstalls()
+        if (!isAllowed) {
+            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                .setData("package:${context.packageName}".toUri())
+            context.startActivity(intent)
+            return // Salimos para que el usuario conceda el permiso antes de continuar
+        }
     }
-    context.startActivity(intent)
+
+    val installIntent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(apkUri, "application/vnd.android.package-archive")
+        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK
+    }
+
+    context.startActivity(installIntent)
 }
 
 // Estas funciones ya las tenías
