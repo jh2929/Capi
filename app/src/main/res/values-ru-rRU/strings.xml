@@ -477,4 +477,5 @@
     <string name="notification">"Активировать уведомления"</string>
     <string name="cached_playlist">"Кэш"</string>
     <string name="added_to_queue">"добавлено в очередь"</string>
+    <string name="warn">"предупреждать"</string>
 </resources>
