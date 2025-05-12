@@ -1,9 +1,15 @@
 package com.arturo254.opentune.ui.screens.playlist
 
 import android.annotation.SuppressLint
+import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,6 +70,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -121,9 +128,12 @@ import com.arturo254.opentune.ui.menu.SelectionSongMenu
 import com.arturo254.opentune.ui.menu.SongMenu
 import com.arturo254.opentune.ui.utils.ItemWrapper
 import com.arturo254.opentune.ui.utils.backToMain
+import com.arturo254.opentune.utils.deletePlaylistImage
+import com.arturo254.opentune.utils.getPlaylistImageUri
 import com.arturo254.opentune.utils.makeTimeString
 import com.arturo254.opentune.utils.rememberEnumPreference
 import com.arturo254.opentune.utils.rememberPreference
+import com.arturo254.opentune.utils.saveCustomPlaylistImage
 import com.arturo254.opentune.viewmodels.LocalPlaylistViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -133,6 +143,7 @@ import org.burnoutcrew.reorderable.detectReorder
 import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 import org.burnoutcrew.reorderable.reorderable
 import java.time.LocalDateTime
+
 
 @SuppressLint("RememberReturnType")
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -889,10 +900,9 @@ fun LocalPlaylistHeader(
     val syncUtils = LocalSyncUtils.current
     val scope = rememberCoroutineScope()
 
-    val playlistLength =
-        remember(songs) {
-            songs.fastSumBy { it.song.song.duration }
-        }
+    val playlistLength = remember(songs) {
+        songs.fastSumBy { it.song.song.duration }
+    }
 
     val downloadUtil = LocalDownloadUtil.current
     var downloadState by remember {
@@ -901,6 +911,20 @@ fun LocalPlaylistHeader(
 
     val liked = playlist.playlist.bookmarkedAt != null
     val editable: Boolean = playlist.playlist.isEditable == true
+
+    // 📸 Miniatura personalizada
+    var customThumbnailUri by rememberSaveable {
+        mutableStateOf<Uri?>(getPlaylistImageUri(context, playlist.playlist.id))
+    }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            customThumbnailUri = it
+            saveCustomPlaylistImage(context, playlist.playlist.id, it)
+        }
+    }
 
     LaunchedEffect(songs) {
         if (songs.isEmpty()) return@LaunchedEffect
@@ -929,50 +953,127 @@ fun LocalPlaylistHeader(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (playlist.thumbnails.size == 1) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .size(AlbumThumbnailSize)
-                        .clip(RoundedCornerShape(ThumbnailCornerRadius)),
-                ) {
-                    AsyncImage(
-                        model = playlist.thumbnails[0],
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(ThumbnailCornerRadius)),
+            val imageModifier = Modifier
+                .size(AlbumThumbnailSize)
+                .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                .clickable(enabled = editable) {
+                    if (editable) imagePickerLauncher.launch("image/*")
+                }
+
+            Box(modifier = imageModifier) {
+                // Estado para controlar la visibilidad de los iconos
+                var showEditButtons by remember { mutableStateOf(false) }
+
+                // Modificador para detectar el long press
+                val longPressModifier = Modifier.pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = { showEditButtons = !showEditButtons }
                     )
                 }
-            } else if (playlist.thumbnails.size > 1) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(AlbumThumbnailSize)
-                            .clip(RoundedCornerShape(ThumbnailCornerRadius)),
-                ) {
-                    listOf(
-                        Alignment.TopStart,
-                        Alignment.TopEnd,
-                        Alignment.BottomStart,
-                        Alignment.BottomEnd,
-                    ).fastForEachIndexed { index, alignment ->
+
+                when {
+                    customThumbnailUri != null -> {
                         AsyncImage(
-                            model = playlist.thumbnails.getOrNull(index),
+                            model = customThumbnailUri,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            modifier =
-                                Modifier
-                                    .align(alignment)
-                                    .size(AlbumThumbnailSize / 2),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                                .then(longPressModifier) // Agregamos el detector de long press
                         )
+                    }
+
+                    playlist.thumbnails.size == 1 -> {
+                        AsyncImage(
+                            model = playlist.thumbnails[0],
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(ThumbnailCornerRadius))
+                                .then(longPressModifier) // Agregamos el detector de long press
+                        )
+                    }
+
+                    playlist.thumbnails.size > 1 -> {
+                        Box(modifier = Modifier.fillMaxSize().then(longPressModifier)) { // Agregamos el detector de long press
+                            listOf(
+                                Alignment.TopStart,
+                                Alignment.TopEnd,
+                                Alignment.BottomStart,
+                                Alignment.BottomEnd,
+                            ).fastForEachIndexed { index, alignment ->
+                                AsyncImage(
+                                    model = playlist.thumbnails.getOrNull(index),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .align(alignment)
+                                        .size(AlbumThumbnailSize / 2)
+                                )
+                            }
+                        }
+                    }
+
+                    else -> {
+                        Icon(
+                            painter = painterResource(R.drawable.image),
+                            contentDescription = stringResource(R.string.add_thumbnail),
+                            modifier = Modifier
+                                .size(48.dp)
+                                .align(Alignment.Center)
+                                .then(longPressModifier), // Agregamos el detector de long press
+                            tint = if (editable)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+
+                // Mostramos los botones solo si showEditButtons es true y editable es true
+                if (editable && showEditButtons) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .clip(RoundedCornerShape(54.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                            .padding(4.dp),
+
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { imagePickerLauncher.launch("image/*") },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.edit),
+                                contentDescription = stringResource(R.string.edit_thumbnail),
+                                tint =  MaterialTheme.colorScheme.surface
+                            )
+                        }
+                        if (customThumbnailUri != null) {
+                            IconButton(
+                                onClick = {
+                                    deletePlaylistImage(context, playlist.playlist.id)
+                                    customThumbnailUri = null
+                                    showEditButtons = false // Ocultar los botones después de eliminar
+                                },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.close),
+                                    contentDescription = stringResource(R.string.remove_thumbnail),
+                                    tint =  MaterialTheme.colorScheme.surface
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            Column(
-                verticalArrangement = Arrangement.Center,
-            ) {
+            Column {
                 AutoResizeText(
                     text = playlist.playlist.name,
                     fontWeight = FontWeight.Bold,
@@ -982,38 +1083,26 @@ fun LocalPlaylistHeader(
                 )
 
                 Text(
-                    text =
-                        if (playlist.songCount == 0 && playlist.playlist.remoteSongCount != null)
-                            pluralStringResource(
-                                R.plurals.n_song,
-                                playlist.playlist.remoteSongCount,
-                                playlist.playlist.remoteSongCount
-                            )
-                        else
-                            pluralStringResource(
-                                R.plurals.n_song,
-                                playlist.songCount,
-                                playlist.songCount
-                            ),
+                    text = pluralStringResource(
+                        R.plurals.n_song,
+                        playlist.songCount,
+                        playlist.songCount
+                    ),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Normal,
                 )
 
                 Text(
                     text = makeTimeString(playlistLength * 1000L),
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Normal,
                 )
 
                 Row {
                     if (editable) {
-                        IconButton(
-                            onClick = onshowDeletePlaylistDialog,
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.delete),
-                                contentDescription = null,
-                            )
+                        IconButton(onClick = onshowDeletePlaylistDialog) {
+                            Icon(painter = painterResource(R.drawable.delete), contentDescription = null)
+                        }
+                        IconButton(onClick = onShowEditDialog) {
+                            Icon(painter = painterResource(R.drawable.edit), contentDescription = null)
                         }
                     } else {
                         IconButton(
@@ -1024,95 +1113,69 @@ fun LocalPlaylistHeader(
                             }
                         ) {
                             Icon(
-                                painter = painterResource(if (liked) R.drawable.favorite else R.drawable.favorite_border),
+                                painter = painterResource(
+                                    if (liked) R.drawable.favorite else R.drawable.favorite_border
+                                ),
                                 contentDescription = null,
                                 tint = if (liked) MaterialTheme.colorScheme.error else LocalContentColor.current
-                            )
-                        }
-                    }
-                    if (editable) {
-                        IconButton(
-                            onClick = onShowEditDialog,
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.edit),
-                                contentDescription = null,
                             )
                         }
                     }
 
                     when (downloadState) {
                         Download.STATE_COMPLETED -> {
-                            IconButton(
-                                onClick = onShowRemoveDownloadDialog,
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.offline),
-                                    contentDescription = null,
-                                )
+                            IconButton(onClick = onShowRemoveDownloadDialog) {
+                                Icon(painter = painterResource(R.drawable.offline), contentDescription = null)
                             }
                         }
 
                         Download.STATE_DOWNLOADING -> {
-                            IconButton(
-                                onClick = {
-                                    songs.forEach { song ->
-                                        DownloadService.sendRemoveDownload(
-                                            context,
-                                            ExoDownloadService::class.java,
-                                            song.song.id,
-                                            false,
-                                        )
-                                    }
-                                },
-                            ) {
+                            IconButton(onClick = {
+                                songs.forEach { song ->
+                                    DownloadService.sendRemoveDownload(
+                                        context,
+                                        ExoDownloadService::class.java,
+                                        song.song.id,
+                                        false
+                                    )
+                                }
+                            }) {
                                 CircularProgressIndicator(
                                     strokeWidth = 2.dp,
-                                    modifier = Modifier.size(24.dp),
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
 
                         else -> {
-                            IconButton(
-                                onClick = {
-                                    songs.forEach { song ->
-                                        val downloadRequest =
-                                            DownloadRequest
-                                                .Builder(song.song.id, song.song.id.toUri())
-                                                .setCustomCacheKey(song.song.id)
-                                                .setData(
-                                                    song.song.song.title
-                                                        .toByteArray(),
-                                                ).build()
-                                        DownloadService.sendAddDownload(
-                                            context,
-                                            ExoDownloadService::class.java,
-                                            downloadRequest,
-                                            false,
-                                        )
-                                    }
-                                },
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.download),
-                                    contentDescription = null,
-                                )
+                            IconButton(onClick = {
+                                songs.forEach { song ->
+                                    val downloadRequest = DownloadRequest.Builder(
+                                        song.song.id, song.song.id.toUri()
+                                    )
+                                        .setCustomCacheKey(song.song.id)
+                                        .setData(song.song.song.title.toByteArray())
+                                        .build()
+
+                                    DownloadService.sendAddDownload(
+                                        context,
+                                        ExoDownloadService::class.java,
+                                        downloadRequest,
+                                        false
+                                    )
+                                }
+                            }) {
+                                Icon(painter = painterResource(R.drawable.download), contentDescription = null)
                             }
                         }
                     }
 
-                    IconButton(
-                        onClick = {
-                            playerConnection.addToQueue(
-                                items = songs.map { it.song.toMediaItem() },
-                            )
-                        },
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.queue_music),
-                            contentDescription = null,
+                    IconButton(onClick = {
+                        playerConnection.addToQueue(
+                            items = songs.map { it.song.toMediaItem() }
                         )
+                    }) {
+                        Icon(painter = painterResource(R.drawable.queue_music), contentDescription = null)
                     }
                 }
             }
@@ -1125,18 +1188,14 @@ fun LocalPlaylistHeader(
                         ListQueue(
                             title = playlist.playlist.name,
                             items = songs.map { it.song.toMediaItem() },
-                        ),
+                        )
                     )
                 },
                 contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f)
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.play),
-                    contentDescription = null,
-                    modifier = Modifier.size(ButtonDefaults.IconSize),
-                )
-                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                Icon(painter = painterResource(R.drawable.play), contentDescription = null)
+                Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
                 Text(stringResource(R.string.play))
             }
 
@@ -1146,18 +1205,14 @@ fun LocalPlaylistHeader(
                         ListQueue(
                             title = playlist.playlist.name,
                             items = songs.shuffled().map { it.song.toMediaItem() },
-                        ),
+                        )
                     )
                 },
                 contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f)
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.shuffle),
-                    contentDescription = null,
-                    modifier = Modifier.size(ButtonDefaults.IconSize),
-                )
-                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                Icon(painter = painterResource(R.drawable.shuffle), contentDescription = null)
+                Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
                 Text(stringResource(R.string.shuffle))
             }
         }

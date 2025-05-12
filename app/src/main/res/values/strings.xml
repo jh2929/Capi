@@ -473,4 +473,7 @@
     <string name="cached_playlist">Cached</string>
     <string name="added_to_queue">added to queue</string>
     <string name="warn">Note: The APK is being downloaded from the official GitHub repository, not from F-Droid.</string>
+    <string name="edit_thumbnail">Edit thumbnail</string>
+    <string name="remove_thumbnail">Remove thumbnail</string>
+    <string name="add_thumbnail">Add thumbnail</string>
 </resources>

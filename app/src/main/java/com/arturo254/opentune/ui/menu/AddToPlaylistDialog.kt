@@ -34,6 +34,7 @@ import com.arturo254.opentune.ui.component.ListItem
 import com.arturo254.opentune.ui.component.PlaylistListItem
 import com.arturo254.opentune.utils.rememberPreference
 import kotlinx.coroutines.Dispatchers
+import com.arturo254.innertube.YouTube
 import kotlinx.coroutines.launch
 
 @Composable
@@ -112,6 +113,12 @@ fun AddToPlaylistDialog(
                             } else {
                                 onDismiss()
                                 database.addSongToPlaylist(playlist, songIds!!)
+
+                                playlist.playlist.browseId?.let { plist ->
+                                    songIds?.forEach {
+                                        YouTube.addToPlaylist(plist, it)
+                                    }
+                                }
                             }
                         }
                     }

@@ -104,6 +104,7 @@ import com.arturo254.opentune.constants.PlayerBackgroundStyle
 import com.arturo254.opentune.constants.PlayerBackgroundStyleKey
 import com.arturo254.opentune.constants.PlayerButtonsStyle
 import com.arturo254.opentune.constants.PlayerButtonsStyleKey
+import com.arturo254.opentune.constants.PlayerTextAlignmentKey
 import com.arturo254.opentune.constants.PureBlackKey
 import com.arturo254.opentune.constants.SliderStyle
 import com.arturo254.opentune.constants.SliderStyleKey
@@ -142,6 +143,12 @@ fun AppearanceSettings(
         DynamicThemeKey,
         defaultValue = true
     )
+    val (playerTextAlignment, onPlayerTextAlignmentChange) =
+        rememberEnumPreference(
+            PlayerTextAlignmentKey,
+            defaultValue = PlayerTextAlignment.CENTER,
+        )
+
     val (darkMode, onDarkModeChange) = rememberEnumPreference(
         DarkModeKey,
         defaultValue = DarkMode.AUTO
@@ -453,6 +460,29 @@ fun AppearanceSettings(
             icon = { Icon(painterResource(R.drawable.swipe), null) },
             checked = swipeThumbnail,
             onCheckedChange = onSwipeThumbnailChange,
+        )
+        EnumListPreference(
+            title = { Text(stringResource(R.string.player_text_alignment)) },
+            icon = {
+                Icon(
+                    painter =
+                        painterResource(
+                            when (playerTextAlignment) {
+                                PlayerTextAlignment.CENTER -> R.drawable.format_align_center
+                                PlayerTextAlignment.SIDED -> R.drawable.format_align_left
+                            },
+                        ),
+                    contentDescription = null,
+                )
+            },
+            selectedValue = playerTextAlignment,
+            onValueSelected = onPlayerTextAlignmentChange,
+            valueText = {
+                when (it) {
+                    PlayerTextAlignment.SIDED -> stringResource(R.string.sided)
+                    PlayerTextAlignment.CENTER -> stringResource(R.string.center)
+                }
+            },
         )
 
         EnumListPreference(

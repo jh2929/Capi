@@ -1399,9 +1399,9 @@ fun ProfileIconWithUpdateBadge(
 
 
 fun logErrorToDownloads(context: Context, e: Exception) {
-    val fileName = "error_log_${SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault()).format(
-        Date()
-    )}.txt"
+    val fileName = "error_log_${
+        SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault()).format(Date())
+    }.txt"
     val logText = buildString {
         append("Exception: ${e.message}\n")
         append("Stacktrace:\n")
@@ -1410,29 +1410,49 @@ fun logErrorToDownloads(context: Context, e: Exception) {
 
     try {
         val outputStream: OutputStream? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val resolver = context.contentResolver
             val contentValues = ContentValues().apply {
-                put(MediaStore.Downloads.DISPLAY_NAME, fileName)
-                put(MediaStore.Downloads.MIME_TYPE, "text/plain")
-                put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                put(MediaStore.Downloads.IS_PENDING, 1)
+                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
 
-            val resolver = context.contentResolver
             val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-            uri?.let {
-                val stream = resolver.openOutputStream(it)
-                contentValues.clear()
-                contentValues.put(MediaStore.Downloads.IS_PENDING, 0)
-                resolver.update(it, contentValues, null, null)
-                stream
+            if (uri == null) {
+                Toast.makeText(context, "Error al crear el archivo en Descargas", Toast.LENGTH_LONG).show()
+                return
             }
+
+            val stream = resolver.openOutputStream(uri)
+            if (stream == null) {
+                Toast.makeText(context, "No se pudo abrir el archivo para escribir", Toast.LENGTH_LONG).show()
+                return
+            }
+
+            // Escribimos antes de cambiar IS_PENDING
+            stream.use {
+                it.write(logText.toByteArray())
+            }
+
+            // Marcamos el archivo como disponible
+            contentValues.clear()
+            contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+            resolver.update(uri, contentValues, null, null)
+
+            // Retornamos null porque ya lo usamos
+            null
         } else {
             val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            if (!downloadsDir.exists()) downloadsDir.mkdirs()
             val file = File(downloadsDir, fileName)
             FileOutputStream(file)
         }
 
-        outputStream?.use { it.write(logText.toByteArray()) }
+        // Solo para API < 29
+        outputStream?.use {
+            it.write(logText.toByteArray())
+        }
 
         Toast.makeText(context, "Log guardado en Descargas como $fileName", Toast.LENGTH_LONG).show()
 
@@ -1441,3 +1461,4 @@ fun logErrorToDownloads(context: Context, e: Exception) {
         Toast.makeText(context, "Error al guardar log: ${ex.message}", Toast.LENGTH_LONG).show()
     }
 }
+

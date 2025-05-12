@@ -33,6 +33,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -371,6 +372,7 @@ fun LibraryPlaylistsScreen(
                                         },
                                     )
                                     .animateItem(),
+                            context = LocalContext.current // Pasamos el contexto actual para obtener la URI de la miniatura
                         )
                     }
 
@@ -379,7 +381,7 @@ fun LibraryPlaylistsScreen(
                         contentType = { CONTENT_TYPE_PLAYLIST },
                     ) {
                         PlaylistGridItem(
-                            playlist = downloadPlaylist,
+                            playlist = likedPlaylist,
                             fillMaxWidth = true,
                             autoPlaylist = true,
                             modifier =
@@ -387,10 +389,11 @@ fun LibraryPlaylistsScreen(
                                     .fillMaxWidth()
                                     .combinedClickable(
                                         onClick = {
-                                            navController.navigate("auto_playlist/downloaded")
+                                            navController.navigate("auto_playlist/liked")
                                         },
                                     )
                                     .animateItem(),
+                            context = LocalContext.current // Pasamos el contexto actual para obtener la URI de la miniatura
                         )
                     }
 
@@ -399,7 +402,7 @@ fun LibraryPlaylistsScreen(
                         contentType = { CONTENT_TYPE_PLAYLIST },
                     ) {
                         PlaylistGridItem(
-                            playlist = topPlaylist,
+                            playlist = likedPlaylist,
                             fillMaxWidth = true,
                             autoPlaylist = true,
                             modifier =
@@ -407,10 +410,11 @@ fun LibraryPlaylistsScreen(
                                     .fillMaxWidth()
                                     .combinedClickable(
                                         onClick = {
-                                            navController.navigate("top_playlist/$topSize")
+                                            navController.navigate("auto_playlist/liked")
                                         },
                                     )
                                     .animateItem(),
+                            context = LocalContext.current // Pasamos el contexto actual para obtener la URI de la miniatura
                         )
                     }
 
@@ -430,9 +434,11 @@ fun LibraryPlaylistsScreen(
                                 menuState = menuState,
                                 coroutineScope = coroutineScope,
                                 playlist = playlist,
-                                modifier = Modifier.animateItem()
+                                modifier = Modifier.animateItem(),
+                                context = LocalContext.current // Pasamos el contexto actual para obtener la miniatura personalizada
                             )
                         }
+
                     }
                 }
 

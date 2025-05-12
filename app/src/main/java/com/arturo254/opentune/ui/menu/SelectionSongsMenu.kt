@@ -51,7 +51,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import androidx.compose.animation.core.tween
-
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 
 @SuppressLint("MutableCollectionMutableState")
@@ -440,17 +441,17 @@ fun SelectionMediaMetadataMenu(
 
     AddToPlaylistDialog(
         isVisible = showChoosePlaylistDialog,
-        onGetSong = { playlist ->
-            coroutineScope.launch(Dispatchers.IO) {
-                songSelection.forEach { song ->
-                    playlist.playlist.browseId?.let { browseId ->
-                        YouTube.addToPlaylist(browseId, song.id)
+        onGetSong = {
+            songSelection.map {
+                runBlocking {
+                    withContext(Dispatchers.IO) {
+                        database.insert(it)
                     }
                 }
+                it.id
             }
-            songSelection.map { it.id }
         },
-        onDismiss = { showChoosePlaylistDialog = false },
+        onDismiss = { showChoosePlaylistDialog = false }
     )
 
     LaunchedEffect(songSelection) {
