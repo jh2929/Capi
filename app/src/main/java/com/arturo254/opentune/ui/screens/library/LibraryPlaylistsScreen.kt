@@ -84,7 +84,7 @@ fun LibraryPlaylistsScreen(
     allowSyncing: Boolean = true,
 ) {
     val menuState = LocalMenuState.current
-    val haptic = LocalHapticFeedback.current
+    LocalHapticFeedback.current
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -133,6 +133,16 @@ fun LibraryPlaylistsScreen(
             thumbnails = emptyList(),
         )
 
+    val cachePlaylist =
+        Playlist(
+            playlist = PlaylistEntity(
+                id = UUID.randomUUID().toString(),
+                name = stringResource(R.string.cached_playlist)
+            ),
+            songCount = 0,
+            thumbnails = emptyList(),
+        )
+
     val lazyListState = rememberLazyListState()
     val lazyGridState = rememberLazyGridState()
 
@@ -141,7 +151,7 @@ fun LibraryPlaylistsScreen(
         backStackEntry?.savedStateHandle?.getStateFlow("scrollToTop", false)?.collectAsState()
 
     val (innerTubeCookie) = rememberPreference(InnerTubeCookieKey, "")
-    val isLoggedIn = remember(innerTubeCookie) {
+    remember(innerTubeCookie) {
         "SAPISID" in parseCookieString(innerTubeCookie)
     }
 
@@ -149,7 +159,9 @@ fun LibraryPlaylistsScreen(
 
     LaunchedEffect(Unit) {
         if (ytmSync) {
-            viewModel.sync()
+            withContext(Dispatchers.IO) {
+                viewModel.sync()
+            }
         }
     }
 
@@ -299,6 +311,27 @@ fun LibraryPlaylistsScreen(
                         )
                     }
 
+                    item(
+                        key = "cachePlaylist",
+                        contentType = { CONTENT_TYPE_PLAYLIST },
+                    ) {
+                        PlaylistGridItem(
+                            playlist = cachePlaylist,
+                            fillMaxWidth = true,
+                            autoPlaylist = true,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {
+                                            navController.navigate("cache_playlist/cached")
+                                        },
+                                    )
+                                    .animateItem(),
+                            context = LocalContext.current // Pasamos el contexto actual para obtener la URI de la miniatura
+                        )
+                    }
+
                     playlists.let { playlists ->
                         if (playlists.isEmpty()) {
                             item {
@@ -381,7 +414,7 @@ fun LibraryPlaylistsScreen(
                         contentType = { CONTENT_TYPE_PLAYLIST },
                     ) {
                         PlaylistGridItem(
-                            playlist = likedPlaylist,
+                            playlist = downloadPlaylist,
                             fillMaxWidth = true,
                             autoPlaylist = true,
                             modifier =
@@ -389,7 +422,7 @@ fun LibraryPlaylistsScreen(
                                     .fillMaxWidth()
                                     .combinedClickable(
                                         onClick = {
-                                            navController.navigate("auto_playlist/liked")
+                                            navController.navigate("auto_playlist/downloaded")
                                         },
                                     )
                                     .animateItem(),
@@ -402,7 +435,7 @@ fun LibraryPlaylistsScreen(
                         contentType = { CONTENT_TYPE_PLAYLIST },
                     ) {
                         PlaylistGridItem(
-                            playlist = likedPlaylist,
+                            playlist = topPlaylist,
                             fillMaxWidth = true,
                             autoPlaylist = true,
                             modifier =
@@ -410,7 +443,28 @@ fun LibraryPlaylistsScreen(
                                     .fillMaxWidth()
                                     .combinedClickable(
                                         onClick = {
-                                            navController.navigate("auto_playlist/liked")
+                                            navController.navigate("top_playlist/$topSize")
+                                        },
+                                    )
+                                    .animateItem(),
+                            context = LocalContext.current // Pasamos el contexto actual para obtener la URI de la miniatura
+                        )
+                    }
+
+                    item(
+                        key = "cachePlaylist",
+                        contentType = { CONTENT_TYPE_PLAYLIST },
+                    ) {
+                        PlaylistGridItem(
+                            playlist = cachePlaylist,
+                            fillMaxWidth = true,
+                            autoPlaylist = true,
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {
+                                            navController.navigate("cache_playlist/cached")
                                         },
                                     )
                                     .animateItem(),
@@ -435,10 +489,9 @@ fun LibraryPlaylistsScreen(
                                 coroutineScope = coroutineScope,
                                 playlist = playlist,
                                 modifier = Modifier.animateItem(),
-                                context = LocalContext.current // Pasamos el contexto actual para obtener la miniatura personalizada
+                                context = LocalContext.current // Pasamos el contexto actual para obtener la URI de la miniatura
                             )
                         }
-
                     }
                 }
 
