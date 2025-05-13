@@ -14,7 +14,6 @@ import com.arturo254.innertube.models.YouTubeClient.Companion.WEB_CREATOR
 import com.arturo254.innertube.models.YouTubeClient.Companion.WEB_REMIX
 import com.arturo254.innertube.models.response.PlayerResponse
 import com.arturo254.opentune.constants.AudioQuality
-import com.arturo254.opentune.db.entities.FormatEntity
 import okhttp3.OkHttpClient
 import timber.log.Timber
 

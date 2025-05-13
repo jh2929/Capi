@@ -55,7 +55,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.exoplayer.offline.Download
 import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
@@ -65,6 +64,7 @@ import com.arturo254.innertube.YouTube
 import com.arturo254.opentune.LocalDatabase
 import com.arturo254.opentune.LocalDownloadUtil
 import com.arturo254.opentune.LocalPlayerConnection
+import com.arturo254.opentune.LocalSyncUtils
 import com.arturo254.opentune.R
 import com.arturo254.opentune.constants.ListItemHeight
 import com.arturo254.opentune.constants.ListThumbnailSize
@@ -76,10 +76,9 @@ import com.arturo254.opentune.models.toMediaMetadata
 import com.arturo254.opentune.playback.ExoDownloadService
 import com.arturo254.opentune.playback.queues.YouTubeQueue
 import com.arturo254.opentune.ui.component.ListDialog
+import com.arturo254.opentune.ui.component.LocalBottomSheetPageState
 import com.arturo254.opentune.ui.component.SongListItem
 import com.arturo254.opentune.ui.component.TextFieldDialog
-import com.arturo254.opentune.LocalSyncUtils
-import com.arturo254.opentune.ui.component.LocalBottomSheetPageState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 

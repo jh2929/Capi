@@ -4,10 +4,10 @@ import android.content.Context
 import android.net.Uri
 import androidx.core.content.edit
 import androidx.core.net.toUri
+import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import timber.log.Timber
 
 /**
  * Guarda una imagen personalizada para una playlist
