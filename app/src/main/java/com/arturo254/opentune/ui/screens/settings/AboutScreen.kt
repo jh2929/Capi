@@ -309,6 +309,15 @@ fun AboutScreen(
                         contentDescription = null
                     )
                 }
+                IconButton(
+                    onClick = { uriHandler.openUri("https://www.paypal.me/OpenTune") }
+                ) {
+                    Icon(
+                        modifier = Modifier.size(20.dp),
+                        contentDescription = null,
+                        painter = painterResource(R.drawable.paypal)
+                    )
+                }
 
                 IconButton(
                     onClick = { uriHandler.openUri("https://g.dev/Arturo254") }

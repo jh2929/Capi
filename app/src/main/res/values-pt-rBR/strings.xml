@@ -450,4 +450,17 @@
     <string name="info_title">Informações</string>
     <string name="info_description">Esta seção fornece detalhes importantes sobre o processo de backup e restauração, incluindo a segurança dos seus dados e como garantir que suas informações permaneçam seguras e facilmente acessíveis.</string>
     <string name="redireccion">Redirecionamento</string>
+    <string name="Version">Versão</string>
+    <string name="notification">Ativar notificações</string>
+    <string name="cached_playlist">Em cache</string>
+    <string name="added_to_queue">adicionado à fila</string>
+    <string name="warn">Observação: O APK está sendo baixado do repositório oficial do GitHub, não do F-Droid.</string>
+    <string name="edit_thumbnail">Editar miniatura</string>
+    <string name="remove_thumbnail">Remover miniatura</string>
+    <string name="add_thumbnail">Adicionar miniatura</string>
+    <string name="storage_overview">Visão geral do armazenamento</string>
+    <string name="clear_downloads_confirmation">Tem certeza de que deseja remover todas as músicas baixadas? Essa ação não pode ser desfeita.</string>
+    <string name="clear_song_cache_confirmation">Tem certeza de que deseja limpar o cache de músicas? Isso liberará espaço, mas poderá afetar temporariamente o desempenho da reprodução.</string>
+    <string name="clear_image_cache_confirmation">Tem certeza de que deseja limpar o cache de imagens? A arte do álbum e as imagens do artista precisarão ser baixadas novamente.</string>
+    <string name="confirm">Confirme</string>
 </resources>

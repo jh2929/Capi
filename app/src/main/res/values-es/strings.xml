@@ -454,4 +454,13 @@
     <string name="notification">Activar notificaciones</string>
     <string name="cached_playlist">En caché</string>
     <string name="added_to_queue">Añadido a la cola</string>
+    <string name="warn">Nota: El APK se descarga desde el repositorio oficial de GitHub, no desde F-Droid.</string>
+    <string name="edit_thumbnail">Editar miniatura</string>
+    <string name="remove_thumbnail">Eliminar miniatura</string>
+    <string name="add_thumbnail">Añadir miniatura</string>
+    <string name="storage_overview">Resumen de almacenamiento</string>
+    <string name="clear_downloads_confirmation">¿Estás seguro de que quieres eliminar todas las canciones descargadas? Esta acción no se puede deshacer.</string>
+    <string name="clear_song_cache_confirmation">¿Estás seguro de que quieres borrar la caché de canciones? Esto liberará espacio pero puede afectar temporalmente al rendimiento de la reproducción.</string>
+    <string name="clear_image_cache_confirmation">¿Estás seguro de que quieres borrar la caché de imágenes? La carátula del álbum y las imágenes del artista tendrán que ser descargadas de nuevo.</string>
+    <string name="confirm">Confirmar</string>
 </resources>

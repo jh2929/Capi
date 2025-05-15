@@ -478,4 +478,12 @@
     <string name="cached_playlist">"Кэш"</string>
     <string name="added_to_queue">"добавлено в очередь"</string>
     <string name="warn">"предупреждать"</string>
+    <string name="edit_thumbnail">Редактировать миниатюру</string>
+    <string name="remove_thumbnail">Удалить миниатюру</string>
+    <string name="add_thumbnail">Добавить миниатюру</string>
+    <string name="storage_overview">Обзор хранилища</string>
+    <string name="clear_downloads_confirmation">Вы уверены, что хотите удалить все загруженные песни? Это действие нельзя отменить.</string>
+    <string name="clear_song_cache_confirmation">Вы уверены, что хотите очистить кэш песен? Это освободит место, но может временно повлиять на производительность воспроизведения.</string>
+    <string name="clear_image_cache_confirmation">Вы уверены, что хотите очистить кэш изображений? Изображения альбомов и исполнителей придется загрузить заново.</string>
+    <string name="confirm">Подтвердите</string>
 </resources>

@@ -6,6 +6,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -253,8 +256,16 @@ fun PlayerMenu(
 
         AnimatedVisibility(
             visible = true,
-            enter = fadeIn() + slideInVertically(),
-            exit = fadeOut() + slideOutVertically()
+            enter = fadeIn(animationSpec = tween(durationMillis = 150)) +
+                    slideInVertically(
+                        initialOffsetY = { it / 4 }, // Reduce la distancia de deslizamiento
+                        animationSpec = tween(durationMillis = 150, easing = FastOutSlowInEasing)
+                    ),
+            exit = fadeOut(animationSpec = tween(durationMillis = 100)) +
+                    slideOutVertically(
+                        targetOffsetY = { it / 4 }, // Reduce la distancia de deslizamiento
+                        animationSpec = tween(durationMillis = 100, easing = FastOutLinearInEasing)
+                    )
         ) {
 
             AlertDialog(
