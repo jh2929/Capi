@@ -18,7 +18,7 @@ android {
         applicationId = "com.Arturo254.opentune"
         minSdk = 24
         targetSdk = 35
-        versionCode = 111
+        versionCode = 112
         versionName = "1.9.8"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
