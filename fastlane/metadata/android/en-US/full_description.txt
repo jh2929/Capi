@@ -18,8 +18,4 @@ Features:
 - Material Design 3
 - Download covers
 - Customize playlist minuatures
-<<<<<<< Updated upstream
 - Add a custom Avatar
-=======
-- Add a custom Avatar
->>>>>>> Stashed changes
