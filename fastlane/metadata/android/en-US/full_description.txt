@@ -1,19 +1,21 @@
-Un cliente de YouTube Music con Material Design 3, para Android
+A YouTube Music client with Material Design 3, for Android.
 
-Caracteristicas:
+Features:
 
-- Reproducción sin anuncios  
-- Reproducción en segundo plano  
-- Búsqueda avanzada  
-- Inicio de sesión integrado  
-- Gestión de biblioteca  
-- Modo sin conexión  
-- Letras sincronizadas  
-- Omisión de silencios  
-- Normalización de audio  
-- Control de tempo y tono  
-- Tema dinámico  
-- Soporte multiidioma  
-- Compatibilidad con Android Auto  
-- Material Design 3  
-- Descarga de portadas
+- Ad-free playback
+- Background playback
+- Advanced search
+- Integrated login
+- Library management
+- Offline mode
+- Synchronized lyrics
+- Silence skipping
+- Audio normalization
+- Tempo and pitch control
+- Dynamic theme
+- Multi-language support
+- Android Auto support
+- Material Design 3
+- Download covers
+- Customize playlist minuatures
+- Add a custom Avatar
