@@ -154,12 +154,10 @@ fun Lyrics(
             delay(50)
             val sliderPosition = sliderPositionProvider()
             isSeeking = sliderPosition != null
-            currentLineIndex = findCurrentLineIndex(
-                lines,
-                sliderPosition ?: playerConnection.player.currentPosition
-            )
+            currentLineIndex = findCurrentLineIndex(lines, sliderPosition ?: playerConnection.player.currentPosition)
         }
     }
+
 
     LaunchedEffect(isSeeking, lastPreviewTime) {
         if (isSeeking) {
@@ -170,17 +168,21 @@ fun Lyrics(
         }
     }
 
+
     val lazyListState = rememberLazyListState()
 
     LaunchedEffect(currentLineIndex, lastPreviewTime) {
-        /** Count number of new lines in a lyric */
+        /**
+         * Count number of new lines in a lyric
+         */
         fun countNewLine(str: String) = str.count { it == '\n' }
 
-        /** Calculate the lyric offset Based on how many lines (\n chars) */
+        /**
+         * Calculate the lyric offset Based on how many lines (\n chars)
+         */
         fun calculateOffset() = with(density) {
             if (landscapeOffset) {
-                16.dp.toPx()
-                    .toInt() * countNewLine(lines[currentLineIndex].text) // landscape sits higher by default
+                16.dp.toPx().toInt() * countNewLine(lines[currentLineIndex].text)
             } else {
                 20.dp.toPx().toInt() * countNewLine(lines[currentLineIndex].text)
             }
@@ -191,12 +193,10 @@ fun Lyrics(
             deferredCurrentLineIndex = currentLineIndex
             if (lastPreviewTime == 0L) {
                 if (isSeeking) {
-                    lazyListState.scrollToItem(
-                        currentLineIndex,
+                    lazyListState.scrollToItem(currentLineIndex,
                         with(density) { 36.dp.toPx().toInt() } + calculateOffset())
                 } else {
-                    lazyListState.animateScrollToItem(
-                        currentLineIndex,
+                    lazyListState.animateScrollToItem(currentLineIndex,
                         with(density) { 36.dp.toPx().toInt() } + calculateOffset())
                 }
             }
