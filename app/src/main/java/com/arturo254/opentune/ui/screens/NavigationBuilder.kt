@@ -37,6 +37,7 @@ import com.arturo254.opentune.ui.screens.settings.DiscordLoginScreen
 import com.arturo254.opentune.ui.screens.settings.DiscordSettings
 import com.arturo254.opentune.ui.screens.settings.PlayerSettings
 import com.arturo254.opentune.ui.screens.settings.PrivacySettings
+import com.arturo254.opentune.ui.screens.settings.ProblemSolverScreen
 import com.arturo254.opentune.ui.screens.settings.SettingsScreen
 import com.arturo254.opentune.ui.screens.settings.StorageSettings
 
@@ -74,6 +75,14 @@ fun NavGraphBuilder.navigationBuilder(
     composable("new_release") {
         NewReleaseScreen(navController, scrollBehavior)
     }
+    composable("settings/problem_solver") {
+        ProblemSolverScreen(navController)
+    }
+
+
+
+
+
     composable(
         route = "search/{query}",
         arguments =

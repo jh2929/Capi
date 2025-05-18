@@ -690,6 +690,11 @@ fun SettingsScreen(
             icon = { Icon(painterResource(R.drawable.info), null) },
             onClick = { navController.navigate("settings/about") }
         )
+//        PreferenceEntry(
+//            title = { Text(stringResource(R.string.problem_solver)) },
+//            icon = { Icon(painterResource(R.drawable.apps), null) },
+//            onClick = { navController.navigate("settings/problem_solver") }
+//        )
         PreferenceEntry(
             title = { Text(stringResource(R.string.Donate)) },
             icon = { Icon(painterResource(R.drawable.donate), null) },
@@ -701,6 +706,7 @@ fun SettingsScreen(
             icon = { Icon(painterResource(R.drawable.telegram), null) },
             onClick = { uriHandler.openUri("https://t.me/OpenTune_chat") }
         )
+
 
         TranslatePreference(uriHandler = uriHandler)
 
