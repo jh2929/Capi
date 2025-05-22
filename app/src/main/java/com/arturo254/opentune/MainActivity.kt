@@ -142,6 +142,8 @@ import com.arturo254.opentune.constants.MiniPlayerHeight
 import com.arturo254.opentune.constants.NavigationBarAnimationSpec
 import com.arturo254.opentune.constants.NavigationBarHeight
 import com.arturo254.opentune.constants.PauseSearchHistoryKey
+import com.arturo254.opentune.constants.PlayerBackgroundStyle
+import com.arturo254.opentune.constants.PlayerBackgroundStyleKey
 import com.arturo254.opentune.constants.PureBlackKey
 import com.arturo254.opentune.constants.SearchSource
 import com.arturo254.opentune.constants.SearchSourceKey
@@ -682,54 +684,67 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Scaffold(
                             topBar = {
+                                val playerBackground by rememberEnumPreference(
+                                    key = PlayerBackgroundStyleKey,
+                                    defaultValue = PlayerBackgroundStyle.DEFAULT
+                                )
+                                val safeSelectedValue = if (
+                                    playerBackground == PlayerBackgroundStyle.BLUR &&
+                                    Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+                                ) {
+                                    PlayerBackgroundStyle.DEFAULT // Sin blur en versiones < Android 12 (S)
+                                } else {
+                                    playerBackground
+                                }
+
                                 if (shouldShowTopBar) {
                                     Box(modifier = Modifier.fillMaxWidth()) {
-                                        // Capa base con el color original
+                                        // Capa base con color de fondo siempre visible
                                         Box(
                                             modifier = Modifier
                                                 .matchParentSize()
                                                 .background(MaterialTheme.colorScheme.surface)
                                         )
 
-                                        // Fondo con blur usando mediaMetadata con gradiente de transparencia más suave
-                                        val playerConnection2 = LocalPlayerConnection.current ?: return@Box
-                                        val mediaMetadata by playerConnection2.mediaMetadata.collectAsState()
-                                        AsyncImage(
-                                            model = mediaMetadata?.thumbnailUrl,
-                                            contentDescription = null,
-                                            contentScale = ContentScale.FillBounds,
-                                            modifier = Modifier
-                                                .matchParentSize()
-                                                .blur(35.dp) // Se reduce el blur para mejorar la visibilidad
-                                                .alpha(0.6f) // Se aumenta la opacidad para que el fondo no se vea tan difuso
-                                                .drawWithContent {
-                                                    drawContent()
-                                                    // Añadir un gradiente que se desvanece suavemente en la parte inferior
-                                                    drawRect(
-                                                        brush = Brush.verticalGradient(
-                                                            colors = listOf(
-                                                                Color.Black.copy(alpha = 0.5f), // Acelera la transición de la opacidad
-                                                                Color.Transparent
-                                                            ),
-                                                            startY = 0f,
-                                                            endY = size.height * 0.6f // Aseguramos que el degradado no ocupe toda la altura
-                                                        ),
-                                                        blendMode = BlendMode.DstIn
-                                                    )
-                                                }
-                                        )
+                                        // Solo mostrar blur si safeSelectedValue es BLUR
+                                        if (safeSelectedValue == PlayerBackgroundStyle.BLUR) {
+                                            val playerConnection = LocalPlayerConnection.current ?: return@Box
+                                            val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
 
-                                        // TopAppBar con color transparente para que el fondo se vea detrás
+                                            mediaMetadata?.thumbnailUrl?.let { imageUrl ->
+                                                AsyncImage(
+                                                    model = imageUrl,
+                                                    contentDescription = null,
+                                                    contentScale = ContentScale.FillBounds,
+                                                    modifier = Modifier
+                                                        .matchParentSize()
+                                                        .blur(35.dp)
+                                                        .alpha(0.6f)
+                                                        .drawWithContent {
+                                                            drawContent()
+                                                            drawRect(
+                                                                brush = Brush.verticalGradient(
+                                                                    colors = listOf(
+                                                                        Color.Black.copy(alpha = 0.5f),
+                                                                        Color.Transparent
+                                                                    ),
+                                                                    startY = 0f,
+                                                                    endY = size.height * 0.6f
+                                                                ),
+                                                                blendMode = BlendMode.DstIn
+                                                            )
+                                                        }
+                                                )
+                                            }
+                                        }
+
                                         TopAppBar(
                                             title = {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
                                                     Image(
                                                         painter = painterResource(R.drawable.opentune),
                                                         contentDescription = "App Logo",
-                                                        modifier = Modifier
-                                                            .size(22.dp)
+                                                        modifier = Modifier.size(22.dp)
                                                     )
                                                     Spacer(modifier = Modifier.width(8.dp))
                                                     Text(
@@ -746,6 +761,7 @@ class MainActivity : ComponentActivity() {
                                                         contentDescription = stringResource(R.string.search)
                                                     )
                                                 }
+
                                                 val context = LocalContext.current
 
                                                 ProfileIconWithUpdateBadge(
@@ -762,11 +778,12 @@ class MainActivity : ComponentActivity() {
                                             },
                                             scrollBehavior = searchBarScrollBehavior,
                                             colors = TopAppBarDefaults.topAppBarColors(
-                                                containerColor = Color.Transparent // Fondo transparente para que el fondo de blur sea visible
+                                                containerColor = Color.Transparent
                                             )
                                         )
                                     }
                                 }
+
 
                                 if (active || navBackStackEntry?.destination?.route?.startsWith("search/") == true) {
                                     TopSearch(

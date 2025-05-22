@@ -14,6 +14,7 @@ ksp = "2.1.0-1.0.29"
 kotlinxSerializationJson = "1.8.0"
 okhttp = "5.0.0-alpha.14"
 loggingInterceptor = "5.0.0-alpha.14"
+blurry = "4.0.1"
 
 [libraries]
 annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
@@ -83,6 +84,7 @@ newpipe-extractor = { group = "com.github.TeamNewPipe", name = "NewPipeExtractor
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "loggingInterceptor" }
+blurry = { group = "jp.wasabeef", name = "blurry", version.ref = "blurry" }
 
 [plugins]
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
