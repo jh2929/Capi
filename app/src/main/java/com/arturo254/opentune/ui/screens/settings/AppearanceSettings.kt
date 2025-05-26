@@ -650,7 +650,7 @@ fun ThumbnailCornerRadiusSelectorButton(
                         id = R.string.customize_thumbnail_corner_radius,
                         currentRadius.roundToInt()
                     ),
-                    style = MaterialTheme.typography.bodyLarge,
+
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurface
