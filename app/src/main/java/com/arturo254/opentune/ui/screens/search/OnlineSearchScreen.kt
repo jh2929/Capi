@@ -275,7 +275,7 @@ fun OnlineSearchScreen(
                                 }
                             },
                         )
-                        .animateItemPlacement(),
+                        .animateItem()
             )
         }
     }

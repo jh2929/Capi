@@ -483,4 +483,5 @@
     <string name="clear_image_cache_confirmation">Are you sure you want to clear the image cache? Album art and artist images will need to be re-downloaded.</string>
     <string name="confirm">Confirm</string>
     <string name="problem_solver">Problem Solver</string>
+    <string name="action_login">Login</string>
 </resources>
