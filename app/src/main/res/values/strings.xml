@@ -484,4 +484,16 @@
     <string name="confirm">Confirm</string>
     <string name="problem_solver">Problem Solver</string>
     <string name="action_login">Login</string>
+    <string name="generating_image">Generating image</string>
+    <string name="please_wait">Please wait</string>
+    <string name="share_lyrics">Share lyrics</string>
+    <string name="share_as_text">Share as text</string>
+    <string name="share_as_image">Share as image</string>
+    <string name="max_selection_limit">Max selection limit</string>
+    <string name="share_selected">Share selected</string>
+    <string name="customize_colors">Customize colors</string>
+    <string name="more_options">More options</string>
+    <string name="text_color">Text color</string>
+    <string name="secondary_text_color">Secondary text color</string>
+    <string name="background_color">Background color</string>
 </resources>

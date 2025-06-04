@@ -463,4 +463,18 @@
     <string name="clear_song_cache_confirmation">¿Estás seguro de que quieres borrar la caché de canciones? Esto liberará espacio pero puede afectar temporalmente al rendimiento de la reproducción.</string>
     <string name="clear_image_cache_confirmation">¿Estás seguro de que quieres borrar la caché de imágenes? La carátula del álbum y las imágenes del artista tendrán que ser descargadas de nuevo.</string>
     <string name="confirm">Confirmar</string>
+    <string name="problem_solver">Solucionador de problemas</string>
+    <string name="action_login">Iniciar sesión</string>
+    <string name="generating_image">Generando imagen</string>
+    <string name="please_wait">Por favor, espere</string>
+    <string name="share_lyrics">Compartir letra</string>
+    <string name="share_as_text">Compartir como texto</string>
+    <string name="share_as_image">Compartir como imagen</string>
+    <string name="max_selection_limit">Límite máximo de selección</string>
+    <string name="share_selected">Compartir selección</string>
+    <string name="customize_colors">Personalizar colores</string>
+    <string name="more_options">Más opciones</string>
+    <string name="text_color">Color del texto</string>
+    <string name="secondary_text_color">Color secundario del texto</string>
+    <string name="background_color">Color de fondo</string>
 </resources>

@@ -485,5 +485,19 @@
     <string name="clear_downloads_confirmation">Вы уверены, что хотите удалить все загруженные песни? Это действие нельзя отменить.</string>
     <string name="clear_song_cache_confirmation">Вы уверены, что хотите очистить кэш песен? Это освободит место, но может временно повлиять на производительность воспроизведения.</string>
     <string name="clear_image_cache_confirmation">Вы уверены, что хотите очистить кэш изображений? Изображения альбомов и исполнителей придется загрузить заново.</string>
-    <string name="confirm">Подтвердите</string>
+    <string name="confirm">Подтвердить</string>
+    <string name="problem_solver">Решение проблемы</string>
+    <string name="action_login">Вход</string>
+    <string name="generating_image">Создание изображения</string>
+    <string name="please_wait">Пожалуйста, подождите</string>
+    <string name="share_lyrics">Поделиться текстом песни</string>
+    <string name="share_as_text">Поделиться в виде текста</string>
+    <string name="share_as_image">Поделиться в виде изображения</string>
+    <string name="max_selection_limit">Максимальный предел выбора</string>
+    <string name="share_selected">Поделиться выбранным</string>
+    <string name="customize_colors">Настроить цвета</string>
+    <string name="more_options">Дополнительные параметры</string>
+    <string name="text_color">Цвет текста</string>
+    <string name="secondary_text_color">Вторичный цвет текста</string>
+    <string name="background_color">Цвет фона</string>
 </resources>

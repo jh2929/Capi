@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
+
+
     <!-- Permite acceder a archivos en la carpeta de descargas externa -->
     <external-files-path
         name="downloads"

@@ -744,7 +744,7 @@ class MainActivity : ComponentActivity() {
                                                     Image(
                                                         painter = painterResource(R.drawable.opentune),
                                                         contentDescription = "App Logo",
-                                                        modifier = Modifier.size(22.dp)
+                                                        modifier = Modifier.size(27.dp)
                                                     )
                                                     Spacer(modifier = Modifier.width(8.dp))
                                                     Text(

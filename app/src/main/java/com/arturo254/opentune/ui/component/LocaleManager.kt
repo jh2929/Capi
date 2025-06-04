@@ -286,8 +286,8 @@ class LocaleManager internal constructor(private val context: Context) {
             val allLanguages = listOf(
                 "de", "af", "ar", "be", "bn", "ca", "cs", "da", "de", "el", "en", "es",
                 "fa", "fr", "hu", "id", "it", "iw", "ja", "ko", "ml", "ne", "nl", "no",
-                "or", "pa", "pl", "pt-BR", "ru", "ro", "sr", "sv", "tr", "uk",
-                "vi", "zh", "zh-CN", "zh-TW", "zh-HK", "hi", "gu", "ta", "te", "kn",
+                "or", "pa", "pl", "pt-BR", "ru", "ro", "sr", "sv", "hi", "tr", "uk",
+                "vi", "zh", "zh-CN", "zh-TW", "zh-HK", "gu", "ta", "te", "kn",
                 "si", "th", "lo", "my", "ka", "am", "km", "mr"
             )
 
