@@ -454,7 +454,7 @@
     <string name="update_version">Update v%1$s</string>
     <string name="download_question">Would you like to download the new version?</string>
     <string name="downloadup">Download</string>
-    <string name="downloadingup">Downloading update...</string>
+    <string name="downloadingup">Downloading update…</string>
     <string name="download_completed">Download completed</string>
     <string name="install">Install</string>
     <string name="download_errorup">Error downloading the update</string>
@@ -496,4 +496,6 @@
     <string name="text_color">Text color</string>
     <string name="secondary_text_color">Secondary text color</string>
     <string name="background_color">Background color</string>
+    <string name="back">Back</string>
+    <string name="navigation_error">Navigation error</string>
 </resources>
