@@ -498,4 +498,6 @@
     <string name="background_color">Background color</string>
     <string name="back">Back</string>
     <string name="navigation_error">Navigation error</string>
+    <string name="notifications_enabled">Notifications enabled</string>
+    <string name="notifications_disabled">Notifications disabled</string>
 </resources>

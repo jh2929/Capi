@@ -2,17 +2,21 @@ package com.arturo254.opentune
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.graphics.drawable.BitmapDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.IBinder
 import android.provider.MediaStore
+import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.view.WindowManager
@@ -35,56 +39,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialogDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.contentColorFor
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -102,6 +62,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
@@ -115,11 +76,14 @@ import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.PermissionChecker
 import androidx.core.net.toUri
 import androidx.core.util.Consumer
 import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -163,6 +127,7 @@ import com.arturo254.opentune.playback.queues.YouTubeQueue
 import com.arturo254.opentune.ui.component.BottomSheetMenu
 import com.arturo254.opentune.ui.component.IconButton
 import com.arturo254.opentune.ui.component.LocalMenuState
+import com.arturo254.opentune.ui.component.LocaleManager
 import com.arturo254.opentune.ui.component.TopSearch
 import com.arturo254.opentune.ui.component.rememberBottomSheetState
 import com.arturo254.opentune.ui.component.shimmer.ShimmerTheme
@@ -174,7 +139,6 @@ import com.arturo254.opentune.ui.screens.search.LocalSearchScreen
 import com.arturo254.opentune.ui.screens.search.OnlineSearchScreen
 import com.arturo254.opentune.ui.screens.settings.AvatarPreferenceManager
 import com.arturo254.opentune.ui.screens.settings.DarkMode
-import com.arturo254.opentune.ui.component.LocaleManager
 import com.arturo254.opentune.ui.screens.settings.NavigationTab
 import com.arturo254.opentune.ui.theme.ColorSaver
 import com.arturo254.opentune.ui.theme.DefaultThemeColor
@@ -1305,43 +1269,81 @@ fun NotificationPermissionPreference() {
     val context = LocalContext.current
     var permissionGranted by remember { mutableStateOf(false) }
 
+    // Función para verificar permisos extraída para mejor legibilidad
+    val checkNotificationPermission = remember {
+        {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED // Usar PackageManager en lugar de PermissionChecker
+            } else {
+                // Para versiones anteriores, verificar si las notificaciones están habilitadas
+                NotificationManagerCompat.from(context).areNotificationsEnabled()
+            }
+        }
+    }
+
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         permissionGranted = isGranted
-    }
-
-    val checkNotificationPermission = {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PermissionChecker.PERMISSION_GRANTED
-        } else {
-            true
+        // Opcional: agregar callback para manejar el resultado
+        if (!isGranted) {
+            // Manejar caso cuando el usuario rechaza el permiso
+            Log.d("NotificationPermission", "Permiso de notificaciones denegado")
         }
     }
 
+    // Verificar permisos al inicializar y cuando la app vuelve al foreground
     LaunchedEffect(Unit) {
         permissionGranted = checkNotificationPermission()
+    }
+
+    // Escuchar cambios cuando la app vuelve del background
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                permissionGranted = checkNotificationPermission()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     SwitchPreference(
         title = { Text(stringResource(R.string.notification)) },
         icon = {
             Icon(
-                painter = painterResource(id = if (permissionGranted) R.drawable.notification_on else R.drawable.notification_off),
-                contentDescription = null
+                painter = painterResource(
+                    id = if (permissionGranted) R.drawable.notification_on
+                    else R.drawable.notification_off
+                ),
+                contentDescription = stringResource(
+                    if (permissionGranted) R.string.notifications_enabled
+                    else R.string.notifications_disabled
+                )
             )
         },
         checked = permissionGranted,
         onCheckedChange = { checked ->
-            if (checked && !permissionGranted) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            when {
+                checked && !permissionGranted -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        // Para versiones anteriores, dirigir a configuración
+                        openNotificationSettings(context)
+                    }
+                }
+                !checked && permissionGranted -> {
+                    // Si el usuario intenta desactivar, dirigir a configuración del sistema
+                    openNotificationSettings(context)
                 }
             }
-            // Note: We don't update permissionGranted here because it will be updated by the LaunchedEffect
         }
     )
 }
@@ -1352,10 +1354,14 @@ fun SwitchPreference(
     icon: @Composable () -> Unit,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true, // Agregar parámetro enabled
+    subtitle: (@Composable () -> Unit)? = null // Agregar subtítulo opcional
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { onCheckedChange(!checked) }, // Hacer clickeable toda la superficie
         color = MaterialTheme.colorScheme.surface
     ) {
         Row(
@@ -1364,22 +1370,79 @@ fun SwitchPreference(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(modifier = Modifier.size(24.dp)) {
-                icon()
+            Box(
+                modifier = Modifier.size(24.dp),
+                contentAlignment = Alignment.Center // Centrar el icono
+            ) {
+                CompositionLocalProvider(
+                    LocalContentColor provides if (enabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    }
+                ) {
+                    icon()
+                }
             }
+
             Spacer(Modifier.width(16.dp))
-            Box(Modifier.weight(1f)) {
-                title()
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                CompositionLocalProvider(
+                    LocalContentColor provides if (enabled) {
+                        MaterialTheme.colorScheme.onSurface
+                    } else {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    }
+                ) {
+                    title()
+                }
+
+                subtitle?.let {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    CompositionLocalProvider(
+                        LocalContentColor provides if (enabled) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
+                        }
+                    ) {
+                        it()
+                    }
+                }
             }
+
             Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange
+                onCheckedChange = onCheckedChange,
+                enabled = enabled
             )
         }
     }
 }
 
+// Función auxiliar para abrir configuración de notificaciones
+private fun openNotificationSettings(context: Context) {
+    val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        }
+    } else {
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+        }
+    }
 
+    try {
+        context.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        Log.e("NotificationSettings", "No se pudo abrir configuración de notificaciones", e)
+        // Fallback: abrir configuración general
+        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+    }
+}
 suspend fun checkForUpdates(): String? = withContext(Dispatchers.IO) {
     try {
         val url = URL("https://api.github.com/repos/Arturo254/OpenTune/releases/latest")
