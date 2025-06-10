@@ -1,7 +1,6 @@
 @file:Suppress("DEPRECATION")
 package com.arturo254.opentune.ui.component
 
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -15,15 +14,19 @@ import android.util.Log
 import android.widget.Toast
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.core.os.ConfigurationCompat
 import androidx.core.os.LocaleListCompat
 import com.arturo254.opentune.R
-import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import java.util.Locale
 
 /**
  * LocaleManager mejorado para manejo de idiomas en aplicaciones Jetpack Compose
