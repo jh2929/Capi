@@ -2,7 +2,7 @@
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
     <shortcut
         android:enabled="true"
-        android:icon="@drawable/shortcut_search"
+        android:icon="@drawable/search"
         android:shortcutId="search"
         android:shortcutShortLabel="@string/search">
         <intent
@@ -12,7 +12,7 @@
     </shortcut>
     <shortcut
         android:enabled="true"
-        android:icon="@drawable/shortcut_explore"
+        android:icon="@drawable/explore"
         android:shortcutId="explore"
         android:shortcutShortLabel="@string/explore">
         <intent
@@ -22,7 +22,7 @@
     </shortcut>
     <shortcut
         android:enabled="true"
-        android:icon="@drawable/shortcut_library"
+        android:icon="@drawable/library_music"
         android:shortcutId="library"
         android:shortcutShortLabel="@string/filter_library">
         <intent
