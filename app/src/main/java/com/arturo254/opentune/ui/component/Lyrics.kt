@@ -56,6 +56,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -643,223 +644,179 @@ fun Lyrics(
         val (lyricsText, songTitle, artists) = shareDialogData!!
         BasicAlertDialog(onDismissRequest = { showShareDialog = false }) {
             Card(
-                shape = RoundedCornerShape(24.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 16.dp),
+                shape = RoundedCornerShape(28.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    containerColor = MaterialTheme.colorScheme.surface,
                 ),
                 modifier = Modifier
-                    .padding(24.dp)
-                    .fillMaxWidth(0.9f)
+                    .padding(16.dp)
+                    .fillMaxWidth(0.92f)
                     .animateContentSize()
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier
+                        .padding(24.dp)
+                        .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Header con icono y título
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
+                    // Header simplificado
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.media3_icon_share),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        // Icono y título en la misma línea
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.primaryContainer,
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.media3_icon_share),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Text(
+                                text = stringResource(R.string.share_lyrics),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        // Botón de cerrar compacto
+                        IconButton(
+                            onClick = { showShareDialog = false },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.close),
+                                contentDescription = stringResource(R.string.cancel),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Text(
-                        text = stringResource(R.string.share_lyrics),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = TextAlign.Center
-                    )
+                    // Información de la canción más compacta
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "$songTitle • $artists",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        )
+                    }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                    // Subtítulo con información de la canción
-                    Text(
-                        text = "$songTitle - $artists",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    // Opciones de compartir
+                    // Opciones de compartir con mejor spacing
                     Column(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Compartir como texto
-                        Surface(
+                        // Compartir como texto - Botón principal
+                        Button(
+                            onClick = {
+                                val shareIntent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    type = "text/plain"
+                                    val songLink = "https://music.youtube.com/watch?v=${mediaMetadata?.id}"
+                                    putExtra(Intent.EXTRA_TEXT, "\"$lyricsText\"\n\n$songTitle - $artists\n$songLink")
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share_lyrics)))
+                                showShareDialog = false
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable {
-                                    val shareIntent = Intent().apply {
-                                        action = Intent.ACTION_SEND
-                                        type = "text/plain"
-                                        val songLink = "https://music.youtube.com/watch?v=${mediaMetadata?.id}"
-                                        putExtra(Intent.EXTRA_TEXT, "\"$lyricsText\"\n\n$songTitle - $artists\n$songLink")
-                                    }
-                                    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share_lyrics)))
-                                    showShareDialog = false
-                                },
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                            tonalElevation = 2.dp
+                                .height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(20.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .background(
-                                            color = MaterialTheme.colorScheme.secondary,
-                                            shape = RoundedCornerShape(10.dp)
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.media3_icon_share),
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSecondary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(16.dp))
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.share_as_text),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                                    )
-                                    Text(
-                                        text = "Compartir letra como texto plano",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                                    )
-                                }
-
-                                Icon(
-                                    painter = painterResource(id = R.drawable.media3_icon_share), // Cambiar por icono de flecha
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
+                            Icon(
+                                painter = painterResource(id = R.drawable.media3_icon_share),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = stringResource(R.string.share_as_text),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
                         }
 
-                        // Compartir como imagen
-                        Surface(
+                        // Compartir como imagen - Botón secundario
+                        OutlinedButton(
+                            onClick = {
+                                shareDialogData = Triple(lyricsText, songTitle, artists)
+                                showColorPickerDialog = true
+                                showShareDialog = false
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable {
-                                    shareDialogData = Triple(lyricsText, songTitle, artists)
-                                    showColorPickerDialog = true
-                                    showShareDialog = false
-                                },
-                            color = MaterialTheme.colorScheme.tertiaryContainer,
-                            tonalElevation = 2.dp
+                                .height(56.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(
+                                width = 1.5.dp,
+                                color = MaterialTheme.colorScheme.outline
+                            ),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(20.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .background(
-                                            color = MaterialTheme.colorScheme.tertiary,
-                                            shape = RoundedCornerShape(10.dp)
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.media3_icon_share), // Cambiar por icono de imagen
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onTertiary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(16.dp))
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = stringResource(R.string.share_as_image),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer
-                                    )
-                                    Text(
-                                        text = "Crear una imagen personalizada",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
-                                    )
-                                }
-
-                                Icon(
-                                    painter = painterResource(id = R.drawable.media3_icon_share), // Cambiar por icono de flecha
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
+                            Icon(
+                                painter = painterResource(id = R.drawable.media3_icon_share), // Cambiar por icono de imagen
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = stringResource(R.string.share_as_image),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Botón de cancelar
-                    OutlinedButton(
+                    // Botón de cancelar como texto button
+                    TextButton(
                         onClick = { showShareDialog = false },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                        ),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.close),
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = stringResource(R.string.cancel),
                             style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Medium
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
