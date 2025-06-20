@@ -66,8 +66,30 @@ fun AccountSettings(
     val (dataSyncId, onDataSyncIdChange) = rememberPreference(DataSyncIdKey, "")
 
     val isLoggedIn = remember(innerTubeCookie) {
-        "SAPISID" in parseCookieString(innerTubeCookie)
+        innerTubeCookie.isNotEmpty() && "SAPISID" in parseCookieString(innerTubeCookie)
     }
+
+    // Función para obtener el nombre de cuenta de manera segura
+    val getAccountDisplayName = remember(accountName, accountEmail, accountChannelHandle, isLoggedIn) {
+        when {
+            !isLoggedIn -> ""
+            accountName.isNotBlank() -> accountName
+            accountEmail.isNotBlank() -> accountEmail.substringBefore("@")
+            accountChannelHandle.isNotBlank() -> accountChannelHandle
+            else -> "Usuario sin nombre" // Fallback para evitar crashes
+        }
+    }
+
+    // Función para obtener la descripción de la cuenta de manera segura
+    val getAccountDescription = remember(accountEmail, accountChannelHandle, isLoggedIn) {
+        when {
+            !isLoggedIn -> null
+            accountEmail.isNotBlank() -> accountEmail
+            accountChannelHandle.isNotBlank() -> accountChannelHandle
+            else -> null
+        }
+    }
+
     val (useLoginForBrowse, onUseLoginForBrowseChange) = rememberPreference(UseLoginForBrowse, true)
     val (ytmSync, onYtmSyncChange) = rememberPreference(YtmSyncKey, defaultValue = true)
 
@@ -113,18 +135,28 @@ fun AccountSettings(
             )
 
             PreferenceEntry(
-                title = { Text(if (isLoggedIn) accountName else stringResource(R.string.login)) },
-                description = if (isLoggedIn) {
-                    accountEmail.takeIf { it.isNotEmpty() }
-                        ?: accountChannelHandle.takeIf { it.isNotEmpty() }
-                } else {
-                    null
+                title = {
+                    Text(
+                        if (isLoggedIn) {
+                            getAccountDisplayName.takeIf { it.isNotBlank() }
+                                ?: stringResource(R.string.login)
+                        } else {
+                            stringResource(R.string.login)
+                        }
+                    )
                 },
+                description = if (isLoggedIn) getAccountDescription else null,
                 icon = { Icon(painterResource(R.drawable.login), null) },
                 trailingContent = {
                     if (isLoggedIn) {
                         OutlinedButton(onClick = {
+                            // Limpiar todos los datos de la cuenta
                             onInnerTubeCookieChange("")
+                            onAccountNameChange("")
+                            onAccountEmailChange("")
+                            onAccountChannelHandleChange("")
+                            onVisitorDataChange("")
+                            onDataSyncIdChange("")
                             forgetAccount(context)
                         }
                         ) {
@@ -143,29 +175,47 @@ fun AccountSettings(
                     initialTextFieldValue = TextFieldValue(text),
                     onDone = { data ->
                         data.split("\n").forEach {
-                            if (it.startsWith("***INNERTUBE COOKIE*** =")) {
-                                onInnerTubeCookieChange(it.substringAfter("***INNERTUBE COOKIE*** ="))
-                            } else if (it.startsWith("***VISITOR DATA*** =")) {
-                                onVisitorDataChange(it.substringAfter("***VISITOR DATA*** ="))
-                            } else if (it.startsWith("***DATASYNC ID*** =")) {
-                                onDataSyncIdChange(it.substringAfter("***DATASYNC ID*** ="))
-                            } else if (it.startsWith("***ACCOUNT NAME*** =")) {
-                                onAccountNameChange(it.substringAfter("***ACCOUNT NAME*** ="))
-                            } else if (it.startsWith("***ACCOUNT EMAIL*** =")) {
-                                onAccountEmailChange(it.substringAfter("***ACCOUNT EMAIL*** ="))
-                            } else if (it.startsWith("***ACCOUNT CHANNEL HANDLE*** =")) {
-                                onAccountChannelHandleChange(it.substringAfter("***ACCOUNT CHANNEL HANDLE*** ="))
+                            when {
+                                it.startsWith("***INNERTUBE COOKIE*** =") -> {
+                                    val cookie = it.substringAfter("***INNERTUBE COOKIE*** =").trim()
+                                    onInnerTubeCookieChange(cookie)
+                                }
+                                it.startsWith("***VISITOR DATA*** =") -> {
+                                    val visitorDataValue = it.substringAfter("***VISITOR DATA*** =").trim()
+                                    onVisitorDataChange(visitorDataValue)
+                                }
+                                it.startsWith("***DATASYNC ID*** =") -> {
+                                    val dataSyncIdValue = it.substringAfter("***DATASYNC ID*** =").trim()
+                                    onDataSyncIdChange(dataSyncIdValue)
+                                }
+                                it.startsWith("***ACCOUNT NAME*** =") -> {
+                                    val name = it.substringAfter("***ACCOUNT NAME*** =").trim()
+                                    onAccountNameChange(name)
+                                }
+                                it.startsWith("***ACCOUNT EMAIL*** =") -> {
+                                    val email = it.substringAfter("***ACCOUNT EMAIL*** =").trim()
+                                    onAccountEmailChange(email)
+                                }
+                                it.startsWith("***ACCOUNT CHANNEL HANDLE*** =") -> {
+                                    val handle = it.substringAfter("***ACCOUNT CHANNEL HANDLE*** =").trim()
+                                    onAccountChannelHandleChange(handle)
+                                }
                             }
                         }
                     },
                     onDismiss = { showTokenEditor = false },
                     singleLine = false,
                     maxLines = 20,
-                    isInputValid = {
-                        it.isNotEmpty() &&
+                    isInputValid = { input ->
+                        input.isNotEmpty() &&
                                 try {
-                                    "SAPISID" in parseCookieString(it)
-                                    true
+                                    val cookieLine = input.lines().find { it.startsWith("***INNERTUBE COOKIE*** =") }
+                                    if (cookieLine != null) {
+                                        val cookie = cookieLine.substringAfter("***INNERTUBE COOKIE*** =").trim()
+                                        cookie.isEmpty() || "SAPISID" in parseCookieString(cookie)
+                                    } else {
+                                        false
+                                    }
                                 } catch (e: Exception) {
                                     false
                                 }

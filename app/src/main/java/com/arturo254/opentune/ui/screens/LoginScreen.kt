@@ -16,6 +16,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -37,9 +39,12 @@ import com.arturo254.opentune.utils.reportException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import timber.log.Timber
 
 private const val YOUTUBE_MUSIC_URL = "https://music.youtube.com"
+private const val MAX_RETRY_ATTEMPTS = 3
+private const val RETRY_DELAY_MS = 1000L
 
 @SuppressLint("SetJavaScriptEnabled")
 @OptIn(ExperimentalMaterial3Api::class, DelicateCoroutinesApi::class)
@@ -52,6 +57,57 @@ fun LoginScreen(navController: NavController) {
     var accountChannelHandle by rememberPreference(AccountChannelHandleKey, "")
 
     var webView: WebView? = null
+    var isLoadingAccountInfo by remember { mutableStateOf(false) }
+
+    suspend fun fetchAccountInfoWithRetry(retryCount: Int = 0) {
+        try {
+            YouTube.accountInfo().onSuccess { accountInfo ->
+                // Verificar que la información no esté vacía
+                val name = accountInfo.name.takeIf { it.isNotBlank() } ?: ""
+                val email = accountInfo.email?.takeIf { it.isNotBlank() } ?: ""
+                val handle = accountInfo.channelHandle?.takeIf { it.isNotBlank() } ?: ""
+
+                // Solo actualizar si tenemos al menos el nombre
+                if (name.isNotEmpty()) {
+                    accountName = name
+                    accountEmail = email
+                    accountChannelHandle = handle
+
+                    Timber.tag("WebView")
+                        .d("Account info retrieved successfully: $name, $email, $handle")
+                    isLoadingAccountInfo = false
+                } else {
+                    // Si el nombre está vacío, reintentar
+                    if (retryCount < MAX_RETRY_ATTEMPTS) {
+                        Timber.tag("WebView")
+                            .w("Account name is empty, retrying... Attempt ${retryCount + 1}")
+                        delay(RETRY_DELAY_MS)
+                        fetchAccountInfoWithRetry(retryCount + 1)
+                    } else {
+                        Timber.tag("WebView")
+                            .e("Failed to retrieve account name after $MAX_RETRY_ATTEMPTS attempts")
+                        isLoadingAccountInfo = false
+                    }
+                }
+            }.onFailure { exception ->
+                if (retryCount < MAX_RETRY_ATTEMPTS) {
+                    Timber.tag("WebView")
+                        .w("Failed to retrieve account info, retrying... Attempt ${retryCount + 1}: ${exception.message}")
+                    delay(RETRY_DELAY_MS)
+                    fetchAccountInfoWithRetry(retryCount + 1)
+                } else {
+                    reportException(exception)
+                    Timber.tag("WebView")
+                        .e(exception, "Failed to retrieve account info after $MAX_RETRY_ATTEMPTS attempts")
+                    isLoadingAccountInfo = false
+                }
+            }
+        } catch (e: Exception) {
+            reportException(e)
+            Timber.tag("WebView").e(e, "Unexpected error while fetching account info")
+            isLoadingAccountInfo = false
+        }
+    }
 
     AndroidView(
         modifier =
@@ -74,26 +130,24 @@ fun LoginScreen(navController: NavController) {
                         Timber.tag("WebView").d("Page finished: $url")
                         if (url != null && url.startsWith(YOUTUBE_MUSIC_URL)) {
                             val youTubeCookieString = CookieManager.getInstance().getCookie(url)
-                            innerTubeCookie =
-                                if ("SAPISID" in parseCookieString(youTubeCookieString)) youTubeCookieString else ""
-                            if (innerTubeCookie.isNotEmpty()) {
+                            val parsedCookies = parseCookieString(youTubeCookieString)
+
+                            if ("SAPISID" in parsedCookies) {
+                                innerTubeCookie = youTubeCookieString
+                                isLoadingAccountInfo = true
+
                                 GlobalScope.launch {
-                                    YouTube.accountInfo().onSuccess {
-                                        accountName = it.name
-                                        accountEmail = it.email.orEmpty()
-                                        accountChannelHandle = it.channelHandle.orEmpty()
-                                        Timber.tag("WebView")
-                                            .d("Account info retrieved: $accountName, $accountEmail, $accountChannelHandle")
-                                    }.onFailure {
-                                        reportException(it)
-                                        Timber.tag("WebView")
-                                            .e(it, "Failed to retrieve account info")
-                                    }
+                                    // Pequeña espera para asegurar que las cookies se establezcan correctamente
+                                    delay(500)
+                                    fetchAccountInfoWithRetry()
                                 }
+
+                                // Obtener visitor data
+                                loadUrl("javascript:Android.onRetrieveVisitorData(window.yt.config_.VISITOR_DATA)")
                             } else {
-                                Timber.tag("WebView").e("Failed to retrieve InnerTube cookie")
+                                innerTubeCookie = ""
+                                Timber.tag("WebView").e("SAPISID not found in cookies")
                             }
-                            loadUrl("javascript:Android.onRetrieveVisitorData(window.yt.config_.VISITOR_DATA)")
                         }
                     }
 
@@ -117,16 +171,18 @@ fun LoginScreen(navController: NavController) {
                     object {
                         @JavascriptInterface
                         fun onRetrieveVisitorData(newVisitorData: String?) {
-                            if (innerTubeCookie == "") {
+                            if (innerTubeCookie.isEmpty()) {
                                 visitorData = ""
                                 Timber.tag("WebView")
                                     .e("InnerTube cookie is empty, cannot retrieve visitor data")
                                 return
                             }
 
-                            if (newVisitorData != null) {
+                            if (!newVisitorData.isNullOrBlank()) {
                                 visitorData = newVisitorData
                                 Timber.tag("WebView").d("Visitor data retrieved: $visitorData")
+                            } else {
+                                Timber.tag("WebView").w("Visitor data is null or blank")
                             }
                         }
                     },
@@ -141,7 +197,15 @@ fun LoginScreen(navController: NavController) {
     )
 
     TopAppBar(
-        title = { Text(stringResource(R.string.login)) },
+        title = {
+            Text(
+                if (isLoadingAccountInfo) {
+                    stringResource(R.string.login) + " - Loading..."
+                } else {
+                    stringResource(R.string.login)
+                }
+            )
+        },
         navigationIcon = {
             IconButton(
                 onClick = navController::navigateUp,
