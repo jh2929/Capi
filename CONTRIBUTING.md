@@ -1,175 +1,234 @@
-# Guía de Contribución
 
-¡Gracias por tu interés en contribuir a OpenTune! Este documento proporciona las directrices y mejores prácticas para contribuir al proyecto. Siguiendo estas pautas, nos ayudas a mantener un código de alta calidad y una comunidad constructiva.
 
-> [!NOTE]  
-> Antes de comenzar, asegúrate de haber leído y comprendido nuestro [Código de Conducta](CODE_OF_CONDUCT.md).
+# Contribution Guide
 
-## Índice
+Thank you for your interest in contributing to **OpenTune**! This document outlines the guidelines and best practices for contributing to the project. By following these recommendations, you help us maintain high-quality code and a collaborative, inclusive community.
 
-- [Cómo Contribuir](#cómo-contribuir)
-  - [Reportar Bugs](#reportar-bugs)
-  - [Sugerir Mejoras](#sugerir-mejoras)
-  - [Pull Requests](#pull-requests)
-- [Guía de Estilo](#guía-de-estilo)
-  - [Estilo de Código](#estilo-de-código)
-  - [Mensajes de Commit](#mensajes-de-commit)
-  - [Documentación](#documentación)
-- [Proceso de Desarrollo](#proceso-de-desarrollo)
-  - [Flujo de Trabajo con Git](#flujo-de-trabajo-con-git)
-  - [Ciclo de Vida de un Pull Request](#ciclo-de-vida-de-un-pull-request)
-- [Configuración del Entorno](#configuración-del-entorno)
-- [Contribuciones de Traducción](#contribuciones-de-traducción)
-- [Contribuciones de Diseño](#contribuciones-de-diseño)
+> \[!NOTE]
+> Before you begin, make sure to read and understand our [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## Cómo Contribuir
+## Table of Contents
 
-### Reportar Bugs
+* [How to Contribute](#how-to-contribute)
 
-Los bugs son rastreados como [issues de GitHub](https://github.com/Arturo254/OpenTune/issues). Antes de crear un nuevo issue, verifica si el problema ya ha sido reportado. Si encuentras un issue abierto que aborda el mismo problema, añade tu información adicional como comentario.
+  * [Reporting Bugs](#reporting-bugs)
+  * [Suggesting Features](#suggesting-features)
+  * [Submitting Pull Requests](#submitting-pull-requests)
+* [Style Guide](#style-guide)
 
-Al crear un nuevo issue, por favor proporciona:
+  * [Code Style](#code-style)
+  * [Commit Messages](#commit-messages)
+  * [Documentation](#documentation)
+* [Development Process](#development-process)
 
-- **Título descriptivo**: Un título claro que identifique el problema
-- **Pasos para reproducir**: Pasos detallados para reproducir el problema
-- **Comportamiento esperado**: Descripción de lo que esperabas que ocurriera
-- **Comportamiento actual**: Descripción de lo que realmente ocurrió
-- **Contexto**: Información relevante como versión de la aplicación, dispositivo, versión de Android, etc.
-- **Capturas de pantalla**: Si es posible, añade capturas de pantalla para ilustrar el problema
-- **Logs**: Si es aplicable, incluye logs relevantes de la aplicación
+  * [Git Workflow](#git-workflow)
+  * [Pull Request Lifecycle](#pull-request-lifecycle)
+* [Development Environment Setup](#development-environment-setup)
+* [Translation Contributions](#translation-contributions)
+* [Design Contributions](#design-contributions)
 
-> [!TIP]
-> Usa las plantillas proporcionadas al crear un issue para asegurarte de incluir toda la información necesaria.
+---
 
-### Sugerir Mejoras
+## How to Contribute
 
-Las sugerencias de mejora también se gestionan a través de [issues de GitHub](https://github.com/Arturo254/OpenTune/issues). Al proponer una nueva característica:
+### Reporting Bugs
 
-- **Describe el problema**: Explica qué problema resolvería esta característica
-- **Explica la solución**: Describe cómo debería funcionar la característica
-- **Proporciona ejemplos**: Si es posible, ofrece ejemplos de cómo se implementaría o utilizaría esta característica
-- **Considera el alcance**: Evalúa si la característica es pequeña, mediana o grande en términos de esfuerzo de implementación
+We track bugs using [GitHub Issues](https://github.com/Arturo254/OpenTune/issues). Before creating a new issue, please search existing issues to see if the problem has already been reported. If you find a similar issue, feel free to add relevant information or insights as a comment.
 
-> [!IMPORTANT]  
-> Antes de trabajar en una nueva característica, asegúrate de que ha sido discutida y aprobada por los mantenedores del proyecto.
+When creating a new issue, include:
 
-### Pull Requests
+* **Descriptive title** that summarizes the issue
+* **Steps to reproduce** the problem
+* **Expected behavior** vs. **actual behavior**
+* **Environment details** (e.g., app version, device model, Android version)
+* **Screenshots** if applicable
+* **Relevant logs** if available
 
-Sigue estos pasos para enviar un pull request:
+> \[!TIP]
+> Use the provided templates to ensure you include all the necessary details.
 
-1. **Fork el repositorio** y crea tu rama desde `main`
-2. **Implementa tus cambios** siguiendo nuestra guía de estilo
-3. **Añade o actualiza tests** para reflejar tus cambios cuando sea necesario
-4. **Asegúrate de que todos los tests pasen**
-5. **Actualiza la documentación** si es necesario
-6. **Envía el pull request** con una descripción clara de los cambios y referencias a los issues relacionados
+---
 
-## Guía de Estilo
+### Suggesting Features
 
-### Estilo de Código
+We also handle feature suggestions through [GitHub Issues](https://github.com/Arturo254/OpenTune/issues). When suggesting a new feature:
 
-- **Kotlin**: Sigue la [guía de estilo oficial de Kotlin](https://kotlinlang.org/docs/coding-conventions.html)
-- **XML**: Usa 4 espacios para la indentación
-- **Nombres de variables y funciones**: Usa camelCase (p.ej., `playerController`)
-- **Nombres de clases**: Usa PascalCase (p.ej., `MusicPlayer`)
-- **Constantes**: Usa SNAKE_CASE en mayúsculas (p.ej., `MAX_RETRY_COUNT`)
+* **Describe the problem** the feature is intended to solve
+* **Explain the solution** and how it would work
+* **Provide examples** or use cases if possible
+* **Assess the scope** of the feature: is it minor, moderate, or large in terms of implementation effort?
 
-### Mensajes de Commit
+> \[!IMPORTANT]
+> Please discuss the feature in an issue and obtain approval from the maintainers before starting development.
 
-Seguimos el estándar de [Conventional Commits](https://www.conventionalcommits.org/):
+---
+
+### Submitting Pull Requests
+
+Pull Requests (PRs) are the primary way to contribute code to OpenTune. To ensure your PR is effective and easy to review, follow these steps:
+
+1. **Fork the repository** and create a feature branch from `main`.
+2. **Implement your changes** while following the [style guide](#style-guide).
+3. **Write or update tests** as needed to cover your changes.
+4. **Ensure all tests pass** before submitting your PR.
+5. **Update the documentation** if your changes affect the public API or usage instructions.
+6. **Submit your pull request** with a **clear, concise, and informative description**.
+
+Your PR description should include:
+
+* **Purpose**: What problem does this PR solve? What feature or fix does it introduce?
+* **Motivation**: Why is this change necessary or useful? How does it improve the project?
+* **Implementation details**: Briefly explain how the changes were implemented.
+* **Related issues**: Link to any related issues using `Closes #123`, `Fixes #456`, etc.
+
+Example:
 
 ```
-<tipo>(<ámbito opcional>): <descripción>
+### Summary
+This PR adds offline playback support for downloaded audio files.
 
-[cuerpo opcional]
+### Motivation
+This feature improves the user experience for those who want to listen to music without an internet connection.
 
-[pie opcional]
+### Changes
+- Added local media cache management
+- Updated playback logic to prefer local files when available
+- Modified UI to show offline availability
+
+### Related Issues
+Closes #45
 ```
 
-Tipos comunes:
-- `feat`: Nueva característica
-- `fix`: Corrección de bug
-- `docs`: Cambios en la documentación
-- `style`: Cambios que no afectan al significado del código (espacios, formato, etc.)
-- `refactor`: Cambio de código que no corrige un bug ni añade una característica
-- `perf`: Cambio de código que mejora el rendimiento
-- `test`: Añadir tests o corregir tests existentes
-- `chore`: Cambios en el proceso de construcción o herramientas auxiliares
+> \[!TIP]
+> Well-written PRs that clearly explain their purpose and impact are more likely to be reviewed and merged quickly.
 
-Ejemplos:
+---
+
+## Style Guide
+
+### Code Style
+
+* **Kotlin**: Follow the [official Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html)
+* **XML**: Use 4 spaces for indentation
+* **Variable and function names**: Use `camelCase` (e.g., `playbackController`)
+* **Class names**: Use `PascalCase` (e.g., `AudioPlayer`)
+* **Constants**: Use `UPPER_SNAKE_CASE` (e.g., `MAX_VOLUME_LEVEL`)
+
+---
+
+### Commit Messages
+
+We use [Conventional Commits](https://www.conventionalcommits.org/) to keep commit history clean and meaningful:
+
 ```
-feat(player): añadir soporte para reproducción de audio sin conexión
-fix(ui): corregir problema de renderizado en la lista de canciones
-docs(readme): actualizar instrucciones de instalación
+<type>(<optional scope>): <short description>
+
+[optional body]
+
+[optional footer]
 ```
 
-### Documentación
+**Common types**:
 
-- Usa Markdown para la documentación
-- Documenta todas las funciones y clases públicas
-- Incluye ejemplos de uso cuando sea posible
-- Mantén la documentación actualizada con los cambios de código
+* `feat`: A new feature
+* `fix`: A bug fix
+* `docs`: Documentation-only changes
+* `style`: Changes that do not affect functionality (formatting, whitespace, etc.)
+* `refactor`: Code changes that neither fix a bug nor add a feature
+* `perf`: Code changes that improve performance
+* `test`: Adding or fixing tests
+* `chore`: Changes to build scripts or auxiliary tools
 
-## Proceso de Desarrollo
+**Examples**:
 
-### Flujo de Trabajo con Git
+```
+feat(player): add support for offline playback
+fix(ui): resolve layout bug in song list
+docs(readme): update installation instructions
+```
 
-Utilizamos un flujo de trabajo basado en ramas:
+---
 
-1. `main`: Rama principal, siempre estable
-2. `develop`: Rama de desarrollo, donde se integran las características
-3. `feature/xxx`: Ramas para nuevas características
-4. `fix/xxx`: Ramas para correcciones de bugs
-5. `release/xxx`: Ramas para preparar versiones
+### Documentation
 
-### Ciclo de Vida de un Pull Request
+* Write documentation in **Markdown**
+* Document all public classes and functions
+* Include **usage examples** whenever possible
+* Keep the documentation **up to date** with code changes
 
-1. **Creación**: El desarrollador crea un PR desde su rama feature/fix
-2. **Review**: Los mantenedores revisan el código y proporcionan feedback
-3. **CI**: Los tests automatizados se ejecutan
-4. **Discusión**: Se resuelven problemas o se solicitan cambios
-5. **Aprobación**: Los mantenedores aprueban el PR
-6. **Merge**: Se integra el PR en la rama de destino
+---
 
-## Configuración del Entorno
+## Development Process
 
-Para contribuir al código de OpenTune, configura tu entorno de desarrollo siguiendo estos pasos:
+### Git Workflow
 
-1. **Instala Android Studio** (versión 2022.1+)
-2. **Configura el SDK de Android** (API nivel 33 recomendado)
-3. **Instala el JDK** (versión 11 o superior)
-4. **Clona el repositorio**:
+We use a structured branching model:
+
+* `main`: The production-ready branch
+* `develop`: The active development branch
+* `feature/xyz`: New feature branches
+* `fix/xyz`: Bug fix branches
+* `release/xyz`: Release preparation branches
+
+---
+
+### Pull Request Lifecycle
+
+1. **Creation**: A contributor opens a PR from a feature/fix branch
+2. **Review**: Maintainers review the code and provide feedback
+3. **CI Validation**: Automated tests are run
+4. **Discussion**: Issues are resolved and necessary changes are made
+5. **Approval**: Once approved, the PR is ready for merging
+6. **Merge**: The PR is merged into the target branch
+
+---
+
+## Development Environment Setup
+
+To set up your local environment for contributing:
+
+1. **Install Android Studio** (version 2022.1 or newer)
+2. **Configure Android SDK** (API level 33 recommended)
+3. **Install JDK** (version 11 or higher)
+4. **Clone the repository**:
+
    ```bash
    git clone https://github.com/Arturo254/OpenTune.git
    cd OpenTune
    ```
-5. **Sincroniza el proyecto con Gradle**:
+5. **Build the project using Gradle**:
+
    ```bash
    ./gradlew build
    ```
 
-## Contribuciones de Traducción
+---
 
-Para contribuir con traducciones:
+## Translation Contributions
 
-1. Regístrate en [Crowdin](https://crowdin.com/project/opentune)
-2. Selecciona el idioma al que quieres contribuir
-3. Traduce las cadenas de texto faltantes o mejora las existentes
-4. El equipo de mantenimiento revisará y aprobará las traducciones
+To help with translations:
 
-Si tu idioma no está disponible en Crowdin, contacta con el equipo de desarrollo en [cervantesarturo254@gmail.com](mailto:cervantesarturo254@gmail.com).
+1. Sign up on [Crowdin](https://crowdin.com/project/opentune)
+2. Choose the language you want to contribute to
+3. Translate missing strings or improve existing translations
+4. The maintainer team will review and approve submissions
 
-## Contribuciones de Diseño
-
-Para contribuir con diseños:
-
-1. Familiarízate con las directrices de [Material Design 3](https://m3.material.io/)
-2. Crea mockups o prototipos de tus ideas
-3. Envía tus diseños como un issue con la etiqueta "design"
-4. Incluye explicaciones sobre cómo tus diseños mejorarían la experiencia del usuario
+If your language is not listed, contact us at [cervantesarturo254@gmail.com](mailto:cervantesarturo254@gmail.com).
 
 ---
 
-¡Gracias por contribuir a OpenTune! Tus esfuerzos ayudan a mejorar la aplicación para todos los usuarios.
+## Design Contributions
 
-Si tienes alguna pregunta sobre cómo contribuir, no dudes en abrir un issue con la etiqueta "question" o contactar directamente con el equipo de desarrollo.
+To contribute design ideas:
+
+1. Review the [Material Design 3 Guidelines](https://m3.material.io/)
+2. Create mockups or interactive prototypes
+3. Submit your designs in a GitHub issue labeled `design`
+4. Include reasoning for how your designs improve the user experience
+
+---
+
+Thank you for contributing to **OpenTune**! Your efforts help us build a better experience for all users.
+If you have any questions, feel free to open an issue labeled `question` or reach out directly to the development team.
+
+
