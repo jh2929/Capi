@@ -47,6 +47,9 @@ class HomeViewModel @Inject constructor(
     val allLocalItems = MutableStateFlow<List<LocalItem>>(emptyList())
     val allYtItems = MutableStateFlow<List<YTItem>>(emptyList())
 
+    val accountName = MutableStateFlow("Guest")
+    val accountImageUrl = MutableStateFlow<String?>(null)
+
     private suspend fun load() {
         isLoading.value = true
 

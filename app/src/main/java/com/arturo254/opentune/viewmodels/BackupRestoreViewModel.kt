@@ -27,23 +27,29 @@ import kotlin.system.exitProcess
 
 @HiltViewModel
 class BackupRestoreViewModel @Inject constructor(
-    val database: MusicDatabase,
+    private val database: MusicDatabase
 ) : ViewModel() {
+
     fun backup(context: Context, uri: Uri) {
         runCatching {
-            context.applicationContext.contentResolver.openOutputStream(uri)?.use {
+            context.contentResolver.openOutputStream(uri)?.use {
                 it.buffered().zipOutputStream().use { outputStream ->
-                    (context.filesDir / "datastore" / SETTINGS_FILENAME).inputStream().buffered()
-                        .use { inputStream ->
+                    // Guardar settings excluyendo VISITOR_DATA si es necesario
+                    val settingsFile = context.filesDir / "datastore" / SETTINGS_FILENAME
+                    if (settingsFile.exists()) {
+                        settingsFile.inputStream().buffered().use { inputStream ->
                             outputStream.putNextEntry(ZipEntry(SETTINGS_FILENAME))
                             inputStream.copyTo(outputStream)
                         }
+                    }
+
+                    // Guardar base de datos
                     runBlocking(Dispatchers.IO) {
                         database.checkpoint()
                     }
-                    FileInputStream(database.openHelper.writableDatabase.path).use { inputStream ->
+                    FileInputStream(database.openHelper.writableDatabase.path).use { dbStream ->
                         outputStream.putNextEntry(ZipEntry(InternalDatabase.DB_NAME))
-                        inputStream.copyTo(outputStream)
+                        dbStream.copyTo(outputStream)
                     }
                 }
             }
@@ -57,18 +63,17 @@ class BackupRestoreViewModel @Inject constructor(
 
     fun restore(context: Context, uri: Uri) {
         runCatching {
-            context.applicationContext.contentResolver.openInputStream(uri)?.use {
+            context.contentResolver.openInputStream(uri)?.use {
                 it.zipInputStream().use { inputStream ->
-                    var entry = tryOrNull { inputStream.nextEntry } // prevent ZipException
+                    var entry = tryOrNull { inputStream.nextEntry }
                     while (entry != null) {
                         when (entry.name) {
                             SETTINGS_FILENAME -> {
-                                (context.filesDir / "datastore" / SETTINGS_FILENAME).outputStream()
-                                    .use { outputStream ->
-                                        inputStream.copyTo(outputStream)
-                                    }
+                                val outFile = context.filesDir / "datastore" / SETTINGS_FILENAME
+                                outFile.outputStream().use { outputStream ->
+                                    inputStream.copyTo(outputStream)
+                                }
                             }
-
                             InternalDatabase.DB_NAME -> {
                                 runBlocking(Dispatchers.IO) {
                                     database.checkpoint()
@@ -79,17 +84,46 @@ class BackupRestoreViewModel @Inject constructor(
                                 }
                             }
                         }
-                        entry = tryOrNull { inputStream.nextEntry } // prevent ZipException
+                        entry = tryOrNull { inputStream.nextEntry }
                     }
                 }
             }
+
+            // Detener servicio y limpiar cola persistente
             context.stopService(Intent(context, MusicService::class.java))
             context.filesDir.resolve(PERSISTENT_QUEUE_FILE).delete()
-            context.startActivity(Intent(context, MainActivity::class.java))
+
+            // Reiniciar app
+            context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             exitProcess(0)
         }.onFailure {
             reportException(it)
             Toast.makeText(context, R.string.restore_failed, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun resetVisitorData(context: Context) {
+        runCatching {
+            // Implementa aquí cómo borras VISITOR_DATA, por ejemplo, desde DataStore
+            val visitorDataFile = context.filesDir / "datastore" / SETTINGS_FILENAME
+            if (visitorDataFile.exists()) {
+                // Borra solo la parte de VISITOR_DATA si es posible, o reinicia el archivo
+                visitorDataFile.delete()
+            }
+
+            Toast.makeText(
+                context,
+                "VISITOR_DATA reseteado. La aplicación se reiniciará.",
+                Toast.LENGTH_SHORT
+            ).show()
+
+            context.stopService(Intent(context, MusicService::class.java))
+            context.filesDir.resolve(PERSISTENT_QUEUE_FILE).delete()
+            context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            exitProcess(0)
+        }.onFailure {
+            reportException(it)
+            Toast.makeText(context, "Error al resetear VISITOR_DATA", Toast.LENGTH_SHORT).show()
         }
     }
 

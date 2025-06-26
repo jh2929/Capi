@@ -477,4 +477,24 @@
     <string name="text_color">Color del texto</string>
     <string name="secondary_text_color">Color secundario del texto</string>
     <string name="background_color">Color de fondo</string>
+
+    <string name="visitor_data_title">Solución de problemas</string>
+    <string name="visitor_data_description">Si está experimentando problemas de conectividad con YouTube, restablecer el visitante_data podría ayudar.</string>
+    <string name="visitor_data_info_button">¿Qué es?</string>
+    <string name="visitor_data_reset_button">Reiniciar</string>
+
+    <string name="visitor_data_info_title">¿Qué es Visor_Data?</string>
+    <string name="visitor_data_info_intro">Visor_Data es un identificador utilizado por YouTube para rastrear su sesión. Cuando está corrompido, puede causar:</string>
+    <string name="visitor_data_info_problems">• Errores de conectividad \n • Problemas de carga de contenido \n • Fallas de búsqueda \n • Interrupciones de reproducción</string>
+    <string name="visitor_data_info_solution">Restablecer Visor_Data genera un nuevo identificador y generalmente resuelve estos problemas.</string>
+    <string name="visitor_data_info_note">Esto funciona tanto para usuarios anónimos como para usuarios.</string>
+    <string name="visitor_data_info_confirm">Entiendo</string>
+
+    <string name="visitor_data_reset_title">Reiniciar visitante_data</string>
+    <string name="visitor_data_reset_message">¿Estás seguro de que quieres restablecer Visor_Data? Esto generará un nuevo identificador para YouTube y puede solucionar problemas de conectividad. \ N \ n La aplicación se reiniciará automáticamente.</string>
+    <string name="visitor_data_reset_confirm">Reiniciar</string>
+    <string name="visitor_data_reset_cancel">Cancelar</string>
+
+
+
 </resources>

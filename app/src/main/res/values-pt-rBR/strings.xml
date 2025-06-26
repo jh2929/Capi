@@ -477,4 +477,23 @@
     <string name="text_color">Cor do texto</string>
     <string name="secondary_text_color">Cor secundária do texto</string>
     <string name="background_color">Cor de fundo</string>
+
+    <string name="visitor_data_title">Solução de problemas</string>
+    <string name="visitor_data_description">Se você está enfrentando problemas de conectividade com o YouTube, a redefinição do visitor_data pode ajudar.</string>
+    <string name="visitor_data_info_button">O que é?</string>
+    <string name="visitor_data_reset_button">Reiniciar</string>
+
+    <string name="visitor_data_info_title">O que é visitor_data?</string>
+    <string name="visitor_data_info_intro">Visitor_data é um identificador usado pelo YouTube para rastrear sua sessão. Quando está corrompido, pode causar:</string>
+    <string name="visitor_data_info_problems">• Erros de conectividade \ n • Problemas carregando conteúdo \ n • falhas de pesquisa \ n • interrupções de reprodução</string>
+    <string name="visitor_data_info_solution">A redefinição do Visitor_Data gera um novo identificador e geralmente resolve esses problemas.</string>
+    <string name="visitor_data_info_note">Isso funciona para usuários e usuários anônimos que se conectaram.</string>
+    <string name="visitor_data_info_confirm">Entendi</string>
+
+    <string name="visitor_data_reset_title">Redefinir visitor_data</string>
+    <string name="visitor_data_reset_message">Tem certeza de que deseja redefinir visitor_data? Isso gerará um novo identificador para o YouTube e poderá corrigir problemas de conectividade. \ N \ n O aplicativo reiniciará automaticamente.</string>
+    <string name="visitor_data_reset_confirm">Reiniciar</string>
+    <string name="visitor_data_reset_cancel">Cancelar</string>
+
+
 </resources>

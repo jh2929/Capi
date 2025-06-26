@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -34,8 +35,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
@@ -50,6 +53,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -81,8 +85,11 @@ fun BackupAndRestore(
     viewModel: BackupRestoreViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+
     val coroutineScope = rememberCoroutineScope()
     var uploadStatus by remember { mutableStateOf<UploadStatus?>(null) }
+    var showVisitorDataDialog by remember { mutableStateOf(false) }
+    var showVisitorDataResetDialog by remember { mutableStateOf(false) }
 
     val backupLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
@@ -122,7 +129,6 @@ fun BackupAndRestore(
         },
     )
 
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -157,6 +163,12 @@ fun BackupAndRestore(
             }
         )
 
+        // Nueva sección para gestión de VISITOR_DATA
+        VisitorDataSection(
+            onResetClick = { showVisitorDataResetDialog = true },
+            onInfoClick = { showVisitorDataDialog = true }
+        )
+
         // Estado de carga
         UploadStatusSection(uploadStatus) {
             copyToClipboard(context, (uploadStatus as UploadStatus.Success).fileUrl)
@@ -164,6 +176,26 @@ fun BackupAndRestore(
 
         Spacer(modifier = Modifier.height(24.dp))
     }
+
+    // Diálogo de información sobre VISITOR_DATA
+    if (showVisitorDataDialog) {
+        VisitorDataInfoDialog(
+            onDismiss = { showVisitorDataDialog = false }
+        )
+    }
+
+    // Diálogo de confirmación para resetear VISITOR_DATA
+
+    if (showVisitorDataResetDialog) {
+        VisitorDataResetDialog(
+            onConfirm = {
+                viewModel.resetVisitorData(context)
+                showVisitorDataResetDialog = false
+            },
+            onDismiss = { showVisitorDataResetDialog = false }
+        )
+    }
+
 }
 
 @Composable
@@ -199,6 +231,12 @@ private fun InfoSection() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
+            // Nueva información sobre VISITOR_DATA
+            Text(
+                text = "Nota: Las copias de seguridad ya no incluyen el VISITOR_DATA para evitar problemas de conectividad con YouTube.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
@@ -211,7 +249,6 @@ private fun ActionSection(
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Usando colores del tema para el botón de backup
         ActionButton(
             icon = painterResource(R.drawable.backup),
             title = stringResource(R.string.backup),
@@ -220,7 +257,6 @@ private fun ActionSection(
             onClick = onBackupClick
         )
 
-        // Usando colores del tema para el botón de restore
         ActionButton(
             icon = painterResource(R.drawable.restore),
             title = stringResource(R.string.restore),
@@ -229,6 +265,178 @@ private fun ActionSection(
             onClick = onRestoreClick
         )
     }
+}
+
+@Composable
+private fun VisitorDataSection(
+    onResetClick: () -> Unit,
+    onInfoClick: () -> Unit
+) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.replay),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = stringResource(R.string.visitor_data_title),
+                    style = MaterialTheme.typography.titleLarge
+                )
+            }
+
+            Text(
+                text = stringResource(R.string.visitor_data_description),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onInfoClick,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.help),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.visitor_data_info_button),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+
+                Button(
+                    onClick = onResetClick,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.replay),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.visitor_data_reset_button),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun VisitorDataInfoDialog(
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.visitor_data_info_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.visitor_data_info_intro),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Text(
+                    text = stringResource(R.string.visitor_data_info_problems),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Text(
+                    text = stringResource(R.string.visitor_data_info_solution),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Text(
+                    text = stringResource(R.string.visitor_data_info_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.visitor_data_info_confirm))
+            }
+        },
+        shape = RoundedCornerShape(16.dp)
+    )
+}
+
+
+@Composable
+private fun VisitorDataResetDialog(
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = stringResource(R.string.visitor_data_reset_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+        },
+        text = {
+            Text(
+                text = stringResource(R.string.visitor_data_reset_message),
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text(stringResource(R.string.visitor_data_reset_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.visitor_data_reset_cancel))
+            }
+        },
+        shape = RoundedCornerShape(16.dp)
+    )
 }
 
 @Composable
@@ -356,8 +564,7 @@ private fun UploadStatusSection(
             }
         }
 
-        null -> { /* No status to show */
-        }
+        null -> { /* No status to show */ }
     }
 }
 
@@ -441,7 +648,6 @@ suspend fun uploadBackupToFilebin(
         val tempFile = File(context.cacheDir, "temp_backup_${System.currentTimeMillis()}.backup")
 
         try {
-            // Copiar archivo a almacenamiento temporal con seguimiento de progreso
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 val fileSize = inputStream.available().toFloat()
                 var totalBytesRead = 0L
@@ -453,15 +659,13 @@ suspend fun uploadBackupToFilebin(
                     while (inputStream.read(buffer).also { bytesRead = it } != -1) {
                         outputStream.write(buffer, 0, bytesRead)
                         totalBytesRead += bytesRead
-                        progressCallback(totalBytesRead / fileSize * 0.5f) // Primera mitad es copia de archivo
+                        progressCallback(totalBytesRead / fileSize * 0.5f)
                     }
                 }
             } ?: return@withContext null
 
-            // Generar un bin ID aleatorio para filebin.net
             val binId = UUID.randomUUID().toString().substring(0, 8)
 
-            // Crear RequestBody con monitoreo de progreso
             val fileRequestBody = object : RequestBody() {
                 override fun contentType(): MediaType? =
                     "application/octet-stream".toMediaTypeOrNull()
@@ -499,7 +703,6 @@ suspend fun uploadBackupToFilebin(
 
             val response = client.newCall(request).execute()
 
-            // Limpiar archivo temporal
             if (tempFile.exists()) {
                 tempFile.delete()
             }
@@ -508,20 +711,16 @@ suspend fun uploadBackupToFilebin(
                 return@withContext null
             }
 
-            // URL predecible de filebin.net
             return@withContext "https://filebin.net/$binId/$fileName"
 
         } catch (e: Exception) {
-            // Limpiar archivo temporal en caso de excepción
             if (tempFile.exists()) {
                 tempFile.delete()
             }
-
             return@withContext null
         }
     }
 }
-
 
 fun copyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

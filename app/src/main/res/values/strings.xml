@@ -500,4 +500,22 @@
     <string name="navigation_error">Navigation error</string>
     <string name="notifications_enabled">Notifications enabled</string>
     <string name="notifications_disabled">Notifications disabled</string>
+
+    <string name="visitor_data_title">Troubleshooting</string>
+    <string name="visitor_data_description">If you\'re experiencing connectivity issues with YouTube, resetting the VISITOR_DATA might help.</string>
+    <string name="visitor_data_info_button">What is it?</string>
+    <string name="visitor_data_reset_button">Reset</string>
+
+    <string name="visitor_data_info_title">What is VISITOR_DATA?</string>
+    <string name="visitor_data_info_intro">VISITOR_DATA is an identifier used by YouTube to track your session. When it\'s corrupted, it can cause:</string>
+    <string name="visitor_data_info_problems">• Connectivity errors\n• Problems loading content\n• Search failures\n• Playback interruptions</string>
+    <string name="visitor_data_info_solution">Resetting VISITOR_DATA generates a new identifier and usually resolves these issues.</string>
+    <string name="visitor_data_info_note">This works for both anonymous users and users signed in.</string>
+    <string name="visitor_data_info_confirm">Got it</string>
+
+    <string name="visitor_data_reset_title">Reset VISITOR_DATA</string>
+    <string name="visitor_data_reset_message">Are you sure you want to reset VISITOR_DATA? This will generate a new identifier for YouTube and may fix connectivity issues.\n\nThe app will restart automatically.</string>
+    <string name="visitor_data_reset_confirm">Reset</string>
+    <string name="visitor_data_reset_cancel">Cancel</string>
+
 </resources>
