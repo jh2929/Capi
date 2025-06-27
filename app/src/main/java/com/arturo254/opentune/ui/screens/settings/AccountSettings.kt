@@ -4,10 +4,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -17,22 +15,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
 import com.arturo254.innertube.YouTube
 import com.arturo254.innertube.utils.parseCookieString
 import com.arturo254.opentune.App.Companion.forgetAccount
@@ -54,7 +46,6 @@ import com.arturo254.opentune.ui.component.SwitchPreference
 import com.arturo254.opentune.ui.component.TextFieldDialog
 import com.arturo254.opentune.ui.utils.backToMain
 import com.arturo254.opentune.utils.rememberPreference
-import com.arturo254.opentune.viewmodels.HomeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,25 +55,50 @@ fun AccountSettings(
 ) {
     val context = LocalContext.current
 
-    val (accountNamePref, onAccountNameChange) = rememberPreference(AccountNameKey, "")
+    val (accountName, onAccountNameChange) = rememberPreference(AccountNameKey, "")
     val (accountEmail, onAccountEmailChange) = rememberPreference(AccountEmailKey, "")
-    val (accountChannelHandle, onAccountChannelHandleChange) = rememberPreference(AccountChannelHandleKey, "")
+    val (accountChannelHandle, onAccountChannelHandleChange) = rememberPreference(
+        AccountChannelHandleKey,
+        ""
+    )
     val (innerTubeCookie, onInnerTubeCookieChange) = rememberPreference(InnerTubeCookieKey, "")
     val (visitorData, onVisitorDataChange) = rememberPreference(VisitorDataKey, "")
     val (dataSyncId, onDataSyncIdChange) = rememberPreference(DataSyncIdKey, "")
 
     val isLoggedIn = remember(innerTubeCookie) {
-        "SAPISID" in parseCookieString(innerTubeCookie)
+        innerTubeCookie.isNotEmpty() && "SAPISID" in parseCookieString(innerTubeCookie)
     }
+
+    // Función para obtener el nombre de cuenta de manera segura
+    val getAccountDisplayName = remember(accountName, accountEmail, accountChannelHandle, isLoggedIn) {
+        when {
+            !isLoggedIn -> ""
+            accountName.isNotBlank() -> accountName
+            accountEmail.isNotBlank() -> accountEmail.substringBefore("@")
+            accountChannelHandle.isNotBlank() -> accountChannelHandle
+            else -> "Usuario sin nombre" // Fallback para evitar crashes
+        }
+    }
+
+    // Función para obtener la descripción de la cuenta de manera segura
+    val getAccountDescription = remember(accountEmail, accountChannelHandle, isLoggedIn) {
+        when {
+            !isLoggedIn -> null
+            accountEmail.isNotBlank() -> accountEmail
+            accountChannelHandle.isNotBlank() -> accountChannelHandle
+            else -> null
+        }
+    }
+
     val (useLoginForBrowse, onUseLoginForBrowseChange) = rememberPreference(UseLoginForBrowse, true)
-    val (ytmSync, onYtmSyncChange) = rememberPreference(YtmSyncKey, true)
+    val (ytmSync, onYtmSyncChange) = rememberPreference(YtmSyncKey, defaultValue = true)
 
-    val viewModel: HomeViewModel = hiltViewModel()
-    val accountName by viewModel.accountName.collectAsState()
-    val accountImageUrl by viewModel.accountImageUrl.collectAsState()
-
-    var showToken: Boolean by remember { mutableStateOf(false) }
-    var showTokenEditor by remember { mutableStateOf(false) }
+    var showToken: Boolean by remember {
+        mutableStateOf(false)
+    }
+    var showTokenEditor by remember {
+        mutableStateOf(false)
+    }
 
     Scaffold(
         topBar = {
@@ -98,7 +114,8 @@ fun AccountSettings(
                             contentDescription = null
                         )
                     }
-                }
+                },
+                scrollBehavior = scrollBehavior
             )
         }
     ) { paddingValues ->
@@ -120,40 +137,29 @@ fun AccountSettings(
             PreferenceEntry(
                 title = {
                     Text(
-                        text = if (isLoggedIn)
-                            accountName
-                        else
+                        if (isLoggedIn) {
+                            getAccountDisplayName.takeIf { it.isNotBlank() }
+                                ?: stringResource(R.string.login)
+                        } else {
                             stringResource(R.string.login)
+                        }
                     )
                 },
-                description = if (isLoggedIn) {
-                    accountEmail.takeIf { it.isNotEmpty() }
-                        ?: accountChannelHandle.takeIf { it.isNotEmpty() }
-                } else null,
-                icon = {
-                    if (isLoggedIn && accountImageUrl != null) {
-                        AsyncImage(
-                            model = accountImageUrl,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(CircleShape)
-                        )
-                    } else {
-                        Icon(
-                            painterResource(R.drawable.login),
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                },
+                description = if (isLoggedIn) getAccountDescription else null,
+                icon = { Icon(painterResource(R.drawable.login), null) },
                 trailingContent = {
                     if (isLoggedIn) {
                         OutlinedButton(onClick = {
+                            // Limpiar todos los datos de la cuenta
                             onInnerTubeCookieChange("")
+                            onAccountNameChange("")
+                            onAccountEmailChange("")
+                            onAccountChannelHandleChange("")
+                            onVisitorDataChange("")
+                            onDataSyncIdChange("")
                             forgetAccount(context)
-                        }) {
+                        }
+                        ) {
                             Text(stringResource(R.string.logout))
                         }
                     }
@@ -163,31 +169,56 @@ fun AccountSettings(
 
             if (showTokenEditor) {
                 val text =
-                    "***INNERTUBE COOKIE*** =${innerTubeCookie}\n\n***VISITOR DATA*** =${visitorData}\n\n***DATASYNC ID*** =${dataSyncId}\n\n***ACCOUNT NAME*** =${accountNamePref}\n\n***ACCOUNT EMAIL*** =${accountEmail}\n\n***ACCOUNT CHANNEL HANDLE*** =${accountChannelHandle}"
+                    "***INNERTUBE COOKIE*** =${innerTubeCookie}\n\n***VISITOR DATA*** =${visitorData}\n\n***DATASYNC ID*** =${dataSyncId}\n\n***ACCOUNT NAME*** =${accountName}\n\n***ACCOUNT EMAIL*** =${accountEmail}\n\n***ACCOUNT CHANNEL HANDLE*** =${accountChannelHandle}"
                 TextFieldDialog(
                     modifier = Modifier,
                     initialTextFieldValue = TextFieldValue(text),
                     onDone = { data ->
                         data.split("\n").forEach {
                             when {
-                                it.startsWith("***INNERTUBE COOKIE*** =") -> onInnerTubeCookieChange(it.substringAfter("***INNERTUBE COOKIE*** ="))
-                                it.startsWith("***VISITOR DATA*** =") -> onVisitorDataChange(it.substringAfter("***VISITOR DATA*** ="))
-                                it.startsWith("***DATASYNC ID*** =") -> onDataSyncIdChange(it.substringAfter("***DATASYNC ID*** ="))
-                                it.startsWith("***ACCOUNT NAME*** =") -> onAccountNameChange(it.substringAfter("***ACCOUNT NAME*** ="))
-                                it.startsWith("***ACCOUNT EMAIL*** =") -> onAccountEmailChange(it.substringAfter("***ACCOUNT EMAIL*** ="))
-                                it.startsWith("***ACCOUNT CHANNEL HANDLE*** =") -> onAccountChannelHandleChange(it.substringAfter("***ACCOUNT CHANNEL HANDLE*** ="))
+                                it.startsWith("***INNERTUBE COOKIE*** =") -> {
+                                    val cookie = it.substringAfter("***INNERTUBE COOKIE*** =").trim()
+                                    onInnerTubeCookieChange(cookie)
+                                }
+                                it.startsWith("***VISITOR DATA*** =") -> {
+                                    val visitorDataValue = it.substringAfter("***VISITOR DATA*** =").trim()
+                                    onVisitorDataChange(visitorDataValue)
+                                }
+                                it.startsWith("***DATASYNC ID*** =") -> {
+                                    val dataSyncIdValue = it.substringAfter("***DATASYNC ID*** =").trim()
+                                    onDataSyncIdChange(dataSyncIdValue)
+                                }
+                                it.startsWith("***ACCOUNT NAME*** =") -> {
+                                    val name = it.substringAfter("***ACCOUNT NAME*** =").trim()
+                                    onAccountNameChange(name)
+                                }
+                                it.startsWith("***ACCOUNT EMAIL*** =") -> {
+                                    val email = it.substringAfter("***ACCOUNT EMAIL*** =").trim()
+                                    onAccountEmailChange(email)
+                                }
+                                it.startsWith("***ACCOUNT CHANNEL HANDLE*** =") -> {
+                                    val handle = it.substringAfter("***ACCOUNT CHANNEL HANDLE*** =").trim()
+                                    onAccountChannelHandleChange(handle)
+                                }
                             }
                         }
                     },
                     onDismiss = { showTokenEditor = false },
                     singleLine = false,
                     maxLines = 20,
-                    isInputValid = {
-                        it.isNotEmpty() && try {
-                            "SAPISID" in parseCookieString(it)
-                        } catch (e: Exception) {
-                            false
-                        }
+                    isInputValid = { input ->
+                        input.isNotEmpty() &&
+                                try {
+                                    val cookieLine = input.lines().find { it.startsWith("***INNERTUBE COOKIE*** =") }
+                                    if (cookieLine != null) {
+                                        val cookie = cookieLine.substringAfter("***INNERTUBE COOKIE*** =").trim()
+                                        cookie.isEmpty() || "SAPISID" in parseCookieString(cookie)
+                                    } else {
+                                        false
+                                    }
+                                } catch (e: Exception) {
+                                    false
+                                }
                     },
                     extraContent = {
                         InfoLabel(text = stringResource(R.string.token_adv_login_description))
