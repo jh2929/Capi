@@ -54,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -68,6 +69,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.arturo254.innertube.utils.parseCookieString
@@ -580,28 +582,33 @@ fun SettingsScreen(
                     modifier = Modifier
                         .size(112.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
+                        .background(MaterialTheme.colorScheme.onBackground),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (customAvatarUri != null) {
-                        Image(
-                            painter = rememberAsyncImagePainter(
-                                ImageRequest.Builder(context)
-                                    .data(data = customAvatarUri!!.toUri())
-                                    .crossfade(true)
-                                    .build()
-                            ),
-                            contentDescription = "Avatar",
+                    customAvatarUri?.let { uri ->
+                        AsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(uri.toUri())
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Avatar de $accountName",
                             modifier = Modifier
                                 .size(104.dp)
-                                .clip(CircleShape),
+                                .clip(CircleShape)
+                                .background(
+                                    brush = Brush.radialGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                            MaterialTheme.colorScheme.primary
+                                        )
+                                    ),
+                                    shape = CircleShape
+                                ),
                             contentScale = ContentScale.Crop
                         )
-                    } else {
-                        // Avatar con inicial del nombre si no hay imagen
+                    } ?: run {
                         Text(
-                            text = accountName.first().toString().uppercase(),
-                            modifier = Modifier.align(Alignment.Center),
+                            text = accountName.firstOrNull()?.uppercase() ?: "?",
                             color = MaterialTheme.colorScheme.onPrimary,
                             style = MaterialTheme.typography.titleLarge
                         )
@@ -610,7 +617,7 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = accountName.replace("@", ""),
+                    text = accountName.replace("@", "").takeIf { it.isNotBlank() } ?: "Usuario",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -618,7 +625,7 @@ fun SettingsScreen(
                 // Logo para usuario no autenticado
                 Icon(
                     painter = painterResource(R.drawable.opentune_monochrome),
-                    contentDescription = null,
+                    contentDescription = "Logo de OpenTune",
                     modifier = Modifier.size(56.dp),
                     tint = MaterialTheme.colorScheme.primary
                 )

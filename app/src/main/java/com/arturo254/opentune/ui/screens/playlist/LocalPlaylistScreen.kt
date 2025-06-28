@@ -477,6 +477,7 @@ fun LocalPlaylistScreen(
                     ) {
                         val currentItem by rememberUpdatedState(song)
 
+                        @SuppressLint("StringFormatInvalid")
                         fun deleteFromPlaylist() {
                             database.transaction {
                                 coroutineScope.launch {
@@ -625,6 +626,7 @@ fun LocalPlaylistScreen(
                     ) {
                         val currentItem by rememberUpdatedState(songWrapper.item)
 
+                        @SuppressLint("StringFormatInvalid")
                         fun deleteFromPlaylist() {
                             database.transaction {
                                 move(
