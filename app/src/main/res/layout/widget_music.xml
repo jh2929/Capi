@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/glass_background"
+    android:padding="16dp"
+    android:gravity="center_horizontal">
+
+    <!-- Portada del álbum -->
+    <ImageView
+        android:id="@+id/widget_album_art"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:contentDescription="@string/albums"
+        android:scaleType="centerCrop"
+        android:src="@drawable/album"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Título de la canción -->
+    <TextView
+        android:id="@+id/widget_track_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:textColor="@color/Lights"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:gravity="center" />
+
+    <!-- Nombre del artista -->
+    <TextView
+        android:id="@+id/widget_artist"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textColor="@color/Lights"
+        android:alpha="0.75"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="12dp" />
+
+    <!-- Barra de progreso con tiempo -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/widget_current_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0:00"
+            android:textSize="12sp"
+            android:textColor="@color/Lights" />
+
+        <ProgressBar
+            android:id="@+id/widget_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="4dp"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="10dp"
+            android:progressTint="@color/Lights"
+            android:progressBackgroundTint="@color/white_30" />
+
+        <TextView
+            android:id="@+id/widget_total_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3:45"
+            android:textSize="12sp"
+            android:textColor="@color/Lights" />
+    </LinearLayout>
+
+    <!-- Controles -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="16dp">
+
+        <ImageButton
+            android:id="@+id/widget_shuffle"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/shuffle"
+            android:background="@drawable/glass_background"
+            android:tint="@color/Lights"
+            android:contentDescription="@string/shuffle" />
+
+        <ImageButton
+            android:id="@+id/widget_prev"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="12dp"
+            android:src="@drawable/skip_previous"
+            android:background="@drawable/glass_background"
+            android:tint="@color/Lights"
+             />
+
+        <ImageButton
+            android:id="@+id/widget_play_pause"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginHorizontal="12dp"
+            android:src="@drawable/play"
+            android:background="@drawable/glass_background"
+            android:tint="@color/Lights"
+             />
+
+        <ImageButton
+            android:id="@+id/widget_next"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/skip_next"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/glass_background"
+            android:tint="@color/Lights"/>
+
+        <ImageButton
+            android:id="@+id/widget_like"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/favorite"
+            android:background="@drawable/glass_background"
+            android:tint="@color/Lights"
+            />
+    </LinearLayout>
+</LinearLayout>

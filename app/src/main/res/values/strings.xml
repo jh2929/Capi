@@ -518,4 +518,6 @@
     <string name="visitor_data_reset_confirm">Reset</string>
     <string name="visitor_data_reset_cancel">Cancel</string>
 
+    <string name="widget_title">Music Widget</string>
+
 </resources>
