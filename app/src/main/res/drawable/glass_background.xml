@@ -1,10 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <gradient
-        android:type="linear"
-        android:angle="135"
-        android:startColor="#1AFFFFFF"
-        android:centerColor="#0DFFFFFF"
-        android:endColor="#05FFFFFF" />
-    <corners android:radius="24dp" />
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Sombra difusa para profundidad -->
+    <item>
+        <shape>
+            <solid android:color="#33000000" /> <!-- sombra negra semi-transparente -->
+            <corners android:radius="25dp" />
+        </shape>
+    </item>
+
+    <!-- Fondo con degradado y borde -->
+    <item android:top="2dp" android:left="2dp" android:right="2dp" android:bottom="2dp">
+        <shape>
+            <gradient
+                android:type="linear"
+                android:angle="135"
+                android:startColor="#1AFFFFFF"
+                android:centerColor="#0DFFFFFF"
+                android:endColor="#05FFFFFF" />
+            <corners android:radius="25dp" />
+            <stroke
+                android:width="1dp"
+                android:color="#20FFFFFF" /> <!-- borde blanco translúcido -->
+        </shape>
+    </item>
+
+</layer-list>

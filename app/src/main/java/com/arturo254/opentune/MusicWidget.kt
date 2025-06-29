@@ -7,8 +7,6 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
 import android.widget.RemoteViews
 import androidx.core.graphics.drawable.toBitmap
 import androidx.media3.common.Player
@@ -21,8 +19,6 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 class MusicWidget : AppWidgetProvider() {
-    private val handler = Handler(Looper.getMainLooper())
-    private lateinit var runnable: Runnable
 
     override fun onUpdate(
         context: Context,
@@ -82,27 +78,16 @@ class MusicWidget : AppWidgetProvider() {
         }
     }
 
-    private fun startProgressUpdater(context: Context) {
-        runnable = Runnable {
-            updateAllWidgets(context)
-            handler.postDelayed(runnable, 1000)
-        }
-        handler.post(runnable)
-    }
-
-    private fun stopProgressUpdater() {
-        handler.removeCallbacks(runnable)
-    }
-
     companion object {
-        const val ACTION_PLAY_PAUSE = "com.maloy.muzza.ACTION_PLAY_PAUSE"
-        const val ACTION_PREV = "com.maloy.muzza.ACTION_PREV"
-        const val ACTION_NEXT = "com.maloy.muzza.ACTION_NEXT"
-        const val ACTION_SHUFFLE = "com.maloy.muzza.ACTION_SHUFFLE"
-        const val ACTION_LIKE = "com.maloy.muzza.ACTION_LIKE"
-        const val ACTION_REPLAY = "com.maloy.muzza.ACTION_REPLAY"
-        const val ACTION_STATE_CHANGED = "com.maloy.muzza.ACTION_STATE_CHANGED"
-        const val ACTION_UPDATE_PROGRESS = "com.maloy.muzza.ACTION_UPDATE_PROGRESS"
+        const val ACTION_PLAY_PAUSE = "com.Arturo254.opentune.ACTION_PLAY_PAUSE"
+        const val ACTION_PREV = "com.Arturo254.opentune.ACTION_PREV"
+        const val ACTION_NEXT = "com.Arturo254.opentune.ACTION_NEXT"
+        const val ACTION_SHUFFLE = "com.Arturo254.opentune.ACTION_SHUFFLE"
+        const val ACTION_LIKE = "com.Arturo254.opentune.ACTION_LIKE"
+        const val ACTION_REPLAY = "com.Arturo254.opentune.ACTION_REPLAY"
+        const val ACTION_STATE_CHANGED = "com.Arturo254.opentune.ACTION_STATE_CHANGED"
+        const val ACTION_UPDATE_PROGRESS = "com.Arturo254.opentune.ACTION_UPDATE_PROGRESS"
+        private var isProgressUpdaterRunning = false
 
         fun updateAllWidgets(context: Context) {
             val appWidgetManager = AppWidgetManager.getInstance(context)
@@ -112,6 +97,7 @@ class MusicWidget : AppWidgetProvider() {
             widgetIds.forEach { updateWidget(context, appWidgetManager, it) }
         }
 
+        @SuppressLint("RemoteViewLayout")
         private fun updateWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
@@ -121,29 +107,45 @@ class MusicWidget : AppWidgetProvider() {
             val playerConnection = PlayerConnection.instance
             val player = playerConnection?.player
 
-            player?.let { it ->
-                views.setTextViewText(R.id.widget_track_title, it.mediaMetadata.title)
-                views.setTextViewText(R.id.widget_artist, it.mediaMetadata.artist)
-                val playPauseIcon = if (it.playWhenReady) R.drawable.pause else R.drawable.play
+            player?.let { p ->
+                // Título y artista
+                views.setTextViewText(R.id.widget_track_title, p.mediaMetadata.title)
+                views.setTextViewText(R.id.widget_artist, p.mediaMetadata.artist)
+
+                // Icono Play / Pause
+                val playPauseIcon = if (p.playWhenReady) R.drawable.pause else R.drawable.play
                 views.setImageViewResource(R.id.widget_play_pause, playPauseIcon)
-                val shuffleIcon = if (it.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle
+
+                // Icono Shuffle
+                val shuffleIcon = if (p.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle
                 views.setImageViewResource(R.id.widget_shuffle, shuffleIcon)
-                val likeIcon = R.drawable.favorite
+
+                // Icono Like (favorito)
+                val likeIcon = if (p.mediaMetadata.extras?.getBoolean("isLiked", false) == true) {
+                    R.drawable.favorite_border
+                } else {
+                    R.drawable.favorite
+                }
                 views.setImageViewResource(R.id.widget_like, likeIcon)
-                if (it.repeatMode == Player.REPEAT_MODE_ONE) {
+
+                // Color especial para el modo repetir 1
+                if (p.repeatMode == Player.REPEAT_MODE_ONE) {
                     views.setInt(R.id.widget_play_pause, "setColorFilter", context.getColor(R.color.light_blue_50))
                 } else {
                     views.setInt(R.id.widget_play_pause, "setColorFilter", context.getColor(android.R.color.transparent))
                 }
-                val currentPos = formatTime(it.currentPosition)
-                val duration = formatTime(it.duration)
-                views.setTextViewText(R.id.widget_current_time, currentPos)
-                views.setTextViewText(R.id.widget_total_time, duration)
-                val progress = if (it.duration > 0) {
-                    (it.currentPosition * 100 / it.duration).toInt()
+
+                // Tiempos y progreso
+                views.setTextViewText(R.id.widget_current_time, formatTime(p.currentPosition))
+                views.setTextViewText(R.id.widget_total_time, formatTime(p.duration))
+
+                val progress = if (p.duration > 0) {
+                    (p.currentPosition * 100 / p.duration).toInt()
                 } else 0
                 views.setProgressBar(R.id.widget_progress, 100, progress, false)
-                val thumbnailUrl = it.mediaMetadata.artworkUri?.toString()
+
+                // Cargar portada del álbum (asíncrono)
+                val thumbnailUrl = p.mediaMetadata.artworkUri?.toString()
                 if (!thumbnailUrl.isNullOrEmpty()) {
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
@@ -156,24 +158,27 @@ class MusicWidget : AppWidgetProvider() {
                                 appWidgetManager.updateAppWidget(appWidgetId, views)
                             }
                         } catch (e: Exception) {
-                            views.setImageViewResource(R.id.widget_album_art, R.drawable.music_note)
+                            views.setImageViewResource(R.id.widget_album_art, R.drawable.album)
                             appWidgetManager.updateAppWidget(appWidgetId, views)
                         }
                     }
                 } else {
-                    views.setImageViewResource(R.id.widget_album_art, R.drawable.music_note)
+                    views.setImageViewResource(R.id.widget_album_art, R.drawable.album)
                 }
             }
 
-            views.setOnClickPendingIntent(R.id.widget_play_pause, getBroadcastPendingIntent(context, ACTION_PLAY_PAUSE))
-            views.setOnClickPendingIntent(R.id.widget_prev, getBroadcastPendingIntent(context, ACTION_PREV))
-            views.setOnClickPendingIntent(R.id.widget_next, getBroadcastPendingIntent(context, ACTION_NEXT))
-            views.setOnClickPendingIntent(R.id.widget_shuffle, getBroadcastPendingIntent(context, ACTION_SHUFFLE))
-            views.setOnClickPendingIntent(R.id.widget_like, getBroadcastPendingIntent(context, ACTION_LIKE))
+            // Asignar acciones a botones
+            views.setOnClickPendingIntent(R.id.widget_play_pause, getPendingIntent(context, ACTION_PLAY_PAUSE))
+            views.setOnClickPendingIntent(R.id.widget_prev, getPendingIntent(context, ACTION_PREV))
+            views.setOnClickPendingIntent(R.id.widget_next, getPendingIntent(context, ACTION_NEXT))
+            views.setOnClickPendingIntent(R.id.widget_shuffle, getPendingIntent(context, ACTION_SHUFFLE))
+            views.setOnClickPendingIntent(R.id.widget_like, getPendingIntent(context, ACTION_LIKE))
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
-        private fun getBroadcastPendingIntent(context: Context, action: String): PendingIntent {
+
+
+        private fun getPendingIntent(context: Context, action: String): PendingIntent {
             val intent = Intent(context, MusicWidget::class.java).apply {
                 this.action = action
                 flags = Intent.FLAG_RECEIVER_FOREGROUND
@@ -194,6 +199,27 @@ class MusicWidget : AppWidgetProvider() {
                 TimeUnit.MILLISECONDS.toSeconds(millis) -
                         TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis))
             )
+        }
+
+        fun startProgressUpdater(context: Context) {
+            if (isProgressUpdaterRunning) return
+
+            isProgressUpdaterRunning = true
+            CoroutineScope(Dispatchers.IO).launch {
+                while (isProgressUpdaterRunning) {
+                    try {
+                        Thread.sleep(1000)
+                        context.sendBroadcast(Intent(ACTION_UPDATE_PROGRESS).apply {
+                            setPackage(context.packageName)
+                        })
+                    } catch (e: InterruptedException) {
+                        break
+                    }
+                }
+            }
+        }
+        fun stopProgressUpdater() {
+            isProgressUpdaterRunning = false
         }
     }
 }
