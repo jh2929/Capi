@@ -1,149 +1,113 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:gravity="center_horizontal"
+    android:layout_margin="9dp"
     android:background="@drawable/glass_background"
     android:elevation="8dp"
-    android:clipToPadding="false"
-    android:clipChildren="false"
-    android:layout_margin="8dp">
+    android:padding="16dp">
 
-    <!-- Album art con bordes redondeados -->
+    <!-- Logotipo OpenTune en esquina superior derecha -->
     <ImageView
-        android:id="@+id/widget_album_art"
-        android:layout_width="100dp"
-        android:layout_height="100dp"
-        android:layout_marginBottom="12dp"
-        android:contentDescription="@string/albums"
-        android:scaleType="centerCrop"
-        android:background="@drawable/rounded_image_bg"
-        android:clipToOutline="true"
-        android:src="@drawable/album" />
-
-    <!-- Título de la canción -->
-    <TextView
-        android:id="@+id/widget_track_title"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="@color/Lights"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:gravity="center"
-        android:maxLines="1"
-        android:ellipsize="end" />
-
-    <!-- Nombre del artista -->
-    <TextView
-        android:id="@+id/widget_artist"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="@color/Lights"
-        android:textSize="14sp"
-        android:alpha="0.75"
-        android:gravity="center"
-        android:maxLines="1"
-        android:ellipsize="end"
+        android:id="@+id/widget_logo"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
         android:layout_marginTop="4dp"
-        android:layout_marginBottom="12dp" />
+        android:layout_marginEnd="4dp"
+        android:contentDescription="OpenTune"
+        android:src="@drawable/opentune"
+        android:alpha="0.7" />
 
-    <!-- Barra de progreso con tiempos -->
+    <!-- Contenido principal del widget -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
-
-        <TextView
-            android:id="@+id/widget_current_time"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="0:00"
-            android:textSize="12sp"
-            android:textColor="@color/Lights" />
-
-        <ProgressBar
-            android:id="@+id/widget_progress"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="0dp"
-            android:layout_height="4dp"
-            android:layout_weight="1"
-            android:layout_marginHorizontal="10dp"
-            android:progressTint="@color/Lights"
-            android:progressBackgroundTint="@color/white_30" />
-
-        <TextView
-            android:id="@+id/widget_total_time"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="3:45"
-            android:textSize="12sp"
-            android:textColor="@color/Lights" />
-    </LinearLayout>
-
-    <!-- Controles principales -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center"
         android:layout_marginTop="16dp"
-        android:weightSum="5">
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-        <ImageButton
-            android:id="@+id/widget_shuffle"
+        <!-- Album art -->
+        <ImageView
+            android:id="@+id/widget_album_art"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/rounded_image_bg"
+            android:clipToOutline="true"
+            android:contentDescription="@string/albums"
+            android:scaleType="centerCrop"
+            android:src="@drawable/album" />
+
+        <!-- Información de la canción -->
+        <LinearLayout
             android:layout_width="0dp"
-            android:layout_height="36dp"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="@drawable/glass_background"
-            android:contentDescription="@string/shuffle"
-            android:src="@drawable/shuffle"
-            android:tint="@color/Lights" />
+            android:gravity="start"
+            android:orientation="vertical" />
 
-        <ImageButton
-            android:id="@+id/widget_prev"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/glass_background"
-            android:src="@drawable/skip_previous"
-            android:tint="@color/Lights" />
+        <!-- Controles de reproducción -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:gravity="center"
+            android:orientation="horizontal">
 
-        <ImageButton
-            android:id="@+id/widget_play_pause"
-            android:layout_width="0dp"
-            android:layout_height="48dp"
-            android:layout_weight="1.5"
-            android:layout_marginHorizontal="8dp"
-            android:background="@drawable/glass_background"
-            android:src="@drawable/play"
-            android:tint="@color/Lights" />
+            <ImageButton
+                android:id="@+id/widget_shuffle"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/shuffle"
+                android:padding="6dp"
+                android:src="@drawable/shuffle"
+                android:tint="@color/Lights" />
 
-        <ImageButton
-            android:id="@+id/widget_next"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:background="@drawable/glass_background"
-            android:src="@drawable/skip_next"
-            android:tint="@color/Lights" />
+            <ImageButton
+                android:id="@+id/widget_prev"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginHorizontal="4dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:padding="6dp"
+                android:src="@drawable/skip_previous"
+                android:tint="@color/Lights" />
 
-        <ImageButton
-            android:id="@+id/widget_like"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
-            android:background="@drawable/glass_background"
-            android:contentDescription="@string/unknown"
-            android:src="@drawable/favorite"
-            android:tint="@color/Lights" />
+            <ImageButton
+                android:id="@+id/widget_play_pause"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginHorizontal="4dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:padding="6dp"
+                android:src="@drawable/play"
+                android:tint="@color/Lights" />
+
+            <ImageButton
+                android:id="@+id/widget_next"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginHorizontal="4dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:padding="6dp"
+                android:src="@drawable/skip_next"
+                android:tint="@color/Lights" />
+
+            <ImageButton
+                android:id="@+id/widget_like"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/unknown"
+                android:padding="6dp"
+                android:src="@drawable/favorite" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
-</LinearLayout>
+</RelativeLayout>
