@@ -1,5 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
     <solid android:color="#05FFFFFF" />
-    <corners android:radius="29dp" />
-    <padding android:left="2dp" android:top="2dp" android:right="2dp" android:bottom="2dp" />
+
+    <!-- Radio apropiado para esquinas redondeadas -->
+    <corners android:radius="20dp" />
+
+    <!-- Padding interno -->
+    <padding
+        android:left="2dp"
+        android:top="2dp"
+        android:right="2dp"
+        android:bottom="2dp" />
+
 </shape>
