@@ -199,7 +199,7 @@ fun BottomSheetPlayer(
     val canSkipPrevious by playerConnection.canSkipPrevious.collectAsState()
     val canSkipNext by playerConnection.canSkipNext.collectAsState()
 
-    var showLyrics by rememberPreference(ShowLyricsKey, defaultValue = false)
+    val showLyrics by rememberPreference(ShowLyricsKey, defaultValue = false)
 
     val sliderStyle by rememberEnumPreference(SliderStyleKey, SliderStyle.DEFAULT)
 

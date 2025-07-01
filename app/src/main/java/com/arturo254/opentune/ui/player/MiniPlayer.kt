@@ -60,6 +60,7 @@ fun MiniPlayer(
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val playbackState by playerConnection.playbackState.collectAsState()
     val error by playerConnection.error.collectAsState()
+
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val canSkipNext by playerConnection.canSkipNext.collectAsState()
 
@@ -67,6 +68,7 @@ fun MiniPlayer(
         modifier =
             modifier
                 .fillMaxWidth()
+
                 .height(MiniPlayerHeight)
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Horizontal)),
     ) {
@@ -75,7 +77,8 @@ fun MiniPlayer(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(2.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(90.dp))
                     .align(Alignment.BottomCenter),
         )
         Row(
@@ -108,7 +111,9 @@ fun MiniPlayer(
                 Icon(
                     painter =
                         painterResource(
-                            if (playbackState == Player.STATE_ENDED) {
+                            if (playbackState ==
+                                Player.STATE_ENDED
+                            ) {
                                 R.drawable.replay
                             } else if (isPlaying) {
                                 R.drawable.pause
@@ -122,7 +127,7 @@ fun MiniPlayer(
 
             IconButton(
                 enabled = canSkipNext,
-                onClick = playerConnection::seekToNext,
+                onClick = playerConnection.player::seekToNext,
             ) {
                 Icon(
                     painter = painterResource(R.drawable.skip_next),
@@ -143,38 +148,15 @@ fun MiniMediaInfo(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier,
     ) {
-        Box(
-            modifier = Modifier
-                .padding(6.dp)
-                .size(48.dp)
-                .clip(RoundedCornerShape(ThumbnailCornerRadius))
-        ) {
-            // Blurred background for thumbnail
+        Box(modifier = Modifier.padding(6.dp)) {
             AsyncImage(
                 model = mediaMetadata.thumbnailUrl,
                 contentDescription = null,
-                contentScale = ContentScale.FillBounds,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer(
-                        renderEffect = BlurEffect(
-                            radiusX = 75f,
-                            radiusY = 75f
-                        ),
-                        alpha = 0.5f
-                    )
+                modifier =
+                    Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(ThumbnailCornerRadius)),
             )
-
-            // Main thumbnail
-            AsyncImage(
-                model = mediaMetadata.thumbnailUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(ThumbnailCornerRadius)),
-            )
-
             androidx.compose.animation.AnimatedVisibility(
                 visible = error != null,
                 enter = fadeIn(),
@@ -182,7 +164,7 @@ fun MiniMediaInfo(
             ) {
                 Box(
                     Modifier
-                        .fillMaxSize()
+                        .size(48.dp)
                         .background(
                             color = Color.Black.copy(alpha = 0.6f),
                             shape = RoundedCornerShape(ThumbnailCornerRadius),
@@ -206,36 +188,24 @@ fun MiniMediaInfo(
                     .weight(1f)
                     .padding(horizontal = 6.dp),
         ) {
-            AnimatedContent(
-                targetState = mediaMetadata.title,
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "",
-            ) { title ->
-                Text(
-                    text = title,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.basicMarquee(),
-                )
-            }
-
-            AnimatedContent(
-                targetState = mediaMetadata.artists.joinToString { it.name },
-                transitionSpec = { fadeIn() togetherWith fadeOut() },
-                label = "",
-            ) { artists ->
-                Text(
-                    text = artists,
-                    color = MaterialTheme.colorScheme.secondary,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.basicMarquee(),
-                )
-            }
+            Text(
+                text = mediaMetadata.title,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier =
+                    Modifier
+                        .basicMarquee(),
+            )
+            Text(
+                text = mediaMetadata.artists.joinToString { it.name },
+                color = MaterialTheme.colorScheme.secondary,
+                fontSize = 12.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
