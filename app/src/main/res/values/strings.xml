@@ -519,5 +519,6 @@
     <string name="visitor_data_reset_cancel">Cancel</string>
 
     <string name="widget_title">Music Widget</string>
-
+    <string name="error_saving_image">Error saving image</string>
+    <string name="processing">Processing</string>
 </resources>

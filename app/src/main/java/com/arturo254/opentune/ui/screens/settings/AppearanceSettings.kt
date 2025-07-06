@@ -1,8 +1,11 @@
 package com.arturo254.opentune.ui.screens.settings
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -35,35 +38,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -86,7 +64,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.navigation.NavController
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.arturo254.opentune.LocalPlayerAwareWindowInsets
 import com.arturo254.opentune.R
@@ -122,10 +100,12 @@ import com.arturo254.opentune.utils.rememberEnumPreference
 import com.arturo254.opentune.utils.rememberPreference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.saket.squiggles.SquigglySlider
 import timber.log.Timber
 import java.io.File
@@ -1098,23 +1078,40 @@ fun CustomAvatarSelector(
     val avatarManager = remember { AvatarPreferenceManager(context) }
     val customAvatarUri by avatarManager.getCustomAvatarUri.collectAsState(initial = null)
 
-    // Crear un ámbito de corrutina para este composable
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
     val coroutineScope = rememberCoroutineScope()
 
-    // Launcher para seleccionar imagen de la galería
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            // Copiamos la imagen a almacenamiento interno para persistencia
-            val file = saveImageToInternalStorage(context, it)
-            file?.let { savedFile ->
-                val savedUri = Uri.fromFile(savedFile)
-                // Lanzamos una corrutina para guardar la URI
-                coroutineScope.launch {
-                    avatarManager.saveCustomAvatarUri(savedUri.toString())
-                }
+            isLoading = true
+            errorMessage = null
+
+            coroutineScope.launch {
+                val result = saveImageToInternalStorage(context, it)
+                result.fold(
+                    onSuccess = { savedFile ->
+                        val savedUri = Uri.fromFile(savedFile)
+                        avatarManager.saveCustomAvatarUri(savedUri.toString())
+                    },
+                    onFailure = { exception ->
+                        errorMessage = context.getString(R.string.error_saving_image)
+                        Log.e("CustomAvatarSelector", "Error saving image", exception)
+                    }
+                )
+                isLoading = false
             }
+        }
+    }
+
+    // Mostrar error temporalmente
+    errorMessage?.let { error ->
+        LaunchedEffect(error) {
+            delay(4000)
+            errorMessage = null
         }
     }
 
@@ -1129,7 +1126,7 @@ fun CustomAvatarSelector(
                 .padding(16.dp)
         ) {
             Text(
-                text = stringResource(id = R.string.custom_avatar_beta), // Reemplazar con string
+                text = stringResource(id = R.string.custom_avatar_beta),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -1140,7 +1137,7 @@ fun CustomAvatarSelector(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Previsualización del avatar
+                // Avatar con indicador de carga
                 Box(
                     modifier = Modifier
                         .size(72.dp)
@@ -1150,28 +1147,40 @@ fun CustomAvatarSelector(
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                             shape = CircleShape
                         )
-                        .clickable { galleryLauncher.launch("image/*") },
+                        .clickable(enabled = !isLoading) {
+                            galleryLauncher.launch("image/*")
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (customAvatarUri != null) {
-                        Image(
-                            painter = rememberAsyncImagePainter(
-                                ImageRequest.Builder(context)
-                                    .data(data = Uri.parse(customAvatarUri))
+                    when {
+                        isLoading -> {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(36.dp),
+                                strokeWidth = 3.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        customAvatarUri != null -> {
+                            AsyncImage(
+                                model = ImageRequest.Builder(context)
+                                    .data(Uri.parse(customAvatarUri))
                                     .crossfade(true)
-                                    .build()
-                            ),
-                            contentDescription = stringResource(id = R.string.custom_avatar), // Reemplazar con string
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Icon(
-                            painter = painterResource(id = R.drawable.person),
-                            contentDescription = stringResource(id = R.string.default_avatar), // Reemplazar con string
-                            modifier = Modifier.size(36.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                                    .error(R.drawable.person)
+                                    .placeholder(R.drawable.person)
+                                    .build(),
+                                contentDescription = stringResource(id = R.string.custom_avatar),
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        else -> {
+                            Icon(
+                                painter = painterResource(id = R.drawable.person),
+                                contentDescription = stringResource(id = R.string.default_avatar),
+                                modifier = Modifier.size(36.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
 
@@ -1180,46 +1189,141 @@ fun CustomAvatarSelector(
                 Column(modifier = Modifier.weight(1f)) {
                     Button(
                         onClick = { galleryLauncher.launch("image/*") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isLoading
                     ) {
-                        Text(stringResource(id = R.string.select_image)) // Reemplazar con string
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
+                        Text(
+                            text = if (isLoading)
+                                stringResource(id = R.string.processing)
+                            else
+                                stringResource(id = R.string.select_image)
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedButton(
                         onClick = {
-                            // Lanzamos una corrutina para restaurar el avatar predeterminado
                             coroutineScope.launch {
+                                // Limpiar archivos antiguos antes de restaurar
+                                cleanupOldAvatars(context)
                                 avatarManager.saveCustomAvatarUri(null)
                             }
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = customAvatarUri != null
+                        enabled = customAvatarUri != null && !isLoading
                     ) {
-                        Text(stringResource(id = R.string.restore_default_avatar)) // Reemplazar con string
+                        Text(stringResource(id = R.string.restore_default_avatar))
                     }
+                }
+            }
+
+            // Mostrar mensaje de error
+            errorMessage?.let { error ->
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = error,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }
     }
 }
 
-
-/** Función para guardar la imagen en almacenamiento interno */
-private fun saveImageToInternalStorage(context: Context, uri: Uri): File? {
-    return try {
+/** Función mejorada para guardar la imagen en almacenamiento interno */
+private suspend fun saveImageToInternalStorage(
+    context: Context,
+    uri: Uri
+): Result<File> = withContext(Dispatchers.IO) {
+    try {
         context.contentResolver.openInputStream(uri)?.use { inputStream ->
-            val outputFile = File(context.filesDir, "custom_avatar.jpg")
+            // Limpiar archivos antiguos antes de guardar uno nuevo
+            cleanupOldAvatars(context)
+
+            // Generar nombre único para evitar conflictos
+            val fileName = "custom_avatar_${System.currentTimeMillis()}.jpg"
+            val outputFile = File(context.filesDir, fileName)
+
+            // Decodificar y comprimir la imagen
+            val bitmap = BitmapFactory.decodeStream(inputStream)
+            val compressedBitmap = resizeAndCompressBitmap(bitmap, 500, 500)
 
             FileOutputStream(outputFile).use { outputStream ->
-                inputStream.copyTo(outputStream)
+                compressedBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
             }
 
-            outputFile
-        }
+            // Limpiar recursos
+            if (bitmap != compressedBitmap) {
+                bitmap.recycle()
+            }
+            compressedBitmap.recycle()
+
+            Result.success(outputFile)
+        } ?: Result.failure(Exception("No se pudo abrir el archivo"))
     } catch (e: Exception) {
-        e.printStackTrace()
-        null
+        Log.e("CustomAvatarSelector", "Error saving image to internal storage", e)
+        Result.failure(e)
     }
 }
+
+/** Función para redimensionar y comprimir bitmap */
+private fun resizeAndCompressBitmap(
+    bitmap: Bitmap,
+    maxWidth: Int,
+    maxHeight: Int
+): Bitmap {
+    val width = bitmap.width
+    val height = bitmap.height
+
+    val ratio = minOf(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
+
+    return if (ratio < 1.0f) {
+        val newWidth = (width * ratio).toInt()
+        val newHeight = (height * ratio).toInt()
+        Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+    } else {
+        bitmap
+    }
+}
+
+/** Función para limpiar archivos antiguos de avatar */
+private fun cleanupOldAvatars(context: Context) {
+    try {
+        context.filesDir.listFiles()?.forEach { file ->
+            if (file.name.startsWith("custom_avatar_") && file.name.endsWith(".jpg")) {
+                val deleted = file.delete()
+                Log.d("CustomAvatarSelector", "Deleted old avatar file: ${file.name}, success: $deleted")
+            }
+        }
+    } catch (e: Exception) {
+        Log.e("CustomAvatarSelector", "Error cleaning up old avatars", e)
+    }
+}
+
+/** Data class para manejar estados de UI (opcional para uso futuro) */
+data class AvatarUiState(
+    val isLoading: Boolean = false,
+    val error: String? = null,
+    val customAvatarUri: String? = null
+)
