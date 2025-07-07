@@ -14,12 +14,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
@@ -34,6 +36,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -63,6 +66,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -577,64 +581,162 @@ fun SettingsScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (isLoggedIn) {
+                var imageLoadError by remember { mutableStateOf(false) }
+                var isImageLoading by remember { mutableStateOf(false) }
+
                 // Avatar circular para usuario
                 Box(
                     modifier = Modifier
                         .size(112.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.onBackground),
+                        .background(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                )
+                            )
+                        )
+                        .border(
+                            width = 2.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                            shape = CircleShape
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
-                    customAvatarUri?.let { uri ->
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(uri.toUri())
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = "Avatar de $accountName",
-                            modifier = Modifier
-                                .size(104.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    brush = Brush.radialGradient(
-                                        colors = listOf(
-                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                            MaterialTheme.colorScheme.primary
+                    when {
+                        // Mostrar avatar personalizado si existe y no hay error
+                        customAvatarUri != null && !imageLoadError -> {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data(customAvatarUri!!.toUri())
+                                    .crossfade(true)
+                                    .listener(
+                                        onStart = { isImageLoading = true },
+                                        onSuccess = { _, _ ->
+                                            isImageLoading = false
+                                            imageLoadError = false
+                                        },
+                                        onError = { _, _ ->
+                                            isImageLoading = false
+                                            imageLoadError = true
+                                        }
+                                    )
+                                    .build(),
+                                contentDescription = "Avatar de $accountName",
+                                modifier = Modifier
+                                    .size(104.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+
+                            // Overlay de carga
+                            if (isImageLoading) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(104.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+
+                        // Mostrar iniciales como fallback
+                        else -> {
+                            val initials = remember(accountName) {
+                                val cleanName = accountName.replace("@", "").trim()
+                                when {
+                                    cleanName.isEmpty() -> "?"
+                                    cleanName.contains(" ") -> {
+                                        val parts = cleanName.split(" ")
+                                        "${parts.first().firstOrNull()?.uppercase() ?: ""}${parts.last().firstOrNull()?.uppercase() ?: ""}"
+                                    }
+                                    else -> cleanName.take(2).uppercase()
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .size(104.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        brush = Brush.radialGradient(
+                                            colors = listOf(
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                                MaterialTheme.colorScheme.primary
+                                            )
                                         )
                                     ),
-                                    shape = CircleShape
-                                ),
-                            contentScale = ContentScale.Crop
-                        )
-                    } ?: run {
-                        Text(
-                            text = accountName.firstOrNull()?.uppercase() ?: "?",
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            style = MaterialTheme.typography.titleLarge
-                        )
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = initials,
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
+
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = accountName.replace("@", "").takeIf { it.isNotBlank() } ?: "Usuario",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             } else {
                 // Logo para usuario no autenticado
-                Icon(
-                    painter = painterResource(R.drawable.opentune_monochrome),
-                    contentDescription = "Logo de OpenTune",
-                    modifier = Modifier.size(56.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(
+                            brush = Brush.radialGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                                )
+                            )
+                        )
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.opentune_monochrome),
+                        contentDescription = "Logo de OpenTune",
+                        modifier = Modifier.fillMaxSize(),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "OpenTune",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold
                 )
+            }
+        }
+
+        // Extensión para convertir String a Uri de forma segura
+        fun String.toUri(): Uri? {
+            return try {
+                Uri.parse(this)
+            } catch (e: Exception) {
+                null
             }
         }
 

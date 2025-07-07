@@ -1,5 +1,5 @@
 [versions]
-androidGradlePlugin = "8.9.0"
+androidGradlePlugin = "8.10.1"
 annotation = "1.9.1"
 json = "20241224"
 kotlin = "2.1.0"
@@ -80,7 +80,7 @@ junit = { group = "junit", name = "junit", version = "4.13.2" }
 
 timber = { group = "com.jakewharton.timber", name = "timber", version = "5.0.1" }
 
-newpipe-extractor = { group = "com.github.libre-tube", name = "NewPipeExtractor", version = "bcb7705" }
+newpipe-extractor = { group = "com.github.libre-tube", name = "NewPipeExtractor", version = "dev-SNAPSHOT" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "loggingInterceptor" }
