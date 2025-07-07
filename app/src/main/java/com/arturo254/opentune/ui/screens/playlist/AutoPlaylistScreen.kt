@@ -34,6 +34,7 @@ import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -67,6 +68,7 @@ import androidx.media3.exoplayer.offline.DownloadRequest
 import androidx.media3.exoplayer.offline.DownloadService
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.arturo254.opentune.LocalDatabase
 import com.arturo254.opentune.LocalDownloadUtil
 import com.arturo254.opentune.LocalPlayerAwareWindowInsets
 import com.arturo254.opentune.LocalPlayerConnection
@@ -78,6 +80,7 @@ import com.arturo254.opentune.constants.SongSortTypeKey
 import com.arturo254.opentune.constants.ThumbnailCornerRadius
 import com.arturo254.opentune.constants.YtmSyncKey
 import com.arturo254.opentune.db.entities.Song
+import com.arturo254.opentune.extensions.move
 import com.arturo254.opentune.extensions.toMediaItem
 import com.arturo254.opentune.extensions.togglePlayPause
 import com.arturo254.opentune.playback.ExoDownloadService
@@ -90,6 +93,7 @@ import com.arturo254.opentune.ui.component.IconButton
 import com.arturo254.opentune.ui.component.LocalMenuState
 import com.arturo254.opentune.ui.component.SongListItem
 import com.arturo254.opentune.ui.component.SortHeader
+import com.arturo254.opentune.ui.component.VerticalFastScroller
 import com.arturo254.opentune.ui.menu.SelectionSongMenu
 import com.arturo254.opentune.ui.menu.SongMenu
 import com.arturo254.opentune.ui.utils.ItemWrapper
@@ -99,7 +103,9 @@ import com.arturo254.opentune.utils.rememberEnumPreference
 import com.arturo254.opentune.utils.rememberPreference
 import com.arturo254.opentune.viewmodels.AutoPlaylistViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
+import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -240,10 +246,42 @@ fun AutoPlaylistScreen(
     }
 
     val state = rememberLazyListState()
+    val database = LocalDatabase.current
+    val headerItems = 2
+    val reorderableState =
+        rememberReorderableLazyListState(
+            onMove = { from, to ->
+                if (to.index >= headerItems && from.index >= headerItems) {
+                    mutableSongs.move(from.index - headerItems, to.index - headerItems)
+                }
+            },
+            onDragEnd = { fromIndex, toIndex ->
+                val from = if (fromIndex < 2) 2 else fromIndex
+                val to = if (toIndex < 2) 2 else toIndex
+                database.transaction {
+                    move(viewModel.playlist, from - headerItems, to - headerItems)
+                }
+            },
+        )
+
+    val showTopBarTitle by remember {
+        derivedStateOf {
+            reorderableState.listState.firstVisibleItemIndex > 0
+        }
+    }
+
+    var dismissJob: Job? by remember { mutableStateOf(null) }
+
 
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
+        // VerticalFastScroller envuelve el LazyColumn
+        VerticalFastScroller(
+            listState = reorderableState.listState,
+            topContentPadding = 16.dp,
+            endContentPadding = 0.dp
+        ) {
         LazyColumn(
             state = state,
             contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
@@ -540,6 +578,7 @@ fun AutoPlaylistScreen(
                     }
                 }
             }
+        }
         }
 
         TopAppBar(

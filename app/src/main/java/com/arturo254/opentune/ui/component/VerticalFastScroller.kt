@@ -45,7 +45,7 @@ import kotlin.math.roundToInt
 @Composable
 fun VerticalFastScroller(
     listState: LazyListState,
-    thumbColor: Color = MaterialTheme.colorScheme.primary,
+    thumbColor: Color = MaterialTheme.colorScheme.onBackground,
     topContentPadding: Dp = Dp.Hairline,
     endContentPadding: Dp = Dp.Hairline,
     content: @Composable () -> Unit,
