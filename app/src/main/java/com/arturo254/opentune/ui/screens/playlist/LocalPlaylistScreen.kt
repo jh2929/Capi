@@ -124,6 +124,7 @@ import com.arturo254.opentune.ui.component.LocalMenuState
 import com.arturo254.opentune.ui.component.SongListItem
 import com.arturo254.opentune.ui.component.SortHeader
 import com.arturo254.opentune.ui.component.TextFieldDialog
+import com.arturo254.opentune.ui.component.VerticalFastScroller
 import com.arturo254.opentune.ui.menu.SelectionSongMenu
 import com.arturo254.opentune.ui.menu.SongMenu
 import com.arturo254.opentune.ui.utils.ItemWrapper
@@ -400,358 +401,365 @@ fun LocalPlaylistScreen(
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
-        LazyColumn(
-            state = reorderableState.listState,
-            contentPadding = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime)
-                .asPaddingValues(),
-            modifier = Modifier.reorderable(reorderableState),
+        // VerticalFastScroller envuelve el LazyColumn
+        VerticalFastScroller(
+            listState = reorderableState.listState,
+            topContentPadding = 16.dp,
+            endContentPadding = 0.dp
         ) {
-            playlist?.let { playlist ->
-                if (playlist.songCount == 0 && playlist.playlist.remoteSongCount == 0) {
-                    item {
-                        EmptyPlaceholder(
-                            icon = R.drawable.music_note,
-                            text = stringResource(R.string.playlist_is_empty),
-                        )
-                    }
-                } else {
-                    if (!isSearching) {
+            LazyColumn(
+                state = reorderableState.listState,
+                contentPadding = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime)
+                    .asPaddingValues(),
+                modifier = Modifier.reorderable(reorderableState),
+            ) {
+                playlist?.let { playlist ->
+                    if (playlist.songCount == 0 && playlist.playlist.remoteSongCount == 0) {
                         item {
-                            LocalPlaylistHeader(
-                                playlist = playlist,
-                                songs = songs,
-                                onShowEditDialog = { showEditDialog = true },
-                                onShowRemoveDownloadDialog = { showRemoveDownloadDialog = true },
-                                onshowDeletePlaylistDialog = { showDeletePlaylistDialog = true },
-                                snackbarHostState = snackbarHostState,
-                                modifier = Modifier.animateItem()
+                            EmptyPlaceholder(
+                                icon = R.drawable.music_note,
+                                text = stringResource(R.string.playlist_is_empty),
                             )
                         }
-                    }
+                    } else {
+                        if (!isSearching) {
+                            item {
+                                LocalPlaylistHeader(
+                                    playlist = playlist,
+                                    songs = songs,
+                                    onShowEditDialog = { showEditDialog = true },
+                                    onShowRemoveDownloadDialog = { showRemoveDownloadDialog = true },
+                                    onshowDeletePlaylistDialog = { showDeletePlaylistDialog = true },
+                                    snackbarHostState = snackbarHostState,
+                                    modifier = Modifier.animateItem()
+                                )
+                            }
+                        }
 
-                    item {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(start = 16.dp),
-                        ) {
-                            SortHeader(
-                                sortType = sortType,
-                                sortDescending = sortDescending,
-                                onSortTypeChange = onSortTypeChange,
-                                onSortDescendingChange = onSortDescendingChange,
-                                sortTypeText = { sortType ->
-                                    when (sortType) {
-                                        PlaylistSongSortType.CUSTOM -> R.string.sort_by_custom
-                                        PlaylistSongSortType.CREATE_DATE -> R.string.sort_by_create_date
-                                        PlaylistSongSortType.NAME -> R.string.sort_by_name
-                                        PlaylistSongSortType.ARTIST -> R.string.sort_by_artist
-                                        PlaylistSongSortType.PLAY_TIME -> R.string.sort_by_play_time
+                        item {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(start = 16.dp),
+                            ) {
+                                SortHeader(
+                                    sortType = sortType,
+                                    sortDescending = sortDescending,
+                                    onSortTypeChange = onSortTypeChange,
+                                    onSortDescendingChange = onSortDescendingChange,
+                                    sortTypeText = { sortType ->
+                                        when (sortType) {
+                                            PlaylistSongSortType.CUSTOM -> R.string.sort_by_custom
+                                            PlaylistSongSortType.CREATE_DATE -> R.string.sort_by_create_date
+                                            PlaylistSongSortType.NAME -> R.string.sort_by_name
+                                            PlaylistSongSortType.ARTIST -> R.string.sort_by_artist
+                                            PlaylistSongSortType.PLAY_TIME -> R.string.sort_by_play_time
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                )
+                                if (editable) {
+                                    IconButton(
+                                        onClick = { locked = !locked },
+                                        modifier = Modifier.padding(horizontal = 6.dp),
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(if (locked) R.drawable.lock else R.drawable.lock_open),
+                                            contentDescription = null,
+                                        )
                                     }
-                                },
-                                modifier = Modifier.weight(1f),
-                            )
-                            if (editable) {
-                                IconButton(
-                                    onClick = { locked = !locked },
-                                    modifier = Modifier.padding(horizontal = 6.dp),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(if (locked) R.drawable.lock else R.drawable.lock_open),
-                                        contentDescription = null,
-                                    )
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            if (!selection) {
-                itemsIndexed(
-                    items = if (isSearching) filteredSongs else mutableSongs,
-                    key = { _, song -> song.map.id },
-                ) { index, song ->
-                    ReorderableItem(
-                        reorderableState = reorderableState,
-                        key = song.map.id,
-                    ) {
-                        val currentItem by rememberUpdatedState(song)
+                if (!selection) {
+                    itemsIndexed(
+                        items = if (isSearching) filteredSongs else mutableSongs,
+                        key = { _, song -> song.map.id },
+                    ) { index, song ->
+                        ReorderableItem(
+                            reorderableState = reorderableState,
+                            key = song.map.id,
+                        ) {
+                            val currentItem by rememberUpdatedState(song)
 
-                        @SuppressLint("StringFormatInvalid")
-                        fun deleteFromPlaylist() {
-                            database.transaction {
-                                coroutineScope.launch {
-                                    playlist?.playlist?.browseId?.let { it1 ->
-                                        var setVideoId = getSetVideoId(currentItem.map.songId)
-                                        if (setVideoId?.setVideoId != null) {
-                                            YouTube.removeFromPlaylist(
-                                                it1, currentItem.map.songId, setVideoId.setVideoId!!
-                                            )
-                                        }
-                                    }
-                                }
-                                move(
-                                    currentItem.map.playlistId,
-                                    currentItem.map.position,
-                                    Int.MAX_VALUE
-                                )
-                                delete(currentItem.map.copy(position = Int.MAX_VALUE))
-                            }
-                            dismissJob?.cancel()
-                            dismissJob = coroutineScope.launch {
-                                val snackbarResult = snackbarHostState.showSnackbar(
-                                    message = context.getString(
-                                        R.string.removed_song_from_playlist,
-                                        currentItem.song.song.title
-                                    ),
-                                    actionLabel = context.getString(R.string.undo),
-                                    duration = SnackbarDuration.Short
-                                )
-                                if (snackbarResult == SnackbarResult.ActionPerformed) {
-                                    database.transaction {
-                                        insert(currentItem.map.copy(position = playlistLength))
-                                        move(
-                                            currentItem.map.playlistId,
-                                            playlistLength,
-                                            currentItem.map.position
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        val dismissBoxState =
-                            rememberSwipeToDismissBoxState(
-                                positionalThreshold = { totalDistance ->
-                                    totalDistance
-                                },
-                                confirmValueChange = { dismissValue ->
-                                    if (dismissValue == SwipeToDismissBoxValue.StartToEnd ||
-                                        dismissValue == SwipeToDismissBoxValue.EndToStart
-                                    ) {
-                                        deleteFromPlaylist()
-                                    }
-                                    true
-                                },
-                            )
-
-                        val content: @Composable () -> Unit = {
-                            SongListItem(
-                                song = song.song,
-                                isActive = song.song.id == mediaMetadata?.id,
-                                isPlaying = isPlaying,
-                                showInLibraryIcon = true,
-                                trailingContent = {
-                                    IconButton(
-                                        onClick = {
-                                            menuState.show {
-                                                SongMenu(
-                                                    originalSong = song.song,
-                                                    playlistSong = song,
-                                                    playlistBrowseId = playlist?.playlist?.browseId,
-                                                    navController = navController,
-                                                    onDismiss = menuState::dismiss,
+                            @SuppressLint("StringFormatInvalid")
+                            fun deleteFromPlaylist() {
+                                database.transaction {
+                                    coroutineScope.launch {
+                                        playlist?.playlist?.browseId?.let { it1 ->
+                                            var setVideoId = getSetVideoId(currentItem.map.songId)
+                                            if (setVideoId?.setVideoId != null) {
+                                                YouTube.removeFromPlaylist(
+                                                    it1, currentItem.map.songId, setVideoId.setVideoId!!
                                                 )
                                             }
-                                        },
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.more_vert),
-                                            contentDescription = null,
-                                        )
+                                        }
                                     }
-
-                                    if (sortType == PlaylistSongSortType.CUSTOM && !locked && !selection && !isSearching) {
-                                        IconButton(
-                                            onClick = { },
-                                            modifier = Modifier.detectReorder(reorderableState),
-                                        ) {
-                                            Icon(
-                                                painter = painterResource(R.drawable.drag_handle),
-                                                contentDescription = null,
+                                    move(
+                                        currentItem.map.playlistId,
+                                        currentItem.map.position,
+                                        Int.MAX_VALUE
+                                    )
+                                    delete(currentItem.map.copy(position = Int.MAX_VALUE))
+                                }
+                                dismissJob?.cancel()
+                                dismissJob = coroutineScope.launch {
+                                    val snackbarResult = snackbarHostState.showSnackbar(
+                                        message = context.getString(
+                                            R.string.removed_song_from_playlist,
+                                            currentItem.song.song.title
+                                        ),
+                                        actionLabel = context.getString(R.string.undo),
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    if (snackbarResult == SnackbarResult.ActionPerformed) {
+                                        database.transaction {
+                                            insert(currentItem.map.copy(position = playlistLength))
+                                            move(
+                                                currentItem.map.playlistId,
+                                                playlistLength,
+                                                currentItem.map.position
                                             )
                                         }
                                     }
-                                },
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .combinedClickable(
+                                }
+                            }
+
+                            val dismissBoxState =
+                                rememberSwipeToDismissBoxState(
+                                    positionalThreshold = { totalDistance ->
+                                        totalDistance
+                                    },
+                                    confirmValueChange = { dismissValue ->
+                                        if (dismissValue == SwipeToDismissBoxValue.StartToEnd ||
+                                            dismissValue == SwipeToDismissBoxValue.EndToStart
+                                        ) {
+                                            deleteFromPlaylist()
+                                        }
+                                        true
+                                    },
+                                )
+
+                            val content: @Composable () -> Unit = {
+                                SongListItem(
+                                    song = song.song,
+                                    isActive = song.song.id == mediaMetadata?.id,
+                                    isPlaying = isPlaying,
+                                    showInLibraryIcon = true,
+                                    trailingContent = {
+                                        IconButton(
                                             onClick = {
-                                                if (song.song.id == mediaMetadata?.id) {
-                                                    playerConnection.player.togglePlayPause()
-                                                } else {
-                                                    playerConnection.playQueue(
-                                                        ListQueue(
-                                                            title = playlist!!.playlist.name,
-                                                            items = songs.map { it.song.toMediaItem() },
-                                                            startIndex = songs.indexOfFirst { it.map.id == song.map.id },
-                                                        ),
+                                                menuState.show {
+                                                    SongMenu(
+                                                        originalSong = song.song,
+                                                        playlistSong = song,
+                                                        playlistBrowseId = playlist?.playlist?.browseId,
+                                                        navController = navController,
+                                                        onDismiss = menuState::dismiss,
                                                     )
                                                 }
                                             },
-                                            onLongClick = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                if (!selection) {
-                                                    selection = true
-                                                }
-                                                wrappedSongs.forEach { it.isSelected = false }
-                                                wrappedSongs.find { it.item.map.id == song.map.id }?.isSelected =
-                                                    true
-                                            },
-                                        )
-                            )
-                        }
-
-                        if (locked || selection) {
-                            content()
-                        } else {
-                            SwipeToDismissBox(
-                                state = dismissBoxState,
-                                backgroundContent = {},
-                            ) {
-                                content()
-                            }
-                        }
-                    }
-                }
-            } else {
-                itemsIndexed(
-                    items = wrappedSongs,
-                    key = { _, song -> song.item.map.id },
-                ) { index, songWrapper ->
-                    ReorderableItem(
-                        reorderableState = reorderableState,
-                        key = songWrapper.item.map.id,
-                    ) {
-                        val currentItem by rememberUpdatedState(songWrapper.item)
-
-                        @SuppressLint("StringFormatInvalid")
-                        fun deleteFromPlaylist() {
-                            database.transaction {
-                                move(
-                                    currentItem.map.playlistId,
-                                    currentItem.map.position,
-                                    Int.MAX_VALUE
-                                )
-                                delete(currentItem.map.copy(position = Int.MAX_VALUE))
-                            }
-                            dismissJob?.cancel()
-                            dismissJob = coroutineScope.launch {
-                                val snackbarResult = snackbarHostState.showSnackbar(
-                                    message = context.getString(
-                                        R.string.removed_song_from_playlist,
-                                        currentItem.song.song.title
-                                    ),
-                                    actionLabel = context.getString(R.string.undo),
-                                    duration = SnackbarDuration.Short
-                                )
-                                if (snackbarResult == SnackbarResult.ActionPerformed) {
-                                    database.transaction {
-                                        insert(currentItem.map.copy(position = playlistLength))
-                                        move(
-                                            currentItem.map.playlistId,
-                                            playlistLength,
-                                            currentItem.map.position
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        val dismissBoxState =
-                            rememberSwipeToDismissBoxState(
-                                positionalThreshold = { totalDistance ->
-                                    totalDistance
-                                },
-                                confirmValueChange = { dismissValue ->
-                                    if (dismissValue == SwipeToDismissBoxValue.StartToEnd ||
-                                        dismissValue == SwipeToDismissBoxValue.EndToStart
-                                    ) {
-                                        deleteFromPlaylist()
-                                    }
-                                    true
-                                },
-                            )
-
-                        val content: @Composable () -> Unit = {
-                            SongListItem(
-                                song = songWrapper.item.song,
-                                isActive = songWrapper.item.song.id == mediaMetadata?.id,
-                                isPlaying = isPlaying,
-                                showInLibraryIcon = true,
-                                trailingContent = {
-                                    IconButton(
-                                        onClick = {
-                                            menuState.show {
-                                                SongMenu(
-                                                    originalSong = songWrapper.item.song,
-                                                    playlistBrowseId = playlist?.playlist?.browseId,
-                                                    navController = navController,
-                                                    onDismiss = menuState::dismiss,
-                                                )
-                                            }
-                                        },
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(R.drawable.more_vert),
-                                            contentDescription = null,
-                                        )
-                                    }
-                                    if (sortType == PlaylistSongSortType.CUSTOM && !locked && !selection && !isSearching) {
-                                        IconButton(
-                                            onClick = { },
-                                            modifier = Modifier.detectReorder(reorderableState),
                                         ) {
                                             Icon(
-                                                painter = painterResource(R.drawable.drag_handle),
+                                                painter = painterResource(R.drawable.more_vert),
                                                 contentDescription = null,
                                             )
                                         }
-                                    }
-                                },
-                                isSelected = songWrapper.isSelected && selection,
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .combinedClickable(
-                                            onClick = {
-                                                if (!selection) {
-                                                    if (songWrapper.item.song.id == mediaMetadata?.id) {
+
+                                        if (sortType == PlaylistSongSortType.CUSTOM && !locked && !selection && !isSearching) {
+                                            IconButton(
+                                                onClick = { },
+                                                modifier = Modifier.detectReorder(reorderableState),
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.drag_handle),
+                                                    contentDescription = null,
+                                                )
+                                            }
+                                        }
+                                    },
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .combinedClickable(
+                                                onClick = {
+                                                    if (song.song.id == mediaMetadata?.id) {
                                                         playerConnection.player.togglePlayPause()
                                                     } else {
                                                         playerConnection.playQueue(
                                                             ListQueue(
                                                                 title = playlist!!.playlist.name,
                                                                 items = songs.map { it.song.toMediaItem() },
-                                                                startIndex = index,
+                                                                startIndex = songs.indexOfFirst { it.map.id == song.map.id },
                                                             ),
                                                         )
                                                     }
-                                                } else {
-                                                    songWrapper.isSelected = !songWrapper.isSelected
-                                                }
-                                            },
-                                            onLongClick = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                if (!selection) {
-                                                    selection = true
-                                                }
-                                                wrappedSongs.forEach { it.isSelected = false }
-                                                songWrapper.isSelected = true
-                                            },
-                                        ),
-                            )
-                        }
+                                                },
+                                                onLongClick = {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    if (!selection) {
+                                                        selection = true
+                                                    }
+                                                    wrappedSongs.forEach { it.isSelected = false }
+                                                    wrappedSongs.find { it.item.map.id == song.map.id }?.isSelected =
+                                                        true
+                                                },
+                                            )
+                                )
+                            }
 
-                        if (locked || !editable) {
-                            content()
-                        } else {
-                            SwipeToDismissBox(
-                                state = dismissBoxState,
-                                backgroundContent = {},
-                            ) {
+                            if (locked || selection) {
                                 content()
+                            } else {
+                                SwipeToDismissBox(
+                                    state = dismissBoxState,
+                                    backgroundContent = {},
+                                ) {
+                                    content()
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    itemsIndexed(
+                        items = wrappedSongs,
+                        key = { _, song -> song.item.map.id },
+                    ) { index, songWrapper ->
+                        ReorderableItem(
+                            reorderableState = reorderableState,
+                            key = songWrapper.item.map.id,
+                        ) {
+                            val currentItem by rememberUpdatedState(songWrapper.item)
+
+                            @SuppressLint("StringFormatInvalid")
+                            fun deleteFromPlaylist() {
+                                database.transaction {
+                                    move(
+                                        currentItem.map.playlistId,
+                                        currentItem.map.position,
+                                        Int.MAX_VALUE
+                                    )
+                                    delete(currentItem.map.copy(position = Int.MAX_VALUE))
+                                }
+                                dismissJob?.cancel()
+                                dismissJob = coroutineScope.launch {
+                                    val snackbarResult = snackbarHostState.showSnackbar(
+                                        message = context.getString(
+                                            R.string.removed_song_from_playlist,
+                                            currentItem.song.song.title
+                                        ),
+                                        actionLabel = context.getString(R.string.undo),
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    if (snackbarResult == SnackbarResult.ActionPerformed) {
+                                        database.transaction {
+                                            insert(currentItem.map.copy(position = playlistLength))
+                                            move(
+                                                currentItem.map.playlistId,
+                                                playlistLength,
+                                                currentItem.map.position
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            val dismissBoxState =
+                                rememberSwipeToDismissBoxState(
+                                    positionalThreshold = { totalDistance ->
+                                        totalDistance
+                                    },
+                                    confirmValueChange = { dismissValue ->
+                                        if (dismissValue == SwipeToDismissBoxValue.StartToEnd ||
+                                            dismissValue == SwipeToDismissBoxValue.EndToStart
+                                        ) {
+                                            deleteFromPlaylist()
+                                        }
+                                        true
+                                    },
+                                )
+
+                            val content: @Composable () -> Unit = {
+                                SongListItem(
+                                    song = songWrapper.item.song,
+                                    isActive = songWrapper.item.song.id == mediaMetadata?.id,
+                                    isPlaying = isPlaying,
+                                    showInLibraryIcon = true,
+                                    trailingContent = {
+                                        IconButton(
+                                            onClick = {
+                                                menuState.show {
+                                                    SongMenu(
+                                                        originalSong = songWrapper.item.song,
+                                                        playlistBrowseId = playlist?.playlist?.browseId,
+                                                        navController = navController,
+                                                        onDismiss = menuState::dismiss,
+                                                    )
+                                                }
+                                            },
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(R.drawable.more_vert),
+                                                contentDescription = null,
+                                            )
+                                        }
+                                        if (sortType == PlaylistSongSortType.CUSTOM && !locked && !selection && !isSearching) {
+                                            IconButton(
+                                                onClick = { },
+                                                modifier = Modifier.detectReorder(reorderableState),
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(R.drawable.drag_handle),
+                                                    contentDescription = null,
+                                                )
+                                            }
+                                        }
+                                    },
+                                    isSelected = songWrapper.isSelected && selection,
+                                    modifier =
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .combinedClickable(
+                                                onClick = {
+                                                    if (!selection) {
+                                                        if (songWrapper.item.song.id == mediaMetadata?.id) {
+                                                            playerConnection.player.togglePlayPause()
+                                                        } else {
+                                                            playerConnection.playQueue(
+                                                                ListQueue(
+                                                                    title = playlist!!.playlist.name,
+                                                                    items = songs.map { it.song.toMediaItem() },
+                                                                    startIndex = index,
+                                                                ),
+                                                            )
+                                                        }
+                                                    } else {
+                                                        songWrapper.isSelected = !songWrapper.isSelected
+                                                    }
+                                                },
+                                                onLongClick = {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    if (!selection) {
+                                                        selection = true
+                                                    }
+                                                    wrappedSongs.forEach { it.isSelected = false }
+                                                    songWrapper.isSelected = true
+                                                },
+                                            ),
+                                )
+                            }
+
+                            if (locked || !editable) {
+                                content()
+                            } else {
+                                SwipeToDismissBox(
+                                    state = dismissBoxState,
+                                    backgroundContent = {},
+                                ) {
+                                    content()
+                                }
                             }
                         }
                     }
