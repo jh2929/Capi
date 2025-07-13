@@ -521,4 +521,6 @@
     <string name="widget_title">Music Widget</string>
     <string name="error_saving_image">Error saving image</string>
     <string name="processing">Processing</string>
+    <string name="subscribed">Subscribed</string>
+    <string name="subscribe">Subscribe</string>
 </resources>

@@ -27,6 +27,7 @@ class ArtistViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
     val librarySongs = database.artistSongsPreview(artistId)
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     init {
         fetchArtistsFromYTM()
@@ -35,8 +36,12 @@ class ArtistViewModel @Inject constructor(
     fun fetchArtistsFromYTM() {
         viewModelScope.launch {
             YouTube.artist(artistId)
-                .onSuccess {
-                    artistPage = it
+                .onSuccess { page ->
+                    val filteredSections = page.sections.filterNot { section ->
+                        section.title.equals("From your library", ignoreCase = true)
+                    }
+
+                    artistPage = page.copy(sections = filteredSections)
                 }.onFailure {
                     reportException(it)
                 }
