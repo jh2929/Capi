@@ -150,7 +150,7 @@ object YouTube {
         SearchResult(
             items = response.contents?.tabbedSearchResultsRenderer?.tabs?.firstOrNull()
                 ?.tabRenderer?.content?.sectionListRenderer?.contents?.lastOrNull()
-                ?.musicShelfRenderer?.continuations?.getItems()?.mapNotNull {
+                ?.musicShelfRenderer?.contents?.getItems()?.mapNotNull {
                     SearchPage.toYTItem(it)
                 }.orEmpty(),
             continuation = response.contents?.tabbedSearchResultsRenderer?.tabs?.firstOrNull()
@@ -201,32 +201,32 @@ object YouTube {
             var response = innerTube.browse(WEB_REMIX, query).body<BrowseResponse>()
             var songs: List<SongItem>  = mutableListOf();
             var continuation: String? = ""
-                songs = response.contents?.twoColumnBrowseResultsRenderer
-                    ?.secondaryContents
-                    ?.sectionListRenderer
-                    ?.contents
-                    ?.firstOrNull()
-                    ?.musicPlaylistShelfRenderer
-                    ?.contents
-                    ?.getItems()
-                    ?.mapNotNull {
-                        AlbumPage.fromMusicResponsiveListItemRenderer(it)
-                    }!!
-                    .toMutableList()
-                continuation = response.contents?.twoColumnBrowseResultsRenderer?.secondaryContents?.sectionListRenderer
-                    ?.contents?.firstOrNull()?.musicPlaylistShelfRenderer?.contents?.getContinuation()
-                while (continuation != null) {
-                    response = innerTube.browse(
-                        client = WEB_REMIX,
-                        continuation = continuation,
-                    ).body<BrowseResponse>()
-                    songs += response.continuationContents?.musicPlaylistShelfContinuation?.contents?.getItems()?.mapNotNull {
-                        AlbumPage.fromMusicResponsiveListItemRenderer(it)
-                    }.orEmpty()
-                    continuation = response.continuationContents?.musicPlaylistShelfContinuation?.continuations?.getContinuation()
-                }
-        songs
-    }
+            songs = response.contents?.twoColumnBrowseResultsRenderer
+                ?.secondaryContents
+                ?.sectionListRenderer
+                ?.contents
+                ?.firstOrNull()
+                ?.musicPlaylistShelfRenderer
+                ?.contents
+                ?.getItems()
+                ?.mapNotNull {
+                    AlbumPage.fromMusicResponsiveListItemRenderer(it)
+                }!!
+                .toMutableList()
+            continuation = response.contents?.twoColumnBrowseResultsRenderer?.secondaryContents?.sectionListRenderer
+                ?.contents?.firstOrNull()?.musicPlaylistShelfRenderer?.contents?.getContinuation()
+            while (continuation != null) {
+                response = innerTube.browse(
+                    client = WEB_REMIX,
+                    continuation = continuation,
+                ).body<BrowseResponse>()
+                songs += response.continuationContents?.musicPlaylistShelfContinuation?.contents?.getItems()?.mapNotNull {
+                    AlbumPage.fromMusicResponsiveListItemRenderer(it)
+                }.orEmpty()
+                continuation = response.continuationContents?.musicPlaylistShelfContinuation?.continuations?.getContinuation()
+            }
+            songs
+        }
 
     suspend fun artist(browseId: String): Result<ArtistPage> =
         runCatching {
@@ -275,8 +275,8 @@ object YouTube {
             ArtistItemsPage(
                 title = response.header?.musicHeaderRenderer?.title?.runs?.firstOrNull()?.text!!,
                 items = musicPlaylistShelfRenderer?.contents?.getItems()?.mapNotNull {
-                        ArtistItemsPage.fromMusicResponsiveListItemRenderer(it)
-                    }!!,
+                    ArtistItemsPage.fromMusicResponsiveListItemRenderer(it)
+                }!!,
                 continuation = musicPlaylistShelfRenderer.contents.getContinuation()
             )
         }
