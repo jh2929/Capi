@@ -50,10 +50,10 @@
     <string name="filter_albums">Álbuns</string>
     <string name="filter_artists">Artistas</string>
     <string name="filter_playlists">Playlists</string>
-    <string name="filter_community_playlists">Playlists da comunidad</string>
+    <string name="filter_community_playlists">Playlists da comunidade</string>
     <string name="filter_featured_playlists">Playlists em destaque</string>
     <string name="filter_bookmarked">nos marcadores</string>
-    <string name="no_results_found">Nenhum resultado foi encontrado</string>
+    <string name="no_results_found">Nenhum resultado encontrado</string>
 
     <!-- Artist screen -->
     <string name="from_your_library">Da sua biblioteca</string>
@@ -77,7 +77,7 @@
     <string name="edit">Editar</string>
     <string name="start_radio">Começar rádio</string>
     <string name="play">Reproduzir</string>
-    <string name="play_next">Reproduzir a seguinte</string>
+    <string name="play_next">Reproduzir a seguir</string>
     <string name="add_to_queue">Adicionar à fila</string>
     <string name="add_to_library">Adicionar à biblioteca</string>
     <string name="remove_from_library">Remover da biblioteca</string>
@@ -89,7 +89,7 @@
     <string name="add_to_playlist">Agregar à playlist</string>
     <string name="view_artist">Ver artista</string>
     <string name="view_album">Ver álbum</string>
-    <string name="refetch">carregar de novo</string>
+    <string name="refetch">Recarregar</string>
     <string name="share">Compartilhar</string>
     <string name="delete">Apagar</string>
     <string name="remove_from_history">Remover do histórico</string>
@@ -201,9 +201,9 @@
     <string name="error_unknown">Erro desconhecido</string>
 
     <!-- Player action -->
-    <string name="seek_forward">5 segundos para frente</string>
+    <string name="seek_forward">Avançar 5 segundos</string>
     <string name="action_like">Curtir</string>
-    <string name="action_remove_like">Remover like</string>
+    <string name="action_remove_like">Remover curtido</string>
     <string name="action_shuffle_on">Aleatório ativado</string>
     <string name="action_shuffle_off">Aleatório desativado</string>
     <string name="repeat_mode_off">Modo de repetição desativado</string>
@@ -252,7 +252,7 @@
     <string name="enable_proxy">Habilitar proxy</string>
     <string name="proxy_type">Tipo de proxy</string>
     <string name="proxy_url">URL do proxy</string>
-    <string name="last_song_listened">Basado na última música tocada</string>
+    <string name="last_song_listened">Baseado na última música tocada</string>
     <string name="restart_to_take_effect">Reiniciar para aplicar as alterações</string>
 
     <string name="set_first_lyrics_provider">Provedor de letras preferido</string>
@@ -270,7 +270,7 @@
     <string name="stop_music_on_task_clear">Parar música ao fechar o app na visão de tarefas</string>
     <string name="equalizer">Equalizador</string>
 
-    <string name="storage">Armazenamentp</string>
+    <string name="storage">Armazenamento</string>
     <string name="cache">Cache</string>
     <string name="image_cache">Cache de imagens</string>
     <string name="song_cache">Cache de músicas</string>
@@ -279,7 +279,7 @@
     <string name="clear_all_downloads">Apagar todos os downloads</string>
     <string name="max_image_cache_size">Tamanho máximo do cache de imagens</string>
     <string name="clear_image_cache">Apagar o cache de imagens</string>
-    <string name="max_song_cache_size">Tamaño máximo do cache de músicas</string>
+    <string name="max_song_cache_size">Tamanho máximo do cache de músicas</string>
     <string name="clear_song_cache">Apagar o cache de músicas</string>
     <string name="size_used">%s usado</string>
 
@@ -287,10 +287,10 @@
     <string name="search_history">Histórico de busca</string>
     <string name="pause_listen_history">Pausar histórico de músicas escutadas</string>
     <string name="clear_listen_history">Apagar histórico de músicas escutadas</string>
-    <string name="clear_listen_history_confirm">Certeza que quer apagar todo o histórico de músicas escutadas?</string>
+    <string name="clear_listen_history_confirm">Tem certeza de que quer apagar todo o histórico de músicas escutadas?</string>
     <string name="pause_search_history">Pausar histórico de buscas</string>
     <string name="clear_search_history">Apagar histórico de buscas</string>
-    <string name="clear_search_history_confirm">Certeza que quer apagar todo o histórico de buscas?</string>
+    <string name="clear_search_history_confirm">tem certeza de que quer apagar todo o histórico de buscas?</string>
     <string name="intent_supported_links_not_found">Não foi encontrado links compatíveis, por favor configure manualmente.</string>
     <string name="enable_kugou">Habilitar o proveedor de letras KuGou</string>
 
@@ -373,7 +373,7 @@
     <string name="enable_similar_content">Habilitar conteúdo similar</string>
     <string name="auto_skip_next_on_error">Pular automaticamente para a próxima música quando ocorrer um erro</string>
     <string name="auto_skip_next_on_error_desc">Garante uma experiência contínua de reprodução</string>
-    <string name="listen_history">Histórico de audição</string>
+    <string name="listen_history">Histórico de reprodução</string>
     <string name="disable_screenshot">Desativar captura de tela</string>
     <string name="disable_screenshot_desc">Quando essa opção estiver ativada, as capturas de tela e a visualização do aplicativo nos recentes serão desativadas.</string>
     <string name="discord_integration">Integração com Discord</string>
@@ -485,13 +485,13 @@
 
     <string name="visitor_data_info_title">O que é visitor_data?</string>
     <string name="visitor_data_info_intro">Visitor_data é um identificador usado pelo YouTube para rastrear sua sessão. Quando está corrompido, pode causar:</string>
-    <string name="visitor_data_info_problems">• Erros de conectividade \ n • Problemas carregando conteúdo \ n • falhas de pesquisa \ n • interrupções de reprodução</string>
+    <string name="visitor_data_info_problems">• Erros de conectividade \n • Problemas carregando conteúdo \n • falhas de pesquisa \n • interrupções de reprodução</string>
     <string name="visitor_data_info_solution">A redefinição do Visitor_Data gera um novo identificador e geralmente resolve esses problemas.</string>
     <string name="visitor_data_info_note">Isso funciona para usuários e usuários anônimos que se conectaram.</string>
     <string name="visitor_data_info_confirm">Entendi</string>
 
     <string name="visitor_data_reset_title">Redefinir visitor_data</string>
-    <string name="visitor_data_reset_message">Tem certeza de que deseja redefinir visitor_data? Isso gerará um novo identificador para o YouTube e poderá corrigir problemas de conectividade. \ N \ n O aplicativo reiniciará automaticamente.</string>
+    <string name="visitor_data_reset_message">Tem certeza de que deseja redefinir visitor_data? Isso gerará um novo identificador para o YouTube e poderá corrigir problemas de conectividade. \n \n O aplicativo reiniciará automaticamente.</string>
     <string name="visitor_data_reset_confirm">Reiniciar</string>
     <string name="visitor_data_reset_cancel">Cancelar</string>
 
