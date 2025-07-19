@@ -1109,10 +1109,8 @@ fun BottomSheetPlayer(
                         val thumbnailSize = (screenWidth * 0.4).dp
                         Thumbnail(
                             sliderPositionProvider = { sliderPosition },
-                            modifier = Modifier.size(thumbnailSize),
-                            color = TextBackgroundColor,
-
-                            )
+                            modifier = Modifier.size(thumbnailSize)
+                        )
                     }
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1147,7 +1145,6 @@ fun BottomSheetPlayer(
                         Thumbnail(
                             sliderPositionProvider = { sliderPosition },
                             modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
-                            color = TextBackgroundColor,
                         )
                     }
 

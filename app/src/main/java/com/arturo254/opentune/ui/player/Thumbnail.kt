@@ -48,7 +48,7 @@ fun Thumbnail(
     sliderPositionProvider: () -> Long?,
     modifier: Modifier = Modifier,
     changeColor: Boolean = false,
-    color: Color,
+
 ) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentView = LocalView.current
