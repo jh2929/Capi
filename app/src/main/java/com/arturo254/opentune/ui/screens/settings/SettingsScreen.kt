@@ -692,7 +692,7 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = accountName.replace("@", "").takeIf { it.isNotBlank() } ?: "Usuario",
+                    text = accountName.replace("@", "").takeIf { it.isNotBlank() } ?: "",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,

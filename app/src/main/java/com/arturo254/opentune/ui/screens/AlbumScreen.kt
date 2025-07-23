@@ -3,6 +3,7 @@ package com.arturo254.opentune.ui.screens
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
+import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
@@ -106,6 +107,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.IOException
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import android.util.Log
+import androidx.compose.material3.TopAppBarDefaults
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -580,83 +590,138 @@ fun AlbumScreen(
         }
     }
 
-    TopAppBar(
-        title = {
-            if (selection) {
-                val count = wrappedSongs?.count { it.isSelected } ?: 0
-                Text(
-                    text = pluralStringResource(R.plurals.n_song, count, count),
-                    style = MaterialTheme.typography.titleLarge
-                )
-            } else {
-                Text(
-                    text = albumWithSongs?.album?.title.orEmpty(),
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+    Box(modifier = Modifier.fillMaxWidth()) {
+        // Capa base con color de fondo siempre visible
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(MaterialTheme.colorScheme.surface)
+        )
+
+        // Solo mostrar blur si el dispositivo es Android 12+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val playerConnection = LocalPlayerConnection.current
+
+            playerConnection?.let { connection ->
+                val mediaMetadata by connection.mediaMetadata.collectAsState()
+
+                mediaMetadata?.thumbnailUrl?.let { imageUrl ->
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.FillBounds,
+                        modifier = Modifier
+                            .matchParentSize()
+                            .blur(35.dp)
+                            .alpha(0.6f)
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Black.copy(alpha = 0.5f),
+                                            Color.Transparent
+                                        ),
+                                        startY = 0f,
+                                        endY = size.height * 0.6f
+                                    ),
+                                    blendMode = BlendMode.DstIn
+                                )
+                            },
+                        onError = { error ->
+                            Log.w(
+                                "AlbumPlayerBackground",
+                                "Error loading album background image: ${error.result.throwable?.message}"
+                            )
+                        }
+                    )
+                }
             }
-        },
-        navigationIcon = {
-            IconButton(
-                onClick = {
-                    if (selection) {
-                        selection = false
-                    } else {
-                        navController.navigateUp()
-                    }
-                },
-            ) {
-                Icon(
-                    painter = painterResource(
-                        if (selection) R.drawable.close else R.drawable.arrow_back
-                    ),
-                    contentDescription = null
-                )
-            }
-        },
-        actions = {
-            if (selection) {
-                val count = wrappedSongs?.count { it.isSelected } ?: 0
+        }
+
+        TopAppBar(
+            title = {
+                if (selection) {
+                    val count = wrappedSongs?.count { it.isSelected } ?: 0
+                    Text(
+                        text = pluralStringResource(R.plurals.n_song, count, count),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                } else {
+                    Text(
+                        text = albumWithSongs?.album?.title.orEmpty(),
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            },
+            navigationIcon = {
                 IconButton(
                     onClick = {
-                        if (count == wrappedSongs?.size) {
-                            wrappedSongs.forEach { it.isSelected = false }
+                        if (selection) {
+                            selection = false
                         } else {
-                            wrappedSongs?.forEach { it.isSelected = true }
+                            navController.navigateUp()
                         }
-                    },
+                    }
                 ) {
                     Icon(
                         painter = painterResource(
-                            if (count == wrappedSongs?.size) R.drawable.deselect else R.drawable.select_all
+                            if (selection) R.drawable.close else R.drawable.arrow_back
                         ),
                         contentDescription = null
                     )
                 }
+            },
+            actions = {
+                if (selection) {
+                    val count = wrappedSongs?.count { it.isSelected } ?: 0
 
-                IconButton(
-                    onClick = {
-                        menuState.show {
-                            SelectionSongMenu(
-                                songSelection = wrappedSongs?.filter { it.isSelected }!!
-                                    .map { it.item },
-                                onDismiss = menuState::dismiss,
-                                clearAction = { selection = false }
-                            )
+                    IconButton(
+                        onClick = {
+                            if (count == wrappedSongs?.size) {
+                                wrappedSongs.forEach { it.isSelected = false }
+                            } else {
+                                wrappedSongs?.forEach { it.isSelected = true }
+                            }
                         }
-                    },
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.more_vert),
-                        contentDescription = null
-                    )
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                if (count == wrappedSongs?.size) R.drawable.deselect else R.drawable.select_all
+                            ),
+                            contentDescription = null
+                        )
+                    }
+
+                    IconButton(
+                        onClick = {
+                            menuState.show {
+                                SelectionSongMenu(
+                                    songSelection = wrappedSongs?.filter { it.isSelected }!!
+                                        .map { it.item },
+                                    onDismiss = menuState::dismiss,
+                                    clearAction = { selection = false }
+                                )
+                            }
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.more_vert),
+                            contentDescription = null
+                        )
+                    }
                 }
-            } else {
-            }
-        }
-    )
+            },
+            scrollBehavior = scrollBehavior,
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent
+            )
+        )
+    }
 }
+
 
 suspend fun saveAlbumImageToGallery(context: Context, imageUrl: String, albumTitle: String) {
     try {

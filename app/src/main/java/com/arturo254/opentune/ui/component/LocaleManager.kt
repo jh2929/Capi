@@ -21,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.core.os.ConfigurationCompat
 import androidx.core.os.LocaleListCompat
 import com.arturo254.opentune.R
@@ -409,7 +410,7 @@ fun LanguagePreference() {
     val (selectedLanguage, changeLanguage) = rememberLanguageState()
 
     ListPreference(
-        title = { Text("Idioma de la aplicación") },
+        title = { Text(stringResource(R.string.language)) },
         icon = { Icon(painterResource(R.drawable.translate), null) },
         selectedValue = selectedLanguage,
         values = availableLanguages.keys.toList(),

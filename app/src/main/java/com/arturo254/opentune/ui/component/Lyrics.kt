@@ -1321,7 +1321,7 @@ fun Lyrics(
                             )
                         ) {
                             Icon(
-                               painterResource(R.drawable.share),
+                                painterResource(R.drawable.share),
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )

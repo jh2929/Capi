@@ -103,6 +103,9 @@ val QuickPicksKey = stringPreferencesKey("discover")
 val PreferredLyricsProviderKey = stringPreferencesKey("lyricsProvider")
 val QueueEditLockKey = booleanPreferencesKey("queueEditLock")
 
+val LyricFontSizeKey = intPreferencesKey("lyricFontSize")
+val fullScreenLyricsKey = booleanPreferencesKey("fullScreenLyrics")
+
 enum class LibraryViewType {
     LIST,
     GRID,
@@ -288,6 +291,7 @@ enum class SearchSource {
 
 val VisitorDataKey = stringPreferencesKey("visitorData")
 val DataSyncIdKey = stringPreferencesKey("dataSyncId")
+val AccountPhotoUrlKey = stringPreferencesKey("account_photo_url")
 val InnerTubeCookieKey = stringPreferencesKey("innerTubeCookie")
 val AccountNameKey = stringPreferencesKey("accountName")
 val AccountEmailKey = stringPreferencesKey("accountEmail")

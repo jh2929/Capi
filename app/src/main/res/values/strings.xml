@@ -523,4 +523,5 @@
     <string name="processing">Processing</string>
     <string name="subscribed">Subscribed</string>
     <string name="subscribe">Subscribe</string>
+    <string name="language">Application language</string>
 </resources>
