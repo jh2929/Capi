@@ -32,7 +32,7 @@ class ArtistViewModel @Inject constructor(
         fetchArtistsFromYTM()
     }
 
-    fun fetchArtistsFromYTM() {
+    private fun fetchArtistsFromYTM() {
         viewModelScope.launch {
             YouTube.artist(artistId)
                 .onSuccess {
