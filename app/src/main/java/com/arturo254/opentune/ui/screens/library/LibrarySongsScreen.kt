@@ -5,13 +5,10 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -27,7 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,7 +39,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import com.arturo254.opentune.LocalDatabase
 import com.arturo254.opentune.LocalPlayerAwareWindowInsets
 import com.arturo254.opentune.LocalPlayerConnection
 import com.arturo254.opentune.R
@@ -55,8 +50,6 @@ import com.arturo254.opentune.constants.SongSortDescendingKey
 import com.arturo254.opentune.constants.SongSortType
 import com.arturo254.opentune.constants.SongSortTypeKey
 import com.arturo254.opentune.constants.YtmSyncKey
-import com.arturo254.opentune.db.entities.Song
-import com.arturo254.opentune.extensions.move
 import com.arturo254.opentune.extensions.toMediaItem
 import com.arturo254.opentune.extensions.togglePlayPause
 import com.arturo254.opentune.playback.queues.ListQueue
@@ -65,14 +58,12 @@ import com.arturo254.opentune.ui.component.HideOnScrollFAB
 import com.arturo254.opentune.ui.component.LocalMenuState
 import com.arturo254.opentune.ui.component.SongListItem
 import com.arturo254.opentune.ui.component.SortHeader
-import com.arturo254.opentune.ui.component.VerticalFastScroller
 import com.arturo254.opentune.ui.menu.SelectionSongMenu
 import com.arturo254.opentune.ui.menu.SongMenu
 import com.arturo254.opentune.ui.utils.ItemWrapper
 import com.arturo254.opentune.utils.rememberEnumPreference
 import com.arturo254.opentune.utils.rememberPreference
 import com.arturo254.opentune.viewmodels.LibrarySongsViewModel
-import org.burnoutcrew.reorderable.rememberReorderableLazyListState
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -87,11 +78,6 @@ fun LibrarySongsScreen(
     val playerConnection = LocalPlayerConnection.current ?: return
     val isPlaying by playerConnection.isPlaying.collectAsState()
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
-
-    val mutableSongs =
-        remember {
-            mutableStateListOf<Song>()
-        }
 
     val (sortType, onSortTypeChange) = rememberEnumPreference(
         SongSortTypeKey,
@@ -133,22 +119,9 @@ fun LibrarySongsScreen(
         }
     }
 
-
-
-
-
-    val contentPadding = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime)
-        .asPaddingValues()
-
-
     Box(
         modifier = Modifier.fillMaxSize(),
     ) {
-        VerticalFastScroller(
-            listState = lazyListState,
-            topContentPadding = contentPadding.calculateTopPadding(),
-            endContentPadding = 0.dp
-        ) {
         LazyColumn(
             state = lazyListState,
             contentPadding = LocalPlayerAwareWindowInsets.current.asPaddingValues(),
@@ -343,8 +316,6 @@ fun LibrarySongsScreen(
                 )
             }
         }
-        }
-
 
         HideOnScrollFAB(
             visible = songs.isNotEmpty() == true,
