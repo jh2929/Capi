@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -393,14 +394,52 @@ fun ArtistScreen(
                                                                     ),
                                                                 )
 
-                                                            is AlbumItem -> navController.navigate("album/${item.id}")
-                                                            is ArtistItem -> navController.navigate(
-                                                                "artist/${item.id}"
-                                                            )
+                                                            is AlbumItem -> {
+                                                                try {
+                                                                    // Validar que el ID no esté vacío o nulo
+                                                                    if (item.id.isNotEmpty()) {
+                                                                        navController.navigate("album/${item.id}")
+                                                                    } else {
+                                                                        Log.w("ArtistScreen", "Album ID is empty")
+                                                                        Toast.makeText(
+                                                                            context,
+                                                                            "Error: Invalid album ID",
+                                                                            Toast.LENGTH_SHORT
+                                                                        ).show()
+                                                                    }
+                                                                } catch (e: Exception) {
+                                                                    Log.e("ArtistScreen", "Navigation error to album: ${item.id}", e)
+                                                                    Toast.makeText(
+                                                                        context,
+                                                                        "Navigation error",
+                                                                        Toast.LENGTH_SHORT
+                                                                    ).show()
+                                                                }
+                                                            }
 
-                                                            is PlaylistItem -> navController.navigate(
-                                                                "online_playlist/${item.id}"
-                                                            )
+                                                            is ArtistItem -> {
+                                                                try {
+                                                                    if (item.id.isNotEmpty()) {
+                                                                        navController.navigate("artist/${item.id}")
+                                                                    } else {
+                                                                        Log.w("ArtistScreen", "Artist ID is empty")
+                                                                    }
+                                                                } catch (e: Exception) {
+                                                                    Log.e("ArtistScreen", "Navigation error to artist: ${item.id}", e)
+                                                                }
+                                                            }
+
+                                                            is PlaylistItem -> {
+                                                                try {
+                                                                    if (item.id.isNotEmpty()) {
+                                                                        navController.navigate("online_playlist/${item.id}")
+                                                                    } else {
+                                                                        Log.w("ArtistScreen", "Playlist ID is empty")
+                                                                    }
+                                                                } catch (e: Exception) {
+                                                                    Log.e("ArtistScreen", "Navigation error to playlist: ${item.id}", e)
+                                                                }
+                                                            }
                                                         }
                                                     },
                                                     onLongClick = {
