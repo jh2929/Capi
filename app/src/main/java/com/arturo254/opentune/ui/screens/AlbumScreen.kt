@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -38,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,7 +51,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -215,7 +223,6 @@ fun AlbumScreen(
                                 )
                             }
                         }
-
 
                         Spacer(Modifier.width(16.dp))
 
@@ -580,82 +587,141 @@ fun AlbumScreen(
         }
     }
 
-    TopAppBar(
-        title = {
-            if (selection) {
-                val count = wrappedSongs?.count { it.isSelected } ?: 0
-                Text(
-                    text = pluralStringResource(R.plurals.n_song, count, count),
-                    style = MaterialTheme.typography.titleLarge
-                )
-            } else {
-                Text(
-                    text = albumWithSongs?.album?.title.orEmpty(),
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        },
-        navigationIcon = {
-            IconButton(
-                onClick = {
-                    if (selection) {
-                        selection = false
-                    } else {
-                        navController.navigateUp()
-                    }
+    // TopAppBar con blur completo del álbum actual (siempre visible)
+    Box(modifier = Modifier.fillMaxWidth()) {
+        // Capa base con color de fondo siempre visible
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp) // Altura fija para evitar dimensiones negativas
+                .background(MaterialTheme.colorScheme.surface)
+        )
+
+        // Mostrar blur del álbum SIEMPRE (no depende del reproductor)
+        albumWithSongs?.album?.thumbnailUrl?.let { imageUrl ->
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp) // Misma altura que el container
+                    .blur(35.dp)
+                    .alpha(0.6f)
+                    .drawWithContent {
+                        // Validación de seguridad antes de dibujar
+                        if (size.width > 0 && size.height > 0) {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Black.copy(alpha = 0.5f),
+                                        Color.Transparent
+                                    ),
+                                    startY = 0f,
+                                    endY = size.height * 0.6f
+                                ),
+                                blendMode = BlendMode.DstIn
+                            )
+                        }
+                    },
+                onError = { error ->
+                    Log.w("AlbumBackground", "Error loading album background: ${error.result.throwable?.message}")
                 },
-            ) {
-                Icon(
-                    painter = painterResource(
-                        if (selection) R.drawable.close else R.drawable.arrow_back
-                    ),
-                    contentDescription = null
-                )
-            }
-        },
-        actions = {
-            if (selection) {
-                val count = wrappedSongs?.count { it.isSelected } ?: 0
+                onSuccess = {
+                    Log.d("AlbumBackground", "Album blur background loaded successfully")
+                }
+            )
+        }
+
+        TopAppBar(
+            title = {
+                if (selection) {
+                    val count = wrappedSongs?.count { it.isSelected } ?: 0
+                    Text(
+                        text = pluralStringResource(R.plurals.n_song, count, count),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                } else {
+                    Text(
+                        text = albumWithSongs?.album?.title.orEmpty(),
+                        style = MaterialTheme.typography.titleLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            },
+            navigationIcon = {
                 IconButton(
                     onClick = {
-                        if (count == wrappedSongs?.size) {
-                            wrappedSongs.forEach { it.isSelected = false }
+                        if (selection) {
+                            selection = false
                         } else {
-                            wrappedSongs?.forEach { it.isSelected = true }
+                            navController.navigateUp()
                         }
                     },
                 ) {
                     Icon(
                         painter = painterResource(
-                            if (count == wrappedSongs?.size) R.drawable.deselect else R.drawable.select_all
+                            if (selection) R.drawable.close else R.drawable.arrow_back
                         ),
-                        contentDescription = null
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
+            },
+            actions = {
+                if (selection) {
+                    val count = wrappedSongs?.count { it.isSelected } ?: 0
+                    IconButton(
+                        onClick = {
+                            if (count == wrappedSongs?.size) {
+                                wrappedSongs.forEach { it.isSelected = false }
+                            } else {
+                                wrappedSongs?.forEach { it.isSelected = true }
+                            }
+                        },
+                    ) {
+                        Icon(
+                            painter = painterResource(
+                                if (count == wrappedSongs?.size) R.drawable.deselect else R.drawable.select_all
+                            ),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
 
-                IconButton(
-                    onClick = {
-                        menuState.show {
-                            SelectionSongMenu(
-                                songSelection = wrappedSongs?.filter { it.isSelected }!!
-                                    .map { it.item },
-                                onDismiss = menuState::dismiss,
-                                clearAction = { selection = false }
-                            )
-                        }
-                    },
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.more_vert),
-                        contentDescription = null
-                    )
+                    IconButton(
+                        onClick = {
+                            menuState.show {
+                                SelectionSongMenu(
+                                    songSelection = wrappedSongs?.filter { it.isSelected }!!
+                                        .map { it.item },
+                                    onDismiss = menuState::dismiss,
+                                    clearAction = { selection = false }
+                                )
+                            }
+                        },
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.more_vert),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
-            } else {
-            }
-        }
-    )
+            },
+            scrollBehavior = scrollBehavior,
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.Transparent,
+                titleContentColor = MaterialTheme.colorScheme.onSurface,
+                actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                navigationIconContentColor = MaterialTheme.colorScheme.onSurface
+            )
+        )
+    }
 }
 
 suspend fun saveAlbumImageToGallery(context: Context, imageUrl: String, albumTitle: String) {
@@ -673,7 +739,6 @@ suspend fun saveAlbumImageToGallery(context: Context, imageUrl: String, albumTit
             // Usar el título del álbum para el nombre del archivo
             val displayName = "${albumTitle.replace(" ", "_")}.png"
             val mimeType = "image/png" // Tipo MIME para PNG
-
 
             val contentValues = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, displayName)

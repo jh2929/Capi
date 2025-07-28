@@ -698,15 +698,6 @@ class MainActivity : ComponentActivity() {
                                     defaultValue = PlayerBackgroundStyle.DEFAULT
                                 )
 
-                                // Validación más segura para el background
-                                val safeSelectedValue = when {
-                                    playerBackground == PlayerBackgroundStyle.BLUR &&
-                                            Build.VERSION.SDK_INT < Build.VERSION_CODES.S -> {
-                                        PlayerBackgroundStyle.DEFAULT // Sin blur en versiones < Android 12 (S)
-                                    }
-                                    else -> playerBackground
-                                }
-
                                 if (shouldShowTopBar) {
                                     Box(modifier = Modifier.fillMaxWidth()) {
                                         // Capa base con color de fondo siempre visible
@@ -715,6 +706,15 @@ class MainActivity : ComponentActivity() {
                                                 .matchParentSize()
                                                 .background(MaterialTheme.colorScheme.surface)
                                         )
+
+                                        // Validación más segura para el background
+                                        val safeSelectedValue = when {
+                                            playerBackground == PlayerBackgroundStyle.BLUR &&
+                                                    Build.VERSION.SDK_INT < Build.VERSION_CODES.S -> {
+                                                PlayerBackgroundStyle.DEFAULT // Sin blur en versiones < Android 12 (S)
+                                            }
+                                            else -> playerBackground
+                                        }
 
                                         // Solo mostrar blur si safeSelectedValue es BLUR
                                         if (safeSelectedValue == PlayerBackgroundStyle.BLUR) {
