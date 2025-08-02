@@ -1,9 +1,12 @@
 package com.arturo254.opentune.ui.screens.settings
 
+import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -12,15 +15,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -37,6 +37,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -53,11 +54,11 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.arturo254.opentune.LocalPlayerAwareWindowInsets
 import com.arturo254.opentune.R
 import com.arturo254.opentune.ui.component.IconButton
 import com.arturo254.opentune.ui.utils.backToMain
@@ -72,11 +73,13 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import okio.BufferedSink
 import java.io.File
+import java.io.IOException
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+@SuppressLint("LogNotTimber")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackupAndRestore(
@@ -85,7 +88,6 @@ fun BackupAndRestore(
     viewModel: BackupRestoreViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
-
     val coroutineScope = rememberCoroutineScope()
     var uploadStatus by remember { mutableStateOf<UploadStatus?>(null) }
     var showVisitorDataDialog by remember { mutableStateOf(false) }
@@ -114,67 +116,78 @@ fun BackupAndRestore(
             }
         }
 
-    TopAppBar(
-        title = { Text(stringResource(R.string.backup_restore)) },
-        navigationIcon = {
-            IconButton(
-                onClick = navController::navigateUp,
-                onLongClick = navController::backToMain,
-            ) {
-                Icon(
-                    painterResource(R.drawable.arrow_back),
-                    contentDescription = null,
-                )
-            }
-        },
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        Spacer(
-            Modifier.windowInsetsPadding(
-                LocalPlayerAwareWindowInsets.current.only(
-                    WindowInsetsSides.Top
-                )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.backup_restore)) },
+                navigationIcon = {
+                    IconButton(
+                        onClick = {
+                            try {
+                                if (navController.previousBackStackEntry != null) {
+                                    navController.navigateUp()
+                                } else {
+                                    navController.popBackStack()
+                                }
+                            } catch (e: Exception) {
+                                Log.w("BackupRestore", "Error en navegación: ${e.message}")
+                                navController.popBackStack()
+                            }
+                        },
+                        onLongClick = navController::backToMain,
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.arrow_back),
+                            contentDescription = "Volver"
+                        )
+                    }
+                },
+                scrollBehavior = scrollBehavior
             )
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Sección de información
-        InfoSection()
-
-        // Sección de acciones principales
-        ActionSection(
-            onBackupClick = {
-                val formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
-                backupLauncher.launch(
-                    "${context.getString(R.string.app_name)}_${
-                        LocalDateTime.now().format(formatter)
-                    }.backup"
-                )
-            },
-            onRestoreClick = {
-                restoreLauncher.launch(arrayOf("application/octet-stream"))
-            }
-        )
-
-        // Nueva sección para gestión de VISITOR_DATA
-        VisitorDataSection(
-            onResetClick = { showVisitorDataResetDialog = true },
-            onInfoClick = { showVisitorDataDialog = true }
-        )
-
-        // Estado de carga
-        UploadStatusSection(uploadStatus) {
-            copyToClipboard(context, (uploadStatus as UploadStatus.Success).fileUrl)
         }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
 
-        Spacer(modifier = Modifier.height(24.dp))
+            // Sección de información
+            InfoSection()
+
+            // Sección de acciones principales
+            ActionSection(
+                isLoading = uploadStatus is UploadStatus.Uploading,
+                onBackupClick = {
+                    val formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
+                    backupLauncher.launch(
+                        "${context.getString(R.string.app_name)}_${
+                            LocalDateTime.now().format(formatter)
+                        }.backup"
+                    )
+                },
+                onRestoreClick = {
+                    restoreLauncher.launch(arrayOf("application/octet-stream"))
+                }
+            )
+
+            // Nueva sección para gestión de VISITOR_DATA
+            VisitorDataSection(
+                onResetClick = { showVisitorDataResetDialog = true },
+                onInfoClick = { showVisitorDataDialog = true }
+            )
+
+            // Estado de carga
+            UploadStatusSection(uploadStatus) {
+                copyToClipboard(context, (uploadStatus as UploadStatus.Success).fileUrl)
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+        }
     }
 
     // Diálogo de información sobre VISITOR_DATA
@@ -185,7 +198,6 @@ fun BackupAndRestore(
     }
 
     // Diálogo de confirmación para resetear VISITOR_DATA
-
     if (showVisitorDataResetDialog) {
         VisitorDataResetDialog(
             onConfirm = {
@@ -195,7 +207,6 @@ fun BackupAndRestore(
             onDismiss = { showVisitorDataResetDialog = false }
         )
     }
-
 }
 
 @Composable
@@ -231,7 +242,6 @@ private fun InfoSection() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // Nueva información sobre VISITOR_DATA
             Text(
                 text = "Nota: Las copias de seguridad ya no incluyen el VISITOR_DATA para evitar problemas de conectividad con YouTube.",
                 style = MaterialTheme.typography.bodySmall,
@@ -243,6 +253,7 @@ private fun InfoSection() {
 
 @Composable
 private fun ActionSection(
+    isLoading: Boolean = false,
     onBackupClick: () -> Unit,
     onRestoreClick: () -> Unit
 ) {
@@ -254,6 +265,7 @@ private fun ActionSection(
             title = stringResource(R.string.backup),
             description = stringResource(R.string.backup_description),
             isPrimary = true,
+            isEnabled = !isLoading,
             onClick = onBackupClick
         )
 
@@ -262,6 +274,7 @@ private fun ActionSection(
             title = stringResource(R.string.restore),
             description = stringResource(R.string.restore_description),
             isPrimary = false,
+            isEnabled = !isLoading,
             onClick = onRestoreClick
         )
     }
@@ -349,7 +362,6 @@ private fun VisitorDataSection(
     }
 }
 
-
 @Composable
 private fun VisitorDataInfoDialog(
     onDismiss: () -> Unit
@@ -400,7 +412,6 @@ private fun VisitorDataInfoDialog(
     )
 }
 
-
 @Composable
 private fun VisitorDataResetDialog(
     onConfirm: () -> Unit,
@@ -445,10 +456,12 @@ private fun ActionButton(
     title: String,
     description: String,
     isPrimary: Boolean = true,
+    isEnabled: Boolean = true,
     onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
+        enabled = isEnabled,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         contentPadding = PaddingValues(16.dp),
@@ -564,8 +577,7 @@ private fun UploadStatusSection(
             }
         }
 
-        null -> { /* No status to show */
-        }
+        null -> { /* No status to show */ }
     }
 }
 
@@ -616,7 +628,9 @@ private fun SuccessCard(fileUrl: String, onCopyClick: () -> Unit) {
                 ) {
                     Text(
                         text = fileUrl,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontFamily = FontFamily.Monospace
+                        ),
                         color = MaterialTheme.colorScheme.primary
                     )
 
@@ -640,6 +654,7 @@ private fun SuccessCard(fileUrl: String, onCopyClick: () -> Unit) {
     }
 }
 
+@SuppressLint("LogNotTimber")
 suspend fun uploadBackupToFilebin(
     context: Context,
     uri: Uri,
@@ -649,21 +664,38 @@ suspend fun uploadBackupToFilebin(
         val tempFile = File(context.cacheDir, "temp_backup_${System.currentTimeMillis()}.backup")
 
         try {
-            context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                val fileSize = inputStream.available().toFloat()
-                var totalBytesRead = 0L
+            val inputStream = context.contentResolver.openInputStream(uri)
+                ?: return@withContext null
 
+            inputStream.use { input ->
+                val fileSize = try {
+                    context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                        val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                        if (sizeIndex != -1 && cursor.moveToFirst()) {
+                            cursor.getLong(sizeIndex)
+                        } else {
+                            input.available().toLong()
+                        }
+                    } ?: input.available().toLong()
+                } catch (e: Exception) {
+                    Log.w("BackupRestore", "No se pudo obtener el tamaño del archivo: ${e.message}")
+                    input.available().toLong()
+                }
+
+                var totalBytesRead = 0L
                 tempFile.outputStream().use { outputStream ->
                     val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
                     var bytesRead: Int
 
-                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
                         outputStream.write(buffer, 0, bytesRead)
                         totalBytesRead += bytesRead
-                        progressCallback(totalBytesRead / fileSize * 0.5f)
+                        if (fileSize > 0) {
+                            progressCallback(totalBytesRead / fileSize.toFloat() * 0.5f)
+                        }
                     }
                 }
-            } ?: return@withContext null
+            }
 
             val binId = UUID.randomUUID().toString().substring(0, 8)
 
@@ -704,29 +736,43 @@ suspend fun uploadBackupToFilebin(
 
             val response = client.newCall(request).execute()
 
-            if (tempFile.exists()) {
-                tempFile.delete()
-            }
-
             if (!response.isSuccessful) {
+                Log.e("BackupRestore", "Error en la respuesta del servidor: ${response.code}")
                 return@withContext null
             }
 
             return@withContext "https://filebin.net/$binId/$fileName"
 
-        } catch (e: Exception) {
-            if (tempFile.exists()) {
-                tempFile.delete()
-            }
+        } catch (e: SecurityException) {
+            Log.e("BackupRestore", "Permisos insuficientes para acceder al archivo", e)
             return@withContext null
+        } catch (e: IOException) {
+            Log.e("BackupRestore", "Error de E/O durante la subida", e)
+            return@withContext null
+        } catch (e: Exception) {
+            Log.e("BackupRestore", "Error inesperado durante la subida", e)
+            return@withContext null
+        } finally {
+            if (tempFile.exists()) {
+                try {
+                    tempFile.delete()
+                } catch (e: Exception) {
+                    Log.w("BackupRestore", "No se pudo eliminar el archivo temporal: ${e.message}")
+                }
+            }
         }
     }
 }
 
+@SuppressLint("LogNotTimber")
 fun copyToClipboard(context: Context, text: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    val clip = ClipData.newPlainText("Backup URL", text)
-    clipboard.setPrimaryClip(clip)
+    try {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText("Backup URL", text)
+        clipboard.setPrimaryClip(clip)
+    } catch (e: Exception) {
+        Log.e("BackupRestore", "Error al copiar al portapapeles: ${e.message}")
+    }
 }
 
 sealed class UploadStatus {
