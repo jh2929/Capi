@@ -65,7 +65,8 @@ fun ContentSettings(
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
     val context = LocalContext.current
-    val localeManager = remember { LocaleManager(context) }
+    val localeManager = remember { LocaleManager.getInstance(context) }
+
 
     val (contentLanguage, onContentLanguageChange) = rememberPreference(
         key = PreferenceKeys.ContentLanguageKey,

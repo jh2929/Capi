@@ -285,16 +285,9 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun attachBaseContext(newBase: Context) {
-        val sharedPreferences = newBase.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-        val savedLanguage =
-            sharedPreferences.getString("app_language", Locale.getDefault().language) ?: "en"
-
-        val localeManager = LocaleManager(newBase)
-        localeManager.updateLocale(savedLanguage)
-
-
-
-        super.attachBaseContext(newBase)
+        super.attachBaseContext(
+            LocaleManager.getInstance(newBase).applyLocaleToContext(newBase)
+        )
     }
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
