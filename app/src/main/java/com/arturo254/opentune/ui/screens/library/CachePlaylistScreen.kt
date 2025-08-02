@@ -96,7 +96,7 @@ fun CachePlaylistScreen(
     val playerCache = LocalPlayerConnection.current?.service?.playerCache
 
     val cachedSongIds = remember(playerCache) {
-        playerCache?.keys?.mapNotNull { it?.toString() }?.toSet() ?: emptySet()
+        playerCache?.keys?.mapNotNull { it.toString() }?.toSet() ?: emptySet()
     }
 
     val allSongs = remember(events, cachedSongIds) {

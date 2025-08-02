@@ -752,7 +752,7 @@ class MainActivity : ComponentActivity() {
                                                             // Log del error sin crashear la app
                                                             Log.w(
                                                                 "PlayerBackground",
-                                                                "Error loading background image: ${error.result.throwable?.message}"
+                                                                "Error loading background image: ${error.result.throwable.message}"
                                                             )
                                                         }
                                                     )
