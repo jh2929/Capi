@@ -39,9 +39,36 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -376,7 +403,8 @@ fun AppearanceSettings(
 
 // También asegurarnos de que el valor seleccionado sea compatible
         val safeSelectedValue = if (playerBackground == PlayerBackgroundStyle.BLUR &&
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+        ) {
             PlayerBackgroundStyle.DEFAULT // O cualquier otro valor por defecto
         } else {
             playerBackground
@@ -1160,6 +1188,7 @@ fun CustomAvatarSelector(
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
+
                         customAvatarUri != null -> {
                             AsyncImage(
                                 model = ImageRequest.Builder(context)
@@ -1173,6 +1202,7 @@ fun CustomAvatarSelector(
                                 contentScale = ContentScale.Crop
                             )
                         }
+
                         else -> {
                             Icon(
                                 painter = painterResource(id = R.drawable.person),
@@ -1313,7 +1343,10 @@ private fun cleanupOldAvatars(context: Context) {
         context.filesDir.listFiles()?.forEach { file ->
             if (file.name.startsWith("custom_avatar_") && file.name.endsWith(".jpg")) {
                 val deleted = file.delete()
-                Log.d("CustomAvatarSelector", "Deleted old avatar file: ${file.name}, success: $deleted")
+                Log.d(
+                    "CustomAvatarSelector",
+                    "Deleted old avatar file: ${file.name}, success: $deleted"
+                )
             }
         }
     } catch (e: Exception) {

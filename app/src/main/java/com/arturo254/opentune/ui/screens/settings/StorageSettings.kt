@@ -102,7 +102,9 @@ fun StorageSettings(
 
     var imageCacheSize by remember { mutableStateOf(imageDiskCache.size) }
     var playerCacheSize by remember { mutableStateOf(tryOrNull { playerCache.cacheSpace } ?: 0) }
-    var downloadCacheSize by remember { mutableStateOf(tryOrNull { downloadCache.cacheSpace } ?: 0) }
+    var downloadCacheSize by remember {
+        mutableStateOf(tryOrNull { downloadCache.cacheSpace } ?: 0)
+    }
     var isRefreshing by remember { mutableStateOf(false) }
     var showDownloadClearConfirm by remember { mutableStateOf(false) }
     var showSongCacheClearConfirm by remember { mutableStateOf(false) }
@@ -113,10 +115,13 @@ fun StorageSettings(
         label = "",
     )
     val playerCacheProgress by animateFloatAsState(
-        targetValue = (playerCacheSize.toFloat() / (maxSongCacheSize * 1024 * 1024L)).coerceIn(0f, 1f),
+        targetValue = (playerCacheSize.toFloat() / (maxSongCacheSize * 1024 * 1024L)).coerceIn(
+            0f,
+            1f
+        ),
         label = "",
     )
-    val downloadCachePercentage = if(downloadCacheSize > 0) {
+    val downloadCachePercentage = if (downloadCacheSize > 0) {
         (downloadCacheSize.toFloat() / (8192 * 1024 * 1024L)).coerceIn(0f, 1f) * 100
     } else 0f
 

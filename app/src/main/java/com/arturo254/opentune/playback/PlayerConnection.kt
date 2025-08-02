@@ -12,7 +12,6 @@ import androidx.media3.common.Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM
 import androidx.media3.common.Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM
 import androidx.media3.common.Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM
 import androidx.media3.common.Player.REPEAT_MODE_OFF
-import androidx.media3.common.Player.STATE_ENDED
 import androidx.media3.common.Player.STATE_READY
 import androidx.media3.common.Timeline
 import com.arturo254.opentune.MusicWidget.Companion.ACTION_STATE_CHANGED
@@ -36,7 +35,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -85,7 +83,8 @@ class PlayerConnection(
 
     // Metadatos y información de la canción actual
     private val _mediaMetadata = MutableStateFlow(player.currentMetadata)
-    val mediaMetadata: StateFlow<com.arturo254.opentune.models.MediaMetadata?> = _mediaMetadata.asStateFlow()
+    val mediaMetadata: StateFlow<com.arturo254.opentune.models.MediaMetadata?> =
+        _mediaMetadata.asStateFlow()
 
     val currentSong = mediaMetadata.flatMapLatest { metadata ->
         database.song(metadata?.id)
@@ -219,7 +218,8 @@ class PlayerConnection(
         if (events.containsAny(
                 Player.EVENT_PLAYBACK_STATE_CHANGED,
                 Player.EVENT_PLAY_WHEN_READY_CHANGED
-            )) {
+            )
+        ) {
             shouldUpdateWidget = true
         }
 
@@ -228,7 +228,8 @@ class PlayerConnection(
         }
 
         if (events.contains(Player.EVENT_POSITION_DISCONTINUITY) ||
-            events.contains(Player.EVENT_TIMELINE_CHANGED)) {
+            events.contains(Player.EVENT_TIMELINE_CHANGED)
+        ) {
             shouldUpdateWidget = true
         }
 
@@ -293,7 +294,8 @@ class PlayerConnection(
 
             // Solo actualizar si hay cambios significativos
             if (kotlin.math.abs(currentPos - lastPosition) > 500L ||
-                _duration.value != totalDuration) {
+                _duration.value != totalDuration
+            ) {
 
                 _currentPosition.value = currentPos
                 _duration.value = totalDuration
@@ -480,7 +482,10 @@ class PlayerConnection(
     }
 
     override fun onPlayWhenReadyChanged(newPlayWhenReady: Boolean, reason: Int) {
-        Log.d(TAG, "PlayWhenReady changed: $lastPlayWhenReady -> $newPlayWhenReady (reason: $reason)")
+        Log.d(
+            TAG,
+            "PlayWhenReady changed: $lastPlayWhenReady -> $newPlayWhenReady (reason: $reason)"
+        )
         _playWhenReady.value = newPlayWhenReady
 
         if (lastPlayWhenReady != newPlayWhenReady) {

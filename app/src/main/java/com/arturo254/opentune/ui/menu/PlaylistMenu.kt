@@ -274,7 +274,7 @@ fun PlaylistMenu(
             }
         },
 
-    )
+        )
 
     HorizontalDivider()
 

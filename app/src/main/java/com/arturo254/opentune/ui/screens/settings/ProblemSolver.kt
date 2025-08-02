@@ -1,4 +1,3 @@
-
 package com.arturo254.opentune.ui.screens.settings
 
 import androidx.compose.animation.AnimatedVisibility
@@ -83,6 +82,7 @@ data class Problema(
     val pasos: List<String> = emptyList(),
     val tips: List<String> = emptyList()
 )
+
 // Problema y preguntas con iconos y colores personalizados
 val problemasComunes = listOf(
     Problema(
@@ -1114,7 +1114,9 @@ fun ProblemSolverScreen(navController: NavController) {
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = MaterialTheme.colorScheme.surface
                         ),
-                        scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+                        scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(
+                            rememberTopAppBarState()
+                        )
                     )
                 }
             }

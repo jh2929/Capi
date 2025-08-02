@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -46,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -786,6 +786,7 @@ fun HomeScreen(
                                     playerConnection.playQueue(LocalAlbumRadio(it))
                                 }
                             }
+
                             is Artist -> {}
                             is Playlist -> {}
                         }
@@ -796,6 +797,7 @@ fun HomeScreen(
                             is ArtistItem -> luckyItem.radioEndpoint?.let {
                                 playerConnection.playQueue(YouTubeQueue(it))
                             }
+
                             is PlaylistItem -> luckyItem.playEndpoint?.let {
                                 playerConnection.playQueue(YouTubeQueue(it))
                             }

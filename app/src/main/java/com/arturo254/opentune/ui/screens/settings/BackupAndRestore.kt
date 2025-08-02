@@ -564,7 +564,8 @@ private fun UploadStatusSection(
             }
         }
 
-        null -> { /* No status to show */ }
+        null -> { /* No status to show */
+        }
     }
 }
 

@@ -277,14 +277,15 @@ fun OnlinePlaylistScreen(
                                                         onClick = {
                                                             if (dbPlaylist?.playlist == null) {
                                                                 database.transaction {
-                                                                    val playlistEntity = PlaylistEntity(
-                                                                        name = playlist.title,
-                                                                        browseId = playlist.id,
-                                                                        isEditable = playlist.isEditable,
-                                                                        playEndpointParams = playlist.playEndpoint?.params,
-                                                                        shuffleEndpointParams = playlist.shuffleEndpoint?.params,
-                                                                        radioEndpointParams = playlist.radioEndpoint?.params
-                                                                    ).toggleLike()
+                                                                    val playlistEntity =
+                                                                        PlaylistEntity(
+                                                                            name = playlist.title,
+                                                                            browseId = playlist.id,
+                                                                            isEditable = playlist.isEditable,
+                                                                            playEndpointParams = playlist.playEndpoint?.params,
+                                                                            shuffleEndpointParams = playlist.shuffleEndpoint?.params,
+                                                                            radioEndpointParams = playlist.radioEndpoint?.params
+                                                                        ).toggleLike()
                                                                     insert(playlistEntity)
                                                                     songs.map(SongItem::toMediaMetadata)
                                                                         .onEach(::insert)
@@ -423,7 +424,9 @@ fun OnlinePlaylistScreen(
                                                     if (song.item.second.id == mediaMetadata?.id) {
                                                         playerConnection.player.togglePlayPause()
                                                     } else {
-                                                        playerConnection.service.getAutomix(playlistId = playlist.id)
+                                                        playerConnection.service.getAutomix(
+                                                            playlistId = playlist.id
+                                                        )
                                                         playerConnection.playQueue(
                                                             YouTubeQueue(
                                                                 song.item.second.endpoint

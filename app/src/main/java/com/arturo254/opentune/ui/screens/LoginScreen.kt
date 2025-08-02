@@ -15,9 +15,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -38,8 +38,8 @@ import com.arturo254.opentune.utils.rememberPreference
 import com.arturo254.opentune.utils.reportException
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 private const val YOUTUBE_MUSIC_URL = "https://music.youtube.com"
@@ -98,7 +98,10 @@ fun LoginScreen(navController: NavController) {
                 } else {
                     reportException(exception)
                     Timber.tag("WebView")
-                        .e(exception, "Failed to retrieve account info after $MAX_RETRY_ATTEMPTS attempts")
+                        .e(
+                            exception,
+                            "Failed to retrieve account info after $MAX_RETRY_ATTEMPTS attempts"
+                        )
                     isLoadingAccountInfo = false
                 }
             }

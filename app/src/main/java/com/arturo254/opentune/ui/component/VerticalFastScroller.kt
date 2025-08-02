@@ -72,7 +72,8 @@ fun VerticalFastScroller(
                 )
             }
 
-            val heightPx = contentHeight.toFloat() - thumbTopPadding - listState.layoutInfo.afterContentPadding
+            val heightPx =
+                contentHeight.toFloat() - thumbTopPadding - listState.layoutInfo.afterContentPadding
             val thumbHeightPx = with(LocalDensity.current) { ThumbLength.toPx() }
             val trackHeightPx = heightPx - thumbHeightPx
 
@@ -82,9 +83,13 @@ fun VerticalFastScroller(
                 val scrollRatio = (thumbOffsetY - thumbTopPadding) / trackHeightPx
                 val scrollItem = layoutInfo.totalItemsCount * scrollRatio
                 val scrollItemRounded = scrollItem.roundToInt()
-                val scrollItemSize = layoutInfo.visibleItemsInfo.find { it.index == scrollItemRounded }?.size ?: 0
+                val scrollItemSize =
+                    layoutInfo.visibleItemsInfo.find { it.index == scrollItemRounded }?.size ?: 0
                 val scrollItemOffset = scrollItemSize * (scrollItem - scrollItemRounded)
-                listState.scrollToItem(index = scrollItemRounded, scrollOffset = scrollItemOffset.roundToInt())
+                listState.scrollToItem(
+                    index = scrollItemRounded,
+                    scrollOffset = scrollItemOffset.roundToInt()
+                )
                 scrolled.tryEmit(Unit)
             }
 
@@ -132,7 +137,10 @@ fun VerticalFastScroller(
                                 enabled = isThumbVisible,
                                 state = rememberDraggableState { delta ->
                                     val newOffsetY = thumbOffsetY + delta
-                                    thumbOffsetY = newOffsetY.coerceIn(thumbTopPadding, thumbTopPadding + trackHeightPx)
+                                    thumbOffsetY = newOffsetY.coerceIn(
+                                        thumbTopPadding,
+                                        thumbTopPadding + trackHeightPx
+                                    )
                                 },
                             )
                         } else Modifier,

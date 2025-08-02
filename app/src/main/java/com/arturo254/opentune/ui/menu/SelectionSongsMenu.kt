@@ -561,7 +561,8 @@ fun SelectionMediaMetadataMenu(
                             start = 8.dp,
                             top = 8.dp,
                             end = 8.dp,
-                            bottom = 8.dp + WindowInsets.systemBars.asPaddingValues().calculateBottomPadding(),
+                            bottom = 8.dp + WindowInsets.systemBars.asPaddingValues()
+                                .calculateBottomPadding(),
                         ),
                     ) {
                         if (currentItems.isNotEmpty()) {
@@ -569,13 +570,19 @@ fun SelectionMediaMetadataMenu(
                                 ListItem(
                                     headlineContent = { Text(text = stringResource(R.string.delete)) },
                                     leadingContent = {
-                                        Icon(painter = painterResource(R.drawable.delete), contentDescription = null)
+                                        Icon(
+                                            painter = painterResource(R.drawable.delete),
+                                            contentDescription = null
+                                        )
                                     },
                                     modifier = Modifier.clickable {
                                         onDismiss()
                                         var i = 0
                                         currentItems.forEach { cur ->
-                                            if (playerConnection.player.availableCommands.contains(Player.COMMAND_CHANGE_MEDIA_ITEMS)) {
+                                            if (playerConnection.player.availableCommands.contains(
+                                                    Player.COMMAND_CHANGE_MEDIA_ITEMS
+                                                )
+                                            ) {
                                                 playerConnection.player.removeMediaItem(cur.firstPeriodIndex - i++)
                                             }
                                         }
@@ -588,12 +595,17 @@ fun SelectionMediaMetadataMenu(
                             ListItem(
                                 headlineContent = { Text(text = stringResource(R.string.play)) },
                                 leadingContent = {
-                                    Icon(painter = painterResource(R.drawable.play), contentDescription = null)
+                                    Icon(
+                                        painter = painterResource(R.drawable.play),
+                                        contentDescription = null
+                                    )
                                 },
                                 modifier = Modifier.clickable {
                                     onDismiss()
                                     playerConnection.playQueue(
-                                        ListQueue("Selection", songSelection.map { it.toMediaItem() })
+                                        ListQueue(
+                                            "Selection",
+                                            songSelection.map { it.toMediaItem() })
                                     )
                                     clearAction()
                                 }
@@ -603,12 +615,17 @@ fun SelectionMediaMetadataMenu(
                             ListItem(
                                 headlineContent = { Text(text = stringResource(R.string.shuffle)) },
                                 leadingContent = {
-                                    Icon(painter = painterResource(R.drawable.shuffle), contentDescription = null)
+                                    Icon(
+                                        painter = painterResource(R.drawable.shuffle),
+                                        contentDescription = null
+                                    )
                                 },
                                 modifier = Modifier.clickable {
                                     onDismiss()
                                     playerConnection.playQueue(
-                                        ListQueue("Selection", songSelection.shuffled().map { it.toMediaItem() })
+                                        ListQueue(
+                                            "Selection",
+                                            songSelection.shuffled().map { it.toMediaItem() })
                                     )
                                     clearAction()
                                 }
@@ -618,7 +635,10 @@ fun SelectionMediaMetadataMenu(
                             ListItem(
                                 headlineContent = { Text(text = stringResource(R.string.add_to_queue)) },
                                 leadingContent = {
-                                    Icon(painter = painterResource(R.drawable.queue_music), contentDescription = null)
+                                    Icon(
+                                        painter = painterResource(R.drawable.queue_music),
+                                        contentDescription = null
+                                    )
                                 },
                                 modifier = Modifier.clickable {
                                     onDismiss()
@@ -631,7 +651,10 @@ fun SelectionMediaMetadataMenu(
                             ListItem(
                                 headlineContent = { Text(text = stringResource(R.string.add_to_playlist)) },
                                 leadingContent = {
-                                    Icon(painter = painterResource(R.drawable.playlist_add), contentDescription = null)
+                                    Icon(
+                                        painter = painterResource(R.drawable.playlist_add),
+                                        contentDescription = null
+                                    )
                                 },
                                 modifier = Modifier.clickable {
                                     showChoosePlaylistDialog = true
@@ -652,7 +675,11 @@ fun SelectionMediaMetadataMenu(
                                 modifier = Modifier.clickable {
                                     database.query {
                                         if (allLiked) {
-                                            songSelection.forEach { update(it.toSongEntity().toggleLike()) }
+                                            songSelection.forEach {
+                                                update(
+                                                    it.toSongEntity().toggleLike()
+                                                )
+                                            }
                                         } else {
                                             songSelection.filter { !it.liked }.forEach {
                                                 update(it.toSongEntity().toggleLike())
@@ -673,9 +700,14 @@ fun SelectionMediaMetadataMenu(
                                             )
                                         },
                                         leadingContent = {
-                                            Icon(painter = painterResource(R.drawable.offline), contentDescription = null)
+                                            Icon(
+                                                painter = painterResource(R.drawable.offline),
+                                                contentDescription = null
+                                            )
                                         },
-                                        modifier = Modifier.clickable { showRemoveDownloadDialog = true }
+                                        modifier = Modifier.clickable {
+                                            showRemoveDownloadDialog = true
+                                        }
                                     )
                                 }
 
@@ -688,7 +720,9 @@ fun SelectionMediaMetadataMenu(
                                                 strokeWidth = 2.dp
                                             )
                                         },
-                                        modifier = Modifier.clickable { showRemoveDownloadDialog = true }
+                                        modifier = Modifier.clickable {
+                                            showRemoveDownloadDialog = true
+                                        }
                                     )
                                 }
 
@@ -696,16 +730,25 @@ fun SelectionMediaMetadataMenu(
                                     ListItem(
                                         headlineContent = { Text(text = stringResource(R.string.download)) },
                                         leadingContent = {
-                                            Icon(painter = painterResource(R.drawable.download), contentDescription = null)
+                                            Icon(
+                                                painter = painterResource(R.drawable.download),
+                                                contentDescription = null
+                                            )
                                         },
                                         modifier = Modifier.clickable {
                                             songSelection.forEach { song ->
-                                                val request = DownloadRequest.Builder(song.id, song.id.toUri())
+                                                val request = DownloadRequest.Builder(
+                                                    song.id,
+                                                    song.id.toUri()
+                                                )
                                                     .setCustomCacheKey(song.id)
                                                     .setData(song.title.toByteArray())
                                                     .build()
                                                 DownloadService.sendAddDownload(
-                                                    context, ExoDownloadService::class.java, request, false
+                                                    context,
+                                                    ExoDownloadService::class.java,
+                                                    request,
+                                                    false
                                                 )
                                             }
                                         }

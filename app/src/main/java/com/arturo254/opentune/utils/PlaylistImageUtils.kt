@@ -9,9 +9,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 
-/**
- * Guarda una imagen personalizada para una playlist
- */
+/** Guarda una imagen personalizada para una playlist */
 fun saveCustomPlaylistImage(context: Context, playlistId: String, imageUri: Uri) {
     try {
         // Crear directorio para imágenes de playlist si no existe
@@ -39,9 +37,7 @@ fun saveCustomPlaylistImage(context: Context, playlistId: String, imageUri: Uri)
     }
 }
 
-/**
- * Obtiene la URI de la imagen personalizada para una playlist
- */
+/** Obtiene la URI de la imagen personalizada para una playlist */
 fun getPlaylistImageUri(context: Context, playlistId: String): Uri? {
     val uriString = context.getSharedPreferences("playlist_images", Context.MODE_PRIVATE)
         .getString("playlist_$playlistId", null)
@@ -54,9 +50,7 @@ fun getPlaylistImageUri(context: Context, playlistId: String): Uri? {
     } else null
 }
 
-/**
- * Elimina la imagen personalizada de una playlist
- */
+/** Elimina la imagen personalizada de una playlist */
 fun deletePlaylistImage(context: Context, playlistId: String) {
     val uriString = context.getSharedPreferences("playlist_images", Context.MODE_PRIVATE)
         .getString("playlist_$playlistId", null)

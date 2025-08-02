@@ -1,4 +1,5 @@
 @file:Suppress("DEPRECATION")
+
 package com.arturo254.opentune.ui.component
 
 import android.app.Activity
@@ -30,7 +31,8 @@ import kotlinx.coroutines.flow.StateFlow
 import java.util.Locale
 
 /**
- * LocaleManager mejorado para manejo de idiomas en aplicaciones Jetpack Compose
+ * LocaleManager mejorado para manejo de idiomas en aplicaciones Jetpack
+ * Compose
  */
 class LocaleManager internal constructor(private val context: Context) {
 
@@ -64,17 +66,13 @@ class LocaleManager internal constructor(private val context: Context) {
     // Cache para idiomas disponibles
     private var _availableLanguages: Map<String, String>? = null
 
-    /**
-     * Obtiene el código de idioma seleccionado por el usuario
-     */
+    /** Obtiene el código de idioma seleccionado por el usuario */
     fun getSelectedLanguageCode(): String {
         val saved = sharedPreferences.getString(PREF_LANGUAGE_KEY, SYSTEM_DEFAULT) ?: SYSTEM_DEFAULT
         return if (saved == SYSTEM_DEFAULT) getSystemLanguageCode() else saved
     }
 
-    /**
-     * Obtiene el código de idioma del sistema
-     */
+    /** Obtiene el código de idioma del sistema */
     private fun getSystemLanguageCode(): String {
         return try {
             val localeList = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -83,7 +81,8 @@ class LocaleManager internal constructor(private val context: Context) {
                 LocaleListCompat.create(Locale.getDefault())
             }
 
-            val systemLocale = if (localeList.isEmpty) Locale.getDefault() else localeList[0] ?: Locale.getDefault()
+            val systemLocale = if (localeList.isEmpty) Locale.getDefault() else localeList[0]
+                ?: Locale.getDefault()
             val language = systemLocale.language
             val country = systemLocale.country
 
@@ -97,6 +96,7 @@ class LocaleManager internal constructor(private val context: Context) {
                         else -> "zh-CN"
                     }
                 }
+
                 language == "pt" && country == "BR" -> "pt-BR"
                 else -> language
             }
@@ -106,9 +106,7 @@ class LocaleManager internal constructor(private val context: Context) {
         }
     }
 
-    /**
-     * Actualiza el idioma de la aplicación
-     */
+    /** Actualiza el idioma de la aplicación */
     fun updateLocale(languageCode: String): Boolean {
         return try {
             Log.d(TAG, "Intentando cambiar idioma a: $languageCode")
@@ -139,9 +137,7 @@ class LocaleManager internal constructor(private val context: Context) {
         }
     }
 
-    /**
-     * Aplica la configuración de idioma a la aplicación
-     */
+    /** Aplica la configuración de idioma a la aplicación */
     private fun applyLocaleToApp(locale: Locale) {
         try {
             // Establecer locale por defecto
@@ -169,9 +165,7 @@ class LocaleManager internal constructor(private val context: Context) {
         }
     }
 
-    /**
-     * Aplica el idioma a un contexto específico
-     */
+    /** Aplica el idioma a un contexto específico */
     fun applyLocaleToContext(baseContext: Context): Context {
         return try {
             val languageCode = getSelectedLanguageCode()
@@ -189,7 +183,10 @@ class LocaleManager internal constructor(private val context: Context) {
             } else {
                 config.locale = locale
                 @Suppress("DEPRECATION")
-                baseContext.resources.updateConfiguration(config, baseContext.resources.displayMetrics)
+                baseContext.resources.updateConfiguration(
+                    config,
+                    baseContext.resources.displayMetrics
+                )
                 baseContext
             }
         } catch (e: Exception) {
@@ -198,9 +195,7 @@ class LocaleManager internal constructor(private val context: Context) {
         }
     }
 
-    /**
-     * Crea un objeto Locale desde un código de idioma
-     */
+    /** Crea un objeto Locale desde un código de idioma */
     private fun createLocaleFromCode(languageCode: String): Locale {
         return try {
             when {
@@ -249,9 +244,7 @@ class LocaleManager internal constructor(private val context: Context) {
         }
     }
 
-    /**
-     * Obtiene el script apropiado para idiomas complejos
-     */
+    /** Obtiene el script apropiado para idiomas complejos */
     private fun getScriptForLanguage(languageCode: String): String {
         return when (languageCode.substringBefore("-")) {
             "hi", "mr" -> "Deva" // Devanagari
@@ -274,9 +267,7 @@ class LocaleManager internal constructor(private val context: Context) {
         }
     }
 
-    /**
-     * Obtiene los idiomas disponibles (manteniendo todos los originales)
-     */
+    /** Obtiene los idiomas disponibles (manteniendo todos los originales) */
     fun getAvailableLanguages(): Map<String, String> {
         _availableLanguages?.let { return it }
 
@@ -284,7 +275,8 @@ class LocaleManager internal constructor(private val context: Context) {
 
         try {
             // Agregar opción de sistema por defecto
-            languages[SYSTEM_DEFAULT] = "Sistema (${getLanguageDisplayName(getSystemLanguageCode())})"
+            languages[SYSTEM_DEFAULT] =
+                "Sistema (${getLanguageDisplayName(getSystemLanguageCode())})"
 
             // Todos los idiomas originales
             val allLanguages = listOf(
@@ -311,9 +303,7 @@ class LocaleManager internal constructor(private val context: Context) {
         return languages
     }
 
-    /**
-     * Obtiene el nombre de display de un idioma
-     */
+    /** Obtiene el nombre de display de un idioma */
     private fun getLanguageDisplayName(languageCode: String): String {
         return try {
             val locale = createLocaleFromCode(languageCode)
@@ -332,9 +322,7 @@ class LocaleManager internal constructor(private val context: Context) {
         }
     }
 
-    /**
-     * Reinicia la aplicación de forma segura
-     */
+    /** Reinicia la aplicación de forma segura */
     fun restartApp(context: Context) {
         try {
             val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
@@ -354,9 +342,7 @@ class LocaleManager internal constructor(private val context: Context) {
     }
 }
 
-/**
- * Composable para manejar el estado del idioma
- */
+/** Composable para manejar el estado del idioma */
 @Composable
 fun rememberLanguageState(): Pair<String, (String) -> Unit> {
     val context = LocalContext.current
@@ -393,9 +379,7 @@ fun rememberLanguageState(): Pair<String, (String) -> Unit> {
     return currentLanguage to changeLanguage
 }
 
-/**
- * Composable para la preferencia de idioma
- */
+/** Composable para la preferencia de idioma */
 @Composable
 fun LanguagePreference() {
     val context = LocalContext.current
@@ -419,9 +403,7 @@ fun LanguagePreference() {
     )
 }
 
-/**
- * Application class base que aplica el idioma guardado
- */
+/** Application class base que aplica el idioma guardado */
 abstract class LocaleAwareApplication : android.app.Application() {
     override fun attachBaseContext(base: Context) {
         val localeManager = LocaleManager.getInstance(base)

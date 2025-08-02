@@ -637,6 +637,7 @@ class MusicService :
             }
         }
     }
+
     private fun openAudioEffectSession() {
         if (isAudioEffectSessionOpened) return
         isAudioEffectSessionOpened = true
@@ -848,9 +849,9 @@ class MusicService :
 
                 songUrlCache[mediaId] =
                     streamUrl to System.currentTimeMillis() + (playbackData.streamExpiresInSeconds * 1000L)
-                return@Factory dataSpec.withUri(streamUrl.toUri()).subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
-            }
-            catch (e: Exception) {
+                return@Factory dataSpec.withUri(streamUrl.toUri())
+                    .subrange(dataSpec.uriPositionOffset, CHUNK_LENGTH)
+            } catch (e: Exception) {
                 Timber.tag(ytLogTag).e(e, "YouTube playback error, trying JossRed as fallback")
 
                 // Check whether alternative source is enabled
@@ -892,15 +893,20 @@ class MusicService :
                         try {
                             val response = client.newCall(request).execute()
                             if (response.isSuccessful) {
-                                Timber.tag(JRlogTag).i("Using JossRed URL as fallback: $alternativeUrl")
+                                Timber.tag(JRlogTag)
+                                    .i("Using JossRed URL as fallback: $alternativeUrl")
                                 scope.launch(Dispatchers.IO) { recoverSong(mediaId) }
                                 return@Factory dataSpec.withUri(alternativeUrl.toUri())
                             } else {
-                                Timber.tag(JRlogTag).w("JossRed URL unreachable (HTTP ${response.code}), throwing original error")
+                                Timber.tag(JRlogTag)
+                                    .w("JossRed URL unreachable (HTTP ${response.code}), throwing original error")
                                 throw e
                             }
                         } catch (jrException: Exception) {
-                            Timber.tag(JRlogTag).e(jrException, "Error verifying JossRed URL, throwing original error")
+                            Timber.tag(JRlogTag).e(
+                                jrException,
+                                "Error verifying JossRed URL, throwing original error"
+                            )
                             throw e
                         }
                     } else {
@@ -909,13 +915,17 @@ class MusicService :
                 } catch (jrException: Exception) {
                     when (jrException) {
                         is JossRedClient.JossRedException -> {
-                            Timber.tag(JRlogTag).w("JossRed error: ${jrException.message}, throwing original error")
+                            Timber.tag(JRlogTag)
+                                .w("JossRed error: ${jrException.message}, throwing original error")
                         }
+
                         is TimeoutCancellationException -> {
                             Timber.tag(JRlogTag).w("JossRed timeout, throwing original error")
                         }
+
                         else -> {
-                            Timber.tag(JRlogTag).e(jrException, "JossRed error, throwing original error")
+                            Timber.tag(JRlogTag)
+                                .e(jrException, "JossRed error, throwing original error")
                         }
                     }
                     throw e
@@ -955,7 +965,8 @@ class MusicService :
         eventTime: AnalyticsListener.EventTime,
         playbackStats: PlaybackStats,
     ) {
-        val mediaItem = eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
+        val mediaItem =
+            eventTime.timeline.getWindow(eventTime.windowIndex, Timeline.Window()).mediaItem
 
         if (playbackStats.totalPlayTimeMs >= (
                     dataStore[HistoryDuration]?.times(1000f)

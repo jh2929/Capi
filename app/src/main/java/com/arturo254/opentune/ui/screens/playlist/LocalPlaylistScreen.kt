@@ -428,8 +428,12 @@ fun LocalPlaylistScreen(
                                     playlist = playlist,
                                     songs = songs,
                                     onShowEditDialog = { showEditDialog = true },
-                                    onShowRemoveDownloadDialog = { showRemoveDownloadDialog = true },
-                                    onshowDeletePlaylistDialog = { showDeletePlaylistDialog = true },
+                                    onShowRemoveDownloadDialog = {
+                                        showRemoveDownloadDialog = true
+                                    },
+                                    onshowDeletePlaylistDialog = {
+                                        showDeletePlaylistDialog = true
+                                    },
                                     snackbarHostState = snackbarHostState,
                                     modifier = Modifier.animateItem()
                                 )
@@ -492,7 +496,9 @@ fun LocalPlaylistScreen(
                                             var setVideoId = getSetVideoId(currentItem.map.songId)
                                             if (setVideoId?.setVideoId != null) {
                                                 YouTube.removeFromPlaylist(
-                                                    it1, currentItem.map.songId, setVideoId.setVideoId!!
+                                                    it1,
+                                                    currentItem.map.songId,
+                                                    setVideoId.setVideoId!!
                                                 )
                                             }
                                         }
@@ -736,7 +742,8 @@ fun LocalPlaylistScreen(
                                                             )
                                                         }
                                                     } else {
-                                                        songWrapper.isSelected = !songWrapper.isSelected
+                                                        songWrapper.isSelected =
+                                                            !songWrapper.isSelected
                                                     }
                                                 },
                                                 onLongClick = {
@@ -1007,7 +1014,11 @@ fun LocalPlaylistHeader(
                     }
 
                     playlist.thumbnails.size > 1 -> {
-                        Box(modifier = Modifier.fillMaxSize().then(longPressModifier)) { // Agregamos el detector de long press
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .then(longPressModifier)
+                        ) { // Agregamos el detector de long press
                             listOf(
                                 Alignment.TopStart,
                                 Alignment.TopEnd,
@@ -1060,7 +1071,7 @@ fun LocalPlaylistHeader(
                             Icon(
                                 painter = painterResource(R.drawable.edit),
                                 contentDescription = stringResource(R.string.edit_thumbnail),
-                                tint =  MaterialTheme.colorScheme.surface
+                                tint = MaterialTheme.colorScheme.surface
                             )
                         }
                         if (customThumbnailUri != null) {
@@ -1068,14 +1079,15 @@ fun LocalPlaylistHeader(
                                 onClick = {
                                     deletePlaylistImage(context, playlist.playlist.id)
                                     customThumbnailUri = null
-                                    showEditButtons = false // Ocultar los botones después de eliminar
+                                    showEditButtons =
+                                        false // Ocultar los botones después de eliminar
                                 },
                                 modifier = Modifier.size(24.dp)
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.close),
                                     contentDescription = stringResource(R.string.remove_thumbnail),
-                                    tint =  MaterialTheme.colorScheme.surface
+                                    tint = MaterialTheme.colorScheme.surface
                                 )
                             }
                         }
@@ -1109,10 +1121,16 @@ fun LocalPlaylistHeader(
                 Row {
                     if (editable) {
                         IconButton(onClick = onshowDeletePlaylistDialog) {
-                            Icon(painter = painterResource(R.drawable.delete), contentDescription = null)
+                            Icon(
+                                painter = painterResource(R.drawable.delete),
+                                contentDescription = null
+                            )
                         }
                         IconButton(onClick = onShowEditDialog) {
-                            Icon(painter = painterResource(R.drawable.edit), contentDescription = null)
+                            Icon(
+                                painter = painterResource(R.drawable.edit),
+                                contentDescription = null
+                            )
                         }
                     } else {
                         IconButton(
@@ -1135,7 +1153,10 @@ fun LocalPlaylistHeader(
                     when (downloadState) {
                         Download.STATE_COMPLETED -> {
                             IconButton(onClick = onShowRemoveDownloadDialog) {
-                                Icon(painter = painterResource(R.drawable.offline), contentDescription = null)
+                                Icon(
+                                    painter = painterResource(R.drawable.offline),
+                                    contentDescription = null
+                                )
                             }
                         }
 
@@ -1175,7 +1196,10 @@ fun LocalPlaylistHeader(
                                     )
                                 }
                             }) {
-                                Icon(painter = painterResource(R.drawable.download), contentDescription = null)
+                                Icon(
+                                    painter = painterResource(R.drawable.download),
+                                    contentDescription = null
+                                )
                             }
                         }
                     }
@@ -1185,7 +1209,10 @@ fun LocalPlaylistHeader(
                             items = songs.map { it.song.toMediaItem() }
                         )
                     }) {
-                        Icon(painter = painterResource(R.drawable.queue_music), contentDescription = null)
+                        Icon(
+                            painter = painterResource(R.drawable.queue_music),
+                            contentDescription = null
+                        )
                     }
                 }
             }

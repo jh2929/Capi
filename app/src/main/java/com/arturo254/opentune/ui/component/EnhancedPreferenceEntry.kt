@@ -37,9 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.arturo254.opentune.R
 
-/**
- * Enhanced version of PreferenceEntry with icon and improved design
- */
+/** Enhanced version of PreferenceEntry with icon and improved design */
 @Composable
 fun EnhancedPreferenceEntry(
     title: String,
@@ -92,13 +90,17 @@ fun EnhancedPreferenceEntry(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(
+                        alpha = 0.6f
+                    )
                 )
                 if (subtitle != null) {
                     Text(
                         text = subtitle,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                            alpha = 0.6f
+                        )
                     )
                 }
             }
@@ -106,15 +108,15 @@ fun EnhancedPreferenceEntry(
             Icon(
                 painter = painterResource(R.drawable.chevron_right),
                 contentDescription = null,
-                tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha =.6f)
+                tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                    alpha = .6f
+                )
             )
         }
     }
 }
 
-/**
- * Enhanced version of ListPreference with icon and improved design
- */
+/** Enhanced version of ListPreference with icon and improved design */
 @Composable
 fun <T> EnhancedListPreference(
     title: String,
@@ -189,9 +191,7 @@ fun <T> EnhancedListPreference(
     }
 }
 
-/**
- * Enhanced Icon Button with animation support
- */
+/** Enhanced Icon Button with animation support */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AnimatedIconButton(

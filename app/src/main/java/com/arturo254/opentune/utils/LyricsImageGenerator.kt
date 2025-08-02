@@ -80,7 +80,6 @@ object ComposeToImage {
     }
 
 
-
     private data class ImageConfig(
         val cardSize: Int,
         val padding: Float = 32f,
@@ -142,7 +141,14 @@ object ComposeToImage {
         renderSongMetadata(canvas, songTitle, artistName, config, colorScheme)
         renderLyricsContent(canvas, lyrics, config, colorScheme)
 
-        renderAppLogo(context, canvas, config.cardSize, config.padding, colorScheme.secondaryTextColor, colorScheme.backgroundColor)
+        renderAppLogo(
+            context,
+            canvas,
+            config.cardSize,
+            config.padding,
+            colorScheme.secondaryTextColor,
+            colorScheme.backgroundColor
+        )
 
         bitmap
     }
@@ -192,9 +198,15 @@ object ComposeToImage {
     private fun renderCoverArt(canvas: Canvas, coverArt: Bitmap?, config: ImageConfig) {
         coverArt?.let { artwork ->
             val size = config.cardSize * config.coverArtRatio
-            val rect = RectF(config.padding, config.padding, config.padding + size, config.padding + size)
+            val rect =
+                RectF(config.padding, config.padding, config.padding + size, config.padding + size)
             val clipPath = Path().apply {
-                addRoundRect(rect, config.imageCornerRadius, config.imageCornerRadius, Path.Direction.CW)
+                addRoundRect(
+                    rect,
+                    config.imageCornerRadius,
+                    config.imageCornerRadius,
+                    Path.Direction.CW
+                )
             }
             canvas.withClip(clipPath) {
                 drawBitmap(artwork, null, rect, null)
@@ -228,12 +240,24 @@ object ComposeToImage {
         val maxWidth = config.cardSize - (config.padding * 2 + coverArtSize + 16f)
         val startX = config.padding + coverArtSize + 16f
 
-        val titleLayout = StaticLayout.Builder.obtain(songTitle, 0, songTitle.length, titlePaint, maxWidth.toInt())
+        val titleLayout = StaticLayout.Builder.obtain(
+            songTitle,
+            0,
+            songTitle.length,
+            titlePaint,
+            maxWidth.toInt()
+        )
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
             .setMaxLines(1)
             .build()
 
-        val artistLayout = StaticLayout.Builder.obtain(artistName, 0, artistName.length, artistPaint, maxWidth.toInt())
+        val artistLayout = StaticLayout.Builder.obtain(
+            artistName,
+            0,
+            artistName.length,
+            artistPaint,
+            maxWidth.toInt()
+        )
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
             .setMaxLines(1)
             .build()
@@ -370,7 +394,10 @@ object ComposeToImage {
     }
 
     private fun determineMixedTextAlignment(text: String): Layout.Alignment {
-        val hasRTL = text.any { Character.getDirectionality(it).toInt() == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC.toInt() }
+        val hasRTL = text.any {
+            Character.getDirectionality(it)
+                .toInt() == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC.toInt()
+        }
         return if (hasRTL) Layout.Alignment.ALIGN_CENTER else Layout.Alignment.ALIGN_NORMAL
     }
 }

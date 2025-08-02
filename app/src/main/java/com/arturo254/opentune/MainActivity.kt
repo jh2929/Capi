@@ -713,6 +713,7 @@ class MainActivity : ComponentActivity() {
                                                     Build.VERSION.SDK_INT < Build.VERSION_CODES.S -> {
                                                 PlayerBackgroundStyle.DEFAULT // Sin blur en versiones < Android 12 (S)
                                             }
+
                                             else -> playerBackground
                                         }
 
@@ -749,7 +750,10 @@ class MainActivity : ComponentActivity() {
                                                             },
                                                         onError = { error ->
                                                             // Log del error sin crashear la app
-                                                            Log.w("PlayerBackground", "Error loading background image: ${error.result.throwable?.message}")
+                                                            Log.w(
+                                                                "PlayerBackground",
+                                                                "Error loading background image: ${error.result.throwable?.message}"
+                                                            )
                                                         }
                                                     )
                                                 }
@@ -821,7 +825,8 @@ class MainActivity : ComponentActivity() {
                                 }
 
                                 // Verificación más segura para la ruta
-                                val isSearchRoute = navBackStackEntry?.destination?.route?.startsWith("search/") == true
+                                val isSearchRoute =
+                                    navBackStackEntry?.destination?.route?.startsWith("search/") == true
 
                                 if (active || isSearchRoute) {
                                     TopSearch(
@@ -842,7 +847,8 @@ class MainActivity : ComponentActivity() {
                                         },
                                         leadingIcon = {
                                             val currentRoute = navBackStackEntry?.destination?.route
-                                            val isInNavigationItems = navigationItems.fastAny { it.route == currentRoute }
+                                            val isInNavigationItems =
+                                                navigationItems.fastAny { it.route == currentRoute }
 
                                             IconButton(
                                                 onClick = {
@@ -852,23 +858,36 @@ class MainActivity : ComponentActivity() {
                                                             try {
                                                                 navController.navigateUp()
                                                             } catch (e: Exception) {
-                                                                Log.e("Navigation", "Error navigating up", e)
+                                                                Log.e(
+                                                                    "Navigation",
+                                                                    "Error navigating up",
+                                                                    e
+                                                                )
                                                             }
                                                         }
+
                                                         else -> onActiveChange(true)
                                                     }
                                                 },
                                                 onLongClick = {
                                                     when {
-                                                        active -> { /* No action */ }
+                                                        active -> { /* No action */
+                                                        }
+
                                                         !isInNavigationItems -> {
                                                             try {
                                                                 navController.backToMain()
                                                             } catch (e: Exception) {
-                                                                Log.e("Navigation", "Error navigating to main", e)
+                                                                Log.e(
+                                                                    "Navigation",
+                                                                    "Error navigating to main",
+                                                                    e
+                                                                )
                                                             }
                                                         }
-                                                        else -> { /* No action */ }
+
+                                                        else -> { /* No action */
+                                                        }
                                                     }
                                                 },
                                             ) {
@@ -909,11 +928,12 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                     IconButton(
                                                         onClick = {
-                                                            searchSource = if (searchSource == SearchSource.ONLINE) {
-                                                                SearchSource.LOCAL
-                                                            } else {
-                                                                SearchSource.ONLINE
-                                                            }
+                                                            searchSource =
+                                                                if (searchSource == SearchSource.ONLINE) {
+                                                                    SearchSource.LOCAL
+                                                                } else {
+                                                                    SearchSource.ONLINE
+                                                                }
                                                         },
                                                     ) {
                                                         Icon(
@@ -961,13 +981,17 @@ class MainActivity : ComponentActivity() {
                                                     onDismiss = { onActiveChange(false) },
                                                     pureBlack = pureBlack,
                                                 )
+
                                                 SearchSource.ONLINE -> OnlineSearchScreen(
                                                     query = query.text,
                                                     onQueryChange = onQueryChange,
                                                     navController = navController,
                                                     onSearch = { searchQuery ->
                                                         try {
-                                                            val encodedQuery = URLEncoder.encode(searchQuery, "UTF-8")
+                                                            val encodedQuery = URLEncoder.encode(
+                                                                searchQuery,
+                                                                "UTF-8"
+                                                            )
                                                             navController.navigate("search/$encodedQuery")
 
                                                             // Verificar preferencias antes de guardar historial
@@ -977,7 +1001,11 @@ class MainActivity : ComponentActivity() {
                                                                 }
                                                             }
                                                         } catch (e: Exception) {
-                                                            Log.e("SearchNavigation", "Error navigating to search: ${e.message}", e)
+                                                            Log.e(
+                                                                "SearchNavigation",
+                                                                "Error navigating to search: ${e.message}",
+                                                                e
+                                                            )
                                                         }
                                                     },
                                                     onDismiss = { onActiveChange(false) },
@@ -1005,10 +1033,15 @@ class MainActivity : ComponentActivity() {
                                                         y = (bottomInset + NavigationBarHeight).roundToPx(),
                                                     )
                                                 } else {
-                                                    val slideOffset = (bottomInset + NavigationBarHeight) *
-                                                            playerBottomSheetState.progress.coerceIn(0f, 1f)
-                                                    val hideOffset = (bottomInset + NavigationBarHeight) *
-                                                            (1 - navigationBarHeight / NavigationBarHeight)
+                                                    val slideOffset =
+                                                        (bottomInset + NavigationBarHeight) *
+                                                                playerBottomSheetState.progress.coerceIn(
+                                                                    0f,
+                                                                    1f
+                                                                )
+                                                    val hideOffset =
+                                                        (bottomInset + NavigationBarHeight) *
+                                                                (1 - navigationBarHeight / NavigationBarHeight)
                                                     IntOffset(
                                                         x = 0,
                                                         y = (slideOffset + hideOffset).roundToPx(),
@@ -1021,9 +1054,10 @@ class MainActivity : ComponentActivity() {
                                         var navigateToExplore by remember { mutableStateOf(false) }
 
                                         navigationItems.fastForEach { screen ->
-                                            val isSelected = navBackStackEntry?.destination?.hierarchy?.any {
-                                                it.route == screen.route
-                                            } == true
+                                            val isSelected =
+                                                navBackStackEntry?.destination?.hierarchy?.any {
+                                                    it.route == screen.route
+                                                } == true
 
                                             NavigationBarItem(
                                                 selected = isSelected,
@@ -1050,10 +1084,12 @@ class MainActivity : ComponentActivity() {
                                                 },
                                                 onClick = {
                                                     val currentTapTime = System.currentTimeMillis()
-                                                    val timeSinceLastTap = currentTapTime - lastTapTime
-                                                    val isDoubleTap = screen.titleId == R.string.explore &&
-                                                            lastTappedIcon == R.string.explore &&
-                                                            timeSinceLastTap < 300L
+                                                    val timeSinceLastTap =
+                                                        currentTapTime - lastTapTime
+                                                    val isDoubleTap =
+                                                        screen.titleId == R.string.explore &&
+                                                                lastTappedIcon == R.string.explore &&
+                                                                timeSinceLastTap < 300L
 
                                                     lastTapTime = currentTapTime
                                                     lastTappedIcon = screen.titleId
@@ -1068,9 +1104,16 @@ class MainActivity : ComponentActivity() {
                                                                 delay(300L)
                                                                 if (navigateToExplore) {
                                                                     try {
-                                                                        navigateToScreen(navController, screen)
+                                                                        navigateToScreen(
+                                                                            navController,
+                                                                            screen
+                                                                        )
                                                                     } catch (e: Exception) {
-                                                                        Log.e("Navigation", "Error navigating to screen", e)
+                                                                        Log.e(
+                                                                            "Navigation",
+                                                                            "Error navigating to screen",
+                                                                            e
+                                                                        )
                                                                     }
                                                                 }
                                                             }
@@ -1086,14 +1129,25 @@ class MainActivity : ComponentActivity() {
                                                                 try {
                                                                     searchBarScrollBehavior.state.resetHeightOffset()
                                                                 } catch (e: Exception) {
-                                                                    Log.e("ScrollBehavior", "Error resetting scroll", e)
+                                                                    Log.e(
+                                                                        "ScrollBehavior",
+                                                                        "Error resetting scroll",
+                                                                        e
+                                                                    )
                                                                 }
                                                             }
                                                         } else {
                                                             try {
-                                                                navigateToScreen(navController, screen)
+                                                                navigateToScreen(
+                                                                    navController,
+                                                                    screen
+                                                                )
                                                             } catch (e: Exception) {
-                                                                Log.e("Navigation", "Error navigating to screen", e)
+                                                                Log.e(
+                                                                    "Navigation",
+                                                                    "Error navigating to screen",
+                                                                    e
+                                                                )
                                                             }
                                                         }
                                                     }
@@ -1382,6 +1436,7 @@ fun NotificationPermissionPreference() {
                         openNotificationSettings(context)
                     }
                 }
+
                 !checked && permissionGranted -> {
                     // Si el usuario intenta desactivar, dirigir a configuración del sistema
                     openNotificationSettings(context)
@@ -1486,6 +1541,7 @@ private fun openNotificationSettings(context: Context) {
         context.startActivity(Intent(Settings.ACTION_SETTINGS))
     }
 }
+
 suspend fun checkForUpdates(): String? = withContext(Dispatchers.IO) {
     try {
         val url = URL("https://api.github.com/repos/Arturo254/OpenTune/releases/latest")
@@ -1623,13 +1679,18 @@ fun logErrorToDownloads(context: Context, e: Exception) {
 
             val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
             if (uri == null) {
-                Toast.makeText(context, "Error al crear el archivo en Descargas", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Error al crear el archivo en Descargas", Toast.LENGTH_LONG)
+                    .show()
                 return
             }
 
             val stream = resolver.openOutputStream(uri)
             if (stream == null) {
-                Toast.makeText(context, "No se pudo abrir el archivo para escribir", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    context,
+                    "No se pudo abrir el archivo para escribir",
+                    Toast.LENGTH_LONG
+                ).show()
                 return
             }
 
@@ -1646,7 +1707,8 @@ fun logErrorToDownloads(context: Context, e: Exception) {
             // Retornamos null porque ya lo usamos
             null
         } else {
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val downloadsDir =
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             if (!downloadsDir.exists()) downloadsDir.mkdirs()
             val file = File(downloadsDir, fileName)
             FileOutputStream(file)
@@ -1657,7 +1719,8 @@ fun logErrorToDownloads(context: Context, e: Exception) {
             it.write(logText.toByteArray())
         }
 
-        Toast.makeText(context, "Log guardado en Descargas como $fileName", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "Log guardado en Descargas como $fileName", Toast.LENGTH_LONG)
+            .show()
 
     } catch (ex: Exception) {
         ex.printStackTrace()

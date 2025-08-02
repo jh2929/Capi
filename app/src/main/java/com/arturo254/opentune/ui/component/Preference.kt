@@ -175,6 +175,7 @@ inline fun <reified T : Enum<T>> EnumListPreference(
         isEnabled = isEnabled,
     )
 }
+
 @Composable
 fun SwitchPreference(
     modifier: Modifier = Modifier,

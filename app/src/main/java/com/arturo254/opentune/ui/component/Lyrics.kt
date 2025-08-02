@@ -11,7 +11,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -54,7 +53,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -264,7 +262,7 @@ fun Lyrics(
                     initialScrollDone = false
                 }
                 isAppMinimized = true
-            } else if(event == Lifecycle.Event.ON_START) {
+            } else if (event == Lifecycle.Event.ON_START) {
                 isAppMinimized = false
             }
         }
@@ -306,14 +304,10 @@ fun Lyrics(
     }
 
     LaunchedEffect(currentLineIndex, lastPreviewTime, initialScrollDone) {
-        /**
-         * Count number of new lines in a lyric
-         */
+        /** Count number of new lines in a lyric */
         fun countNewLine(str: String) = str.count { it == '\n' }
 
-        /**
-         * Calculate the lyric offset Based on how many lines (\n chars)
-         */
+        /** Calculate the lyric offset Based on how many lines (\n chars) */
         fun calculateOffset() = with(density) {
             if (landscapeOffset) {
                 16.dp.toPx()
@@ -324,12 +318,12 @@ fun Lyrics(
         }
 
         if (!isSynced) return@LaunchedEffect
-        if((currentLineIndex == 0 && shouldScrollToFirstLine) || !initialScrollDone) {
+        if ((currentLineIndex == 0 && shouldScrollToFirstLine) || !initialScrollDone) {
             shouldScrollToFirstLine = false
             lazyListState.scrollToItem(
                 currentLineIndex,
                 with(density) { 36.dp.toPx().toInt() } + calculateOffset())
-            if(!isAppMinimized) {
+            if (!isAppMinimized) {
                 initialScrollDone = true
             }
         } else if (currentLineIndex != -1) {
@@ -345,14 +339,19 @@ fun Lyrics(
                 if (isCurrentLineVisible) {
                     val viewportStartOffset = lazyListState.layoutInfo.viewportStartOffset
                     val viewportEndOffset = lazyListState.layoutInfo.viewportEndOffset
-                    val currentLineOffset = visibleItemsInfo.find { it.index == currentLineIndex }?.offset ?: 0
-                    val previousLineOffset = visibleItemsInfo.find { it.index == previousLineIndex }?.offset ?: 0
+                    val currentLineOffset =
+                        visibleItemsInfo.find { it.index == currentLineIndex }?.offset ?: 0
+                    val previousLineOffset =
+                        visibleItemsInfo.find { it.index == previousLineIndex }?.offset ?: 0
 
-                    val centerRangeStart = viewportStartOffset + (viewportEndOffset - viewportStartOffset) / 2
-                    val centerRangeEnd = viewportEndOffset - (viewportEndOffset - viewportStartOffset) / 8
+                    val centerRangeStart =
+                        viewportStartOffset + (viewportEndOffset - viewportStartOffset) / 2
+                    val centerRangeEnd =
+                        viewportEndOffset - (viewportEndOffset - viewportStartOffset) / 8
 
                     if (currentLineOffset in centerRangeStart..centerRangeEnd ||
-                        previousLineOffset in centerRangeStart..centerRangeEnd) {
+                        previousLineOffset in centerRangeStart..centerRangeEnd
+                    ) {
                         lazyListState.animateScrollToItem(
                             currentLineIndex,
                             with(density) { 36.dp.toPx().toInt() } + calculateOffset())
@@ -360,7 +359,7 @@ fun Lyrics(
                 }
             }
         }
-        if(currentLineIndex > 0) {
+        if (currentLineIndex > 0) {
             shouldScrollToFirstLine = true
         }
         previousLineIndex = currentLineIndex
@@ -444,7 +443,8 @@ fun Lyrics(
                                     if (isSelected) {
                                         selectedIndices.remove(index)
                                         if (selectedIndices.isEmpty()) {
-                                            isSelectionModeActive = false // Exit mode if last item deselected
+                                            isSelectionModeActive =
+                                                false // Exit mode if last item deselected
                                         }
                                     } else {
                                         if (selectedIndices.size < maxSelectionLimit) {
@@ -483,7 +483,9 @@ fun Lyrics(
                             }
                         )
                         .background(
-                            if (isSelected && isSelectionModeActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                            if (isSelected && isSelectionModeActive) MaterialTheme.colorScheme.primary.copy(
+                                alpha = 0.3f
+                            )
                             else Color.Transparent
                         )
                         .padding(horizontal = 24.dp, vertical = 8.dp)
@@ -593,7 +595,9 @@ fun Lyrics(
                         Icon(
                             painter = painterResource(id = R.drawable.media3_icon_share),
                             contentDescription = stringResource(R.string.share_selected),
-                            tint = if (selectedIndices.isNotEmpty()) textColor else textColor.copy(alpha = 0.5f)
+                            tint = if (selectedIndices.isNotEmpty()) textColor else textColor.copy(
+                                alpha = 0.5f
+                            )
                         )
                     }
                 } else {
@@ -618,7 +622,6 @@ fun Lyrics(
                 }
             }
         }
-
 
 
     }
@@ -745,10 +748,19 @@ fun Lyrics(
                                 val shareIntent = Intent().apply {
                                     action = Intent.ACTION_SEND
                                     type = "text/plain"
-                                    val songLink = "https://music.youtube.com/watch?v=${mediaMetadata?.id}"
-                                    putExtra(Intent.EXTRA_TEXT, "\"$lyricsText\"\n\n$songTitle - $artists\n$songLink")
+                                    val songLink =
+                                        "https://music.youtube.com/watch?v=${mediaMetadata?.id}"
+                                    putExtra(
+                                        Intent.EXTRA_TEXT,
+                                        "\"$lyricsText\"\n\n$songTitle - $artists\n$songLink"
+                                    )
                                 }
-                                context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.share_lyrics)))
+                                context.startActivity(
+                                    Intent.createChooser(
+                                        shareIntent,
+                                        context.getString(R.string.share_lyrics)
+                                    )
+                                )
                                 showShareDialog = false
                             },
                             modifier = Modifier
@@ -841,7 +853,8 @@ fun Lyrics(
         // Calculate height considerations
         val previewBoxHeight = 340.dp
         val headerFooterEstimate = (48.dp + 14.dp + 16.dp + 20.dp + 8.dp + 28.dp * 2)
-        val previewAvailableHeight = previewBoxHeight - headerFooterEstimate        // Define the base style for measurement
+        val previewAvailableHeight =
+            previewBoxHeight - headerFooterEstimate        // Define the base style for measurement
         val textStyleForMeasurement = TextStyle(
             color = previewTextColor,
             fontWeight = FontWeight.Bold,
@@ -867,7 +880,8 @@ fun Lyrics(
                 withContext(Dispatchers.IO) {
                     try {
                         val loader = ImageLoader(context)
-                        val req = ImageRequest.Builder(context).data(coverUrl).allowHardware(false).build()
+                        val req = ImageRequest.Builder(context).data(coverUrl).allowHardware(false)
+                            .build()
                         val result = loader.execute(req)
                         val bmp = result.drawable?.toBitmap()
                         if (bmp != null) {
@@ -882,7 +896,8 @@ fun Lyrics(
                             paletteColors.clear()
                             paletteColors.addAll(colors.take(5))
                         }
-                    } catch (_: Exception) {}
+                    } catch (_: Exception) {
+                    }
                 }
             }
         }
@@ -892,7 +907,13 @@ fun Lyrics(
             var expandedSecondaryText by remember { mutableStateOf(false) }
 
             // Predefined color palettes with names
-            val backgroundColors = (paletteColors + listOf(Color(0xFF242424), Color(0xFF121212), Color.White, Color.Black, Color(0xFFF5F5F5))).distinct().take(8).mapIndexed { index, color ->
+            val backgroundColors = (paletteColors + listOf(
+                Color(0xFF242424),
+                Color(0xFF121212),
+                Color.White,
+                Color.Black,
+                Color(0xFFF5F5F5)
+            )).distinct().take(8).mapIndexed { index, color ->
                 color to when (color) {
                     Color(0xFF242424) -> "Oscuro"
                     Color(0xFF121212) -> "Negro profundo"
@@ -903,16 +924,22 @@ fun Lyrics(
                 }
             }
 
-            val textColors = (paletteColors + listOf(Color.White, Color.Black, Color(0xFF1DB954))).distinct().take(8).mapIndexed { index, color ->
-                color to when (color) {
-                    Color.White -> "Blanco"
-                    Color.Black -> "Negro"
-                    Color(0xFF1DB954) -> "Verde Spotify"
-                    else -> "Paleta ${index + 1}"
+            val textColors =
+                (paletteColors + listOf(Color.White, Color.Black, Color(0xFF1DB954))).distinct()
+                    .take(8).mapIndexed { index, color ->
+                    color to when (color) {
+                        Color.White -> "Blanco"
+                        Color.Black -> "Negro"
+                        Color(0xFF1DB954) -> "Verde Spotify"
+                        else -> "Paleta ${index + 1}"
+                    }
                 }
-            }
 
-            val secondaryTextColors = (paletteColors.map { it.copy(alpha = 0.7f) } + listOf(Color.White.copy(alpha = 0.7f), Color.Black.copy(alpha = 0.7f), Color(0xFF1DB954))).distinct().take(8).mapIndexed { index, color ->
+            val secondaryTextColors = (paletteColors.map { it.copy(alpha = 0.7f) } + listOf(
+                Color.White.copy(alpha = 0.7f),
+                Color.Black.copy(alpha = 0.7f),
+                Color(0xFF1DB954)
+            )).distinct().take(8).mapIndexed { index, color ->
                 color to when {
                     color.alpha < 1f && color.copy(alpha = 1f) == Color.White -> "Blanco suave"
                     color.alpha < 1f && color.copy(alpha = 1f) == Color.Black -> "Negro suave"
@@ -1049,7 +1076,10 @@ fun Lyrics(
                                             Box(
                                                 modifier = Modifier
                                                     .size(20.dp)
-                                                    .background(color, shape = RoundedCornerShape(4.dp))
+                                                    .background(
+                                                        color,
+                                                        shape = RoundedCornerShape(4.dp)
+                                                    )
                                                     .border(
                                                         1.dp,
                                                         MaterialTheme.colorScheme.outline,
@@ -1140,7 +1170,10 @@ fun Lyrics(
                                             Box(
                                                 modifier = Modifier
                                                     .size(20.dp)
-                                                    .background(color, shape = RoundedCornerShape(4.dp))
+                                                    .background(
+                                                        color,
+                                                        shape = RoundedCornerShape(4.dp)
+                                                    )
                                                     .border(
                                                         1.dp,
                                                         MaterialTheme.colorScheme.outline,
@@ -1231,7 +1264,10 @@ fun Lyrics(
                                             Box(
                                                 modifier = Modifier
                                                     .size(20.dp)
-                                                    .background(color, shape = RoundedCornerShape(4.dp))
+                                                    .background(
+                                                        color,
+                                                        shape = RoundedCornerShape(4.dp)
+                                                    )
                                                     .border(
                                                         1.dp,
                                                         MaterialTheme.colorScheme.outline,
@@ -1301,15 +1337,28 @@ fun Lyrics(
                                         )
                                         val timestamp = System.currentTimeMillis()
                                         val filename = "lyrics_$timestamp"
-                                        val uri = ComposeToImage.saveBitmapAsFile(context, image, filename)
+                                        val uri = ComposeToImage.saveBitmapAsFile(
+                                            context,
+                                            image,
+                                            filename
+                                        )
                                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                             type = "image/png"
                                             putExtra(Intent.EXTRA_STREAM, uri)
                                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                         }
-                                        context.startActivity(Intent.createChooser(shareIntent, "Share Lyrics"))
+                                        context.startActivity(
+                                            Intent.createChooser(
+                                                shareIntent,
+                                                "Share Lyrics"
+                                            )
+                                        )
                                     } catch (e: Exception) {
-                                        Toast.makeText(context, "Failed to create image: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            "Failed to create image: ${e.message}",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     } finally {
                                         showProgressDialog = false
                                     }
@@ -1332,7 +1381,6 @@ fun Lyrics(
                 }
             }
         }
-
 
 
     }

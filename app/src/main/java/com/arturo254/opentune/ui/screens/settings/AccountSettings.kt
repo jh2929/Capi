@@ -70,15 +70,16 @@ fun AccountSettings(
     }
 
     // Función para obtener el nombre de cuenta de manera segura
-    val getAccountDisplayName = remember(accountName, accountEmail, accountChannelHandle, isLoggedIn) {
-        when {
-            !isLoggedIn -> ""
-            accountName.isNotBlank() -> accountName
-            accountEmail.isNotBlank() -> accountEmail.substringBefore("@")
-            accountChannelHandle.isNotBlank() -> accountChannelHandle
-            else -> "Usuario sin nombre" // Fallback para evitar crashes
+    val getAccountDisplayName =
+        remember(accountName, accountEmail, accountChannelHandle, isLoggedIn) {
+            when {
+                !isLoggedIn -> ""
+                accountName.isNotBlank() -> accountName
+                accountEmail.isNotBlank() -> accountEmail.substringBefore("@")
+                accountChannelHandle.isNotBlank() -> accountChannelHandle
+                else -> "Usuario sin nombre" // Fallback para evitar crashes
+            }
         }
-    }
 
     // Función para obtener la descripción de la cuenta de manera segura
     val getAccountDescription = remember(accountEmail, accountChannelHandle, isLoggedIn) {
@@ -177,27 +178,36 @@ fun AccountSettings(
                         data.split("\n").forEach {
                             when {
                                 it.startsWith("***INNERTUBE COOKIE*** =") -> {
-                                    val cookie = it.substringAfter("***INNERTUBE COOKIE*** =").trim()
+                                    val cookie =
+                                        it.substringAfter("***INNERTUBE COOKIE*** =").trim()
                                     onInnerTubeCookieChange(cookie)
                                 }
+
                                 it.startsWith("***VISITOR DATA*** =") -> {
-                                    val visitorDataValue = it.substringAfter("***VISITOR DATA*** =").trim()
+                                    val visitorDataValue =
+                                        it.substringAfter("***VISITOR DATA*** =").trim()
                                     onVisitorDataChange(visitorDataValue)
                                 }
+
                                 it.startsWith("***DATASYNC ID*** =") -> {
-                                    val dataSyncIdValue = it.substringAfter("***DATASYNC ID*** =").trim()
+                                    val dataSyncIdValue =
+                                        it.substringAfter("***DATASYNC ID*** =").trim()
                                     onDataSyncIdChange(dataSyncIdValue)
                                 }
+
                                 it.startsWith("***ACCOUNT NAME*** =") -> {
                                     val name = it.substringAfter("***ACCOUNT NAME*** =").trim()
                                     onAccountNameChange(name)
                                 }
+
                                 it.startsWith("***ACCOUNT EMAIL*** =") -> {
                                     val email = it.substringAfter("***ACCOUNT EMAIL*** =").trim()
                                     onAccountEmailChange(email)
                                 }
+
                                 it.startsWith("***ACCOUNT CHANNEL HANDLE*** =") -> {
-                                    val handle = it.substringAfter("***ACCOUNT CHANNEL HANDLE*** =").trim()
+                                    val handle =
+                                        it.substringAfter("***ACCOUNT CHANNEL HANDLE*** =").trim()
                                     onAccountChannelHandleChange(handle)
                                 }
                             }
@@ -209,9 +219,12 @@ fun AccountSettings(
                     isInputValid = { input ->
                         input.isNotEmpty() &&
                                 try {
-                                    val cookieLine = input.lines().find { it.startsWith("***INNERTUBE COOKIE*** =") }
+                                    val cookieLine = input.lines()
+                                        .find { it.startsWith("***INNERTUBE COOKIE*** =") }
                                     if (cookieLine != null) {
-                                        val cookie = cookieLine.substringAfter("***INNERTUBE COOKIE*** =").trim()
+                                        val cookie =
+                                            cookieLine.substringAfter("***INNERTUBE COOKIE*** =")
+                                                .trim()
                                         cookie.isEmpty() || "SAPISID" in parseCookieString(cookie)
                                     } else {
                                         false

@@ -74,6 +74,7 @@ class BackupRestoreViewModel @Inject constructor(
                                     inputStream.copyTo(outputStream)
                                 }
                             }
+
                             InternalDatabase.DB_NAME -> {
                                 runBlocking(Dispatchers.IO) {
                                     database.checkpoint()
@@ -94,7 +95,12 @@ class BackupRestoreViewModel @Inject constructor(
             context.filesDir.resolve(PERSISTENT_QUEUE_FILE).delete()
 
             // Reiniciar app
-            context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            context.startActivity(
+                Intent(
+                    context,
+                    MainActivity::class.java
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
             exitProcess(0)
         }.onFailure {
             reportException(it)
@@ -119,7 +125,12 @@ class BackupRestoreViewModel @Inject constructor(
 
             context.stopService(Intent(context, MusicService::class.java))
             context.filesDir.resolve(PERSISTENT_QUEUE_FILE).delete()
-            context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            context.startActivity(
+                Intent(
+                    context,
+                    MainActivity::class.java
+                ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
             exitProcess(0)
         }.onFailure {
             reportException(it)

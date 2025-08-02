@@ -105,7 +105,6 @@ fun SongMenu(
     var refetchIconDegree by remember { mutableFloatStateOf(0f) }
 
 
-
     val rotationAnimation by animateFloatAsState(
         targetValue = refetchIconDegree,
         animationSpec = tween(durationMillis = 800),
@@ -479,12 +478,18 @@ fun SongMenu(
                                 playlistBrowseId?.let { playlistId ->
                                     if (playlistSong.map.setVideoId != null) {
                                         YouTube.removeFromPlaylist(
-                                            playlistId, playlistSong.map.songId, playlistSong.map.setVideoId
+                                            playlistId,
+                                            playlistSong.map.songId,
+                                            playlistSong.map.setVideoId
                                         )
                                     }
                                 }
                             }
-                            move(playlistSong.map.playlistId, playlistSong.map.position, Int.MAX_VALUE)
+                            move(
+                                playlistSong.map.playlistId,
+                                playlistSong.map.position,
+                                Int.MAX_VALUE
+                            )
                             delete(playlistSong.map.copy(position = Int.MAX_VALUE))
                         }
                         onDismiss()
@@ -518,6 +523,7 @@ fun SongMenu(
                         }
                     )
                 }
+
                 Download.STATE_QUEUED, Download.STATE_DOWNLOADING -> {
                     ListItem(
                         headlineContent = { Text(text = stringResource(R.string.downloading)) },
@@ -537,6 +543,7 @@ fun SongMenu(
                         }
                     )
                 }
+
                 else -> {
                     ListItem(
                         headlineContent = { Text(text = stringResource(R.string.download)) },
@@ -637,7 +644,7 @@ fun SongMenu(
                 modifier = Modifier.clickable {
                     onDismiss()
                     bottomSheetPageState.show {
-                       (song.id)
+                        (song.id)
                     }
                 }
             )

@@ -224,7 +224,8 @@ fun GridItem(
                     Modifier.fillMaxWidth()
                 } else {
                     Modifier.height(GridThumbnailHeight)
-                }.aspectRatio(thumbnailRatio)
+                }
+                    .aspectRatio(thumbnailRatio)
                     .clip(RoundedCornerShape(27.dp)),
         ) {
             thumbnailContent()
@@ -1208,7 +1209,8 @@ fun PlaylistGridItem(
     },
     badges = badges,
     thumbnailContent = {
-        val thumbnailUri = getPlaylistImageUri(context, playlist.playlist.id) // Obtener URI de la miniatura
+        val thumbnailUri =
+            getPlaylistImageUri(context, playlist.playlist.id) // Obtener URI de la miniatura
 
         if (thumbnailUri != null) {
             // Si la URI de la imagen existe, la mostramos
@@ -1449,7 +1451,11 @@ fun YouTubeListItem(
                 makeTimeString(item.duration?.times(1000L))
             )
 
-            is AlbumItem -> joinByBullet(item.artists?.joinToString { it.name }, item.year?.toString())
+            is AlbumItem -> joinByBullet(
+                item.artists?.joinToString { it.name },
+                item.year?.toString()
+            )
+
             is ArtistItem -> null
             is PlaylistItem -> joinByBullet(item.author?.name, item.songCountText)
         },

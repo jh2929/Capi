@@ -12,7 +12,6 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -74,7 +73,6 @@ import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
-import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.arturo254.innertube.utils.parseCookieString
 import com.arturo254.opentune.BuildConfig
@@ -171,7 +169,6 @@ fun UpdateCard(latestVersion: String = "") {
     var showUpdateCard by remember { mutableStateOf(false) }
     var currentLatestVersion by remember { mutableStateOf(latestVersion) }
     var showDownloadDialog by remember { mutableStateOf(false) }
-
 
 
     // Verificar actualizaciones al inicio
@@ -362,8 +359,9 @@ fun UpdateDownloadDialog(
                                 if (downloadedApkUri != null) {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                                         if (!context.packageManager.canRequestPackageInstalls()) {
-                                            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
-                                                .setData("package:${context.packageName}".toUri())
+                                            val intent =
+                                                Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
+                                                    .setData("package:${context.packageName}".toUri())
 
                                             installPermissionLauncher.launch(intent)
                                         } else {
@@ -552,7 +550,6 @@ fun SettingsScreen(
 //    var isBetaFunEnabled by remember { mutableStateOf(false) }
 
 
-
     Column(
         Modifier
             .windowInsetsPadding(LocalPlayerAwareWindowInsets.current.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
@@ -658,8 +655,11 @@ fun SettingsScreen(
                                     cleanName.isEmpty() -> "?"
                                     cleanName.contains(" ") -> {
                                         val parts = cleanName.split(" ")
-                                        "${parts.first().firstOrNull()?.uppercase() ?: ""}${parts.last().firstOrNull()?.uppercase() ?: ""}"
+                                        "${
+                                            parts.first().firstOrNull()?.uppercase() ?: ""
+                                        }${parts.last().firstOrNull()?.uppercase() ?: ""}"
                                     }
+
                                     else -> cleanName.take(2).uppercase()
                                 }
                             }

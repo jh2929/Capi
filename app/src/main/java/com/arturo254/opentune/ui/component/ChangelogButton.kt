@@ -355,8 +355,16 @@ private fun ReleaseCard(release: Release) {
 
             AnimatedVisibility(
                 visible = expanded,
-                enter = fadeIn(animationSpec = tween(300)) + expandVertically(animationSpec = tween(300)),
-                exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(animationSpec = tween(300))
+                enter = fadeIn(animationSpec = tween(300)) + expandVertically(
+                    animationSpec = tween(
+                        300
+                    )
+                ),
+                exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(
+                    animationSpec = tween(
+                        300
+                    )
+                )
             ) {
                 Column {
                     Spacer(modifier = Modifier.height(12.dp))
@@ -714,7 +722,6 @@ private fun HorizontalRule() {
 }
 
 
-
 @Composable
 private fun FormattedText(
     text: String,
@@ -949,7 +956,8 @@ class ChangelogViewModel : ViewModel() {
                     val jsonArray = JSONArray(response)
                     val releases = mutableListOf<Release>()
 
-                    for (i in 0 until jsonArray.length().coerceAtMost(10)) { // Limitar a 10 releases
+                    for (i in 0 until jsonArray.length()
+                        .coerceAtMost(10)) { // Limitar a 10 releases
                         val releaseJson = jsonArray.getJSONObject(i)
                         releases.add(
                             Release(

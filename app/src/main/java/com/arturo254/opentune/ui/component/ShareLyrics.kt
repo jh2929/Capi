@@ -88,8 +88,10 @@ val colorPresets = listOf(
     ColorPreset("Oscuro Clásico", Color(0xFF0A0A0A), Color(0xFFFFFFFF), Color(0xFFB0B0B0), true),
     ColorPreset("Azul Nocturno", Color(0xFF0F172A), Color(0xFFF1F5F9), Color(0xFF94A3B8), true),
     ColorPreset("Verde Esmeralda", Color(0xFF064E3B), Color(0xFFECFDF5), Color(0xFFA7F3D0), true),
-    ColorPreset("Púrpura Profundo", Color(0xFF7C2D12), Color(0xFFFED7AA), Color(0xFFEA580C), true,
-        gradientColors = listOf(Color(0xFF7C2D12), Color(0xFFEA580C))),
+    ColorPreset(
+        "Púrpura Profundo", Color(0xFF7C2D12), Color(0xFFFED7AA), Color(0xFFEA580C), true,
+        gradientColors = listOf(Color(0xFF7C2D12), Color(0xFFEA580C))
+    ),
     ColorPreset("Blanco Limpio", Color(0xFFFFFFFF), Color(0xFF0F172A), Color(0xFF64748B), false),
     ColorPreset("Crema Suave", Color(0xFFFEF7ED), Color(0xFF431407), Color(0xFF78716C), false),
     ColorPreset("Rosa Suave", Color(0xFFFFF1F2), Color(0xFF881337), Color(0xFFA21CAF), false),
@@ -389,7 +391,9 @@ private fun ColorPresetItem(
                 )
                 .border(
                     width = if (isSelected) 3.dp else 1.dp,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.3f),
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray.copy(
+                        alpha = 0.3f
+                    ),
                     shape = RoundedCornerShape(16.dp)
                 ),
             contentAlignment = Alignment.Center

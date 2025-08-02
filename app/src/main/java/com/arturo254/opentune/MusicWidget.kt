@@ -7,12 +7,12 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import android.widget.RemoteViews
 import androidx.core.graphics.drawable.toBitmap
 import androidx.media3.common.Player
 import coil.ImageLoader
-import android.os.Handler
-import android.os.Looper
 import coil.request.ImageRequest
 import com.arturo254.opentune.playback.PlayerConnection
 import kotlinx.coroutines.CoroutineScope
@@ -51,31 +51,37 @@ class MusicWidget : AppWidgetProvider() {
                 abortBroadcast()
                 updateAllWidgets(context)
             }
+
             ACTION_PREV -> {
                 PlayerConnection.instance?.seekToPrevious()
                 abortBroadcast()
                 updateAllWidgets(context)
             }
+
             ACTION_NEXT -> {
                 PlayerConnection.instance?.seekToNext()
                 abortBroadcast()
                 updateAllWidgets(context)
             }
+
             ACTION_SHUFFLE -> {
                 PlayerConnection.instance?.toggleShuffle()
                 abortBroadcast()
                 updateAllWidgets(context)
             }
+
             ACTION_LIKE -> {
                 PlayerConnection.instance?.toggleLike()
                 abortBroadcast()
                 updateAllWidgets(context)
             }
+
             ACTION_REPLAY -> {
                 PlayerConnection.instance?.toggleReplayMode()
                 abortBroadcast()
                 updateAllWidgets(context)
             }
+
             ACTION_STATE_CHANGED, ACTION_UPDATE_PROGRESS -> {
                 updateAllWidgets(context)
             }
@@ -125,14 +131,23 @@ class MusicWidget : AppWidgetProvider() {
 
                 val playPauseIcon = if (it.playWhenReady) R.drawable.pause else R.drawable.play
                 views.setImageViewResource(R.id.widget_play_pause, playPauseIcon)
-                val shuffleIcon = if (it.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle
+                val shuffleIcon =
+                    if (it.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle
                 views.setImageViewResource(R.id.widget_shuffle, shuffleIcon)
                 val likeIcon = R.drawable.favorite
                 views.setImageViewResource(R.id.widget_like, likeIcon)
                 if (it.repeatMode == Player.REPEAT_MODE_ONE) {
-                    views.setInt(R.id.widget_play_pause, "setColorFilter", context.getColor(R.color.light_blue_50))
+                    views.setInt(
+                        R.id.widget_play_pause,
+                        "setColorFilter",
+                        context.getColor(R.color.light_blue_50)
+                    )
                 } else {
-                    views.setInt(R.id.widget_play_pause, "setColorFilter", context.getColor(android.R.color.transparent))
+                    views.setInt(
+                        R.id.widget_play_pause,
+                        "setColorFilter",
+                        context.getColor(android.R.color.transparent)
+                    )
                 }
                 val currentPos = formatTime(it.currentPosition)
                 val duration = formatTime(it.duration)
@@ -161,14 +176,30 @@ class MusicWidget : AppWidgetProvider() {
                 }
             }
 
-            views.setOnClickPendingIntent(R.id.widget_play_pause, getBroadcastPendingIntent(context, ACTION_PLAY_PAUSE))
-            views.setOnClickPendingIntent(R.id.widget_prev, getBroadcastPendingIntent(context, ACTION_PREV))
-            views.setOnClickPendingIntent(R.id.widget_next, getBroadcastPendingIntent(context, ACTION_NEXT))
-            views.setOnClickPendingIntent(R.id.widget_shuffle, getBroadcastPendingIntent(context, ACTION_SHUFFLE))
-            views.setOnClickPendingIntent(R.id.widget_like, getBroadcastPendingIntent(context, ACTION_LIKE))
+            views.setOnClickPendingIntent(
+                R.id.widget_play_pause,
+                getBroadcastPendingIntent(context, ACTION_PLAY_PAUSE)
+            )
+            views.setOnClickPendingIntent(
+                R.id.widget_prev,
+                getBroadcastPendingIntent(context, ACTION_PREV)
+            )
+            views.setOnClickPendingIntent(
+                R.id.widget_next,
+                getBroadcastPendingIntent(context, ACTION_NEXT)
+            )
+            views.setOnClickPendingIntent(
+                R.id.widget_shuffle,
+                getBroadcastPendingIntent(context, ACTION_SHUFFLE)
+            )
+            views.setOnClickPendingIntent(
+                R.id.widget_like,
+                getBroadcastPendingIntent(context, ACTION_LIKE)
+            )
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }
+
         private fun getBroadcastPendingIntent(context: Context, action: String): PendingIntent {
             val intent = Intent(context, MusicWidget::class.java).apply {
                 this.action = action

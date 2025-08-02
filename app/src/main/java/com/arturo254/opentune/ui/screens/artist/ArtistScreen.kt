@@ -400,7 +400,10 @@ fun ArtistScreen(
                                                                     if (item.id.isNotEmpty()) {
                                                                         navController.navigate("album/${item.id}")
                                                                     } else {
-                                                                        Log.w("ArtistScreen", "Album ID is empty")
+                                                                        Log.w(
+                                                                            "ArtistScreen",
+                                                                            "Album ID is empty"
+                                                                        )
                                                                         Toast.makeText(
                                                                             context,
                                                                             "Error: Invalid album ID",
@@ -408,7 +411,11 @@ fun ArtistScreen(
                                                                         ).show()
                                                                     }
                                                                 } catch (e: Exception) {
-                                                                    Log.e("ArtistScreen", "Navigation error to album: ${item.id}", e)
+                                                                    Log.e(
+                                                                        "ArtistScreen",
+                                                                        "Navigation error to album: ${item.id}",
+                                                                        e
+                                                                    )
                                                                     Toast.makeText(
                                                                         context,
                                                                         "Navigation error",
@@ -422,10 +429,17 @@ fun ArtistScreen(
                                                                     if (item.id.isNotEmpty()) {
                                                                         navController.navigate("artist/${item.id}")
                                                                     } else {
-                                                                        Log.w("ArtistScreen", "Artist ID is empty")
+                                                                        Log.w(
+                                                                            "ArtistScreen",
+                                                                            "Artist ID is empty"
+                                                                        )
                                                                     }
                                                                 } catch (e: Exception) {
-                                                                    Log.e("ArtistScreen", "Navigation error to artist: ${item.id}", e)
+                                                                    Log.e(
+                                                                        "ArtistScreen",
+                                                                        "Navigation error to artist: ${item.id}",
+                                                                        e
+                                                                    )
                                                                 }
                                                             }
 
@@ -434,10 +448,17 @@ fun ArtistScreen(
                                                                     if (item.id.isNotEmpty()) {
                                                                         navController.navigate("online_playlist/${item.id}")
                                                                     } else {
-                                                                        Log.w("ArtistScreen", "Playlist ID is empty")
+                                                                        Log.w(
+                                                                            "ArtistScreen",
+                                                                            "Playlist ID is empty"
+                                                                        )
                                                                     }
                                                                 } catch (e: Exception) {
-                                                                    Log.e("ArtistScreen", "Navigation error to playlist: ${item.id}", e)
+                                                                    Log.e(
+                                                                        "ArtistScreen",
+                                                                        "Navigation error to playlist: ${item.id}",
+                                                                        e
+                                                                    )
                                                                 }
                                                             }
                                                         }
