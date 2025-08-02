@@ -1,6 +1,7 @@
 package com.arturo254.opentune.ui.player
 
 import android.content.res.Configuration
+import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.text.format.Formatter
 import android.widget.Toast
@@ -137,6 +138,247 @@ import kotlinx.coroutines.withContext
 import me.saket.squiggles.SquigglySlider
 import kotlin.math.roundToInt
 
+// Clase para manejar el estado del gradiente
+data class GradientState(
+    val colors: List<Color> = emptyList(),
+    val isLoading: Boolean = false,
+    val textColor: Color = Color.White,
+    val iconColor: Color = Color.Black,
+    val shouldUseWhiteText: Boolean = false
+) {
+    val isGradientReady: Boolean get() = colors.size >= 2
+}
+
+// Función para calcular colores óptimos con mejor contraste
+private fun calculateOptimalColors(gradientColors: List<Color>): Triple<Color, Color, Boolean> {
+    val dominantColor = gradientColors.first()
+    val secondaryColor = gradientColors.last()
+
+    val whiteContrastDominant = ColorUtils.calculateContrast(
+        dominantColor.toArgb(),
+        Color.White.toArgb()
+    )
+    val blackContrastDominant = ColorUtils.calculateContrast(
+        dominantColor.toArgb(),
+        Color.Black.toArgb()
+    )
+
+    val whiteContrastSecondary = ColorUtils.calculateContrast(
+        secondaryColor.toArgb(),
+        Color.White.toArgb()
+    )
+    val blackContrastSecondary = ColorUtils.calculateContrast(
+        secondaryColor.toArgb(),
+        Color.Black.toArgb()
+    )
+
+    val minWhiteContrast = minOf(whiteContrastDominant, whiteContrastSecondary)
+    val minBlackContrast = minOf(blackContrastDominant, blackContrastSecondary)
+
+    val contrastThreshold = 3.5
+
+    return when {
+        minWhiteContrast >= contrastThreshold && minBlackContrast < contrastThreshold -> {
+            Triple(Color.White, Color.Black, true)
+        }
+        minBlackContrast >= contrastThreshold && minWhiteContrast < contrastThreshold -> {
+            Triple(Color.Black, Color.White, false)
+        }
+        minWhiteContrast > minBlackContrast -> {
+            Triple(Color.White, Color.Black, true)
+        }
+        else -> {
+            Triple(Color.Black, Color.White, false)
+        }
+    }
+}
+
+// Funciones auxiliares para el procesamiento de colores
+private fun quantizeColor(color: Int): Int {
+    val factor = 64
+    val r = (android.graphics.Color.red(color) / factor) * factor
+    val g = (android.graphics.Color.green(color) / factor) * factor
+    val b = (android.graphics.Color.blue(color) / factor) * factor
+    return android.graphics.Color.rgb(r, g, b)
+}
+
+private fun calculateColorDistance(color1: Color, color2: Color): Double {
+    val deltaR = color1.red - color2.red
+    val deltaG = color1.green - color2.green
+    val deltaB = color1.blue - color2.blue
+    return kotlin.math.sqrt((deltaR * deltaR + deltaG * deltaG + deltaB * deltaB).toDouble())
+}
+
+// Extensión mejorada para extraer colores del bitmap
+fun Bitmap.extractGradientColors(): List<Color> {
+    val scaledBitmap = if (width > 100 || height > 100) {
+        Bitmap.createScaledBitmap(this, 100, 100, true)
+    } else this
+
+    val colorCounts = mutableMapOf<Int, Int>()
+
+    for (x in 0 until scaledBitmap.width step 2) {
+        for (y in 0 until scaledBitmap.height step 2) {
+            val pixel = scaledBitmap.getPixel(x, y)
+            val quantizedColor = quantizeColor(pixel)
+            colorCounts[quantizedColor] = colorCounts.getOrDefault(quantizedColor, 0) + 1
+        }
+    }
+
+    val dominantColors = colorCounts.entries
+        .sortedByDescending { it.value }
+        .take(8)
+        .map { Color(it.key) }
+        .filter { color ->
+            val luminance = (0.299 * color.red + 0.587 * color.green + 0.114 * color.blue)
+            luminance in 0.1..0.9
+        }
+
+    return if (dominantColors.size >= 2) {
+        val primaryColor = dominantColors.first()
+        val secondaryColor = dominantColors.drop(1)
+            .maxByOrNull { color ->
+                calculateColorDistance(primaryColor, color)
+            } ?: dominantColors.last()
+
+        listOf(primaryColor, secondaryColor)
+    } else {
+        emptyList()
+    }
+}
+
+// Composable para manejar el estado del gradiente
+@Composable
+private fun rememberGradientState(
+    thumbnailUrl: String?,
+    playerBackground: PlayerBackgroundStyle,
+    useBlackBackground: Boolean
+): GradientState {
+    var gradientState by remember { mutableStateOf(GradientState()) }
+    val context = LocalContext.current
+
+    LaunchedEffect(thumbnailUrl, playerBackground, useBlackBackground) {
+        if (useBlackBackground && playerBackground != PlayerBackgroundStyle.GRADIENT) {
+            gradientState = GradientState(
+                colors = listOf(Color.Black, Color.Black),
+                textColor = Color.White,
+                iconColor = Color.White
+            )
+            return@LaunchedEffect
+        }
+
+        if (playerBackground != PlayerBackgroundStyle.GRADIENT || thumbnailUrl == null) {
+            gradientState = GradientState()
+            return@LaunchedEffect
+        }
+
+        gradientState = gradientState.copy(isLoading = true)
+
+        withContext(Dispatchers.IO) {
+            try {
+                val bitmap = ImageLoader(context)
+                    .execute(
+                        ImageRequest.Builder(context)
+                            .data(thumbnailUrl)
+                            .allowHardware(false)
+                            .size(200)
+                            .build()
+                    ).drawable?.let { it as? BitmapDrawable }?.bitmap
+
+                val colors = bitmap?.extractGradientColors() ?: emptyList()
+
+                if (colors.size >= 2) {
+                    val (textColor, iconColor, shouldUseWhite) = calculateOptimalColors(colors)
+
+                    gradientState = GradientState(
+                        colors = colors,
+                        textColor = textColor,
+                        iconColor = iconColor,
+                        shouldUseWhiteText = shouldUseWhite,
+                        isLoading = false
+                    )
+                } else {
+                    gradientState = GradientState(isLoading = false)
+                }
+            } catch (e: Exception) {
+                gradientState = GradientState(isLoading = false)
+            }
+        }
+    }
+
+    return gradientState
+}
+
+// Composable mejorado para el fondo
+@Composable
+private fun PlayerBackground(
+    gradientState: GradientState,
+    playerBackground: PlayerBackgroundStyle,
+    thumbnailUrl: String?,
+    isExpanded: Boolean,
+    showLyrics: Boolean,
+    modifier: Modifier = Modifier
+) {
+    AnimatedVisibility(
+        visible = isExpanded,
+        enter = fadeIn(tween(800)),
+        exit = fadeOut(tween(400))
+    ) {
+        when (playerBackground) {
+            PlayerBackgroundStyle.BLUR -> {
+                AsyncImage(
+                    model = thumbnailUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = modifier
+                        .fillMaxSize()
+                        .blur(150.dp)
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.4f))
+                )
+            }
+
+            PlayerBackgroundStyle.GRADIENT -> {
+                AnimatedContent(
+                    targetState = gradientState.colors,
+                    transitionSpec = {
+                        fadeIn(tween(600)) togetherWith fadeOut(tween(400))
+                    },
+                    label = "gradient_transition"
+                ) { colors ->
+                    if (colors.size >= 2) {
+                        Box(
+                            modifier = modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = colors,
+                                        startY = 0f,
+                                        endY = Float.POSITIVE_INFINITY
+                                    )
+                                )
+                        )
+                    }
+                }
+            }
+
+            else -> { /* DEFAULT - sin fondo especial */ }
+        }
+
+        if (playerBackground != PlayerBackgroundStyle.DEFAULT && showLyrics) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f))
+            )
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BottomSheetPlayer(
@@ -151,7 +393,6 @@ fun BottomSheetPlayer(
     val clipboardManager = LocalClipboardManager.current
 
     val playerConnection = LocalPlayerConnection.current ?: return
-
 
     val playerTextAlignment by rememberEnumPreference(
         PlayerTextAlignmentKey,
@@ -169,14 +410,7 @@ fun BottomSheetPlayer(
     val useDarkTheme = remember(darkTheme, isSystemInDarkTheme) {
         if (darkTheme == DarkMode.AUTO) isSystemInDarkTheme else darkTheme == DarkMode.ON
     }
-    val onBackgroundColor = when (playerBackground) {
-        PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.secondary
-        else ->
-            if (useDarkTheme)
-                MaterialTheme.colorScheme.onSurface
-            else
-                MaterialTheme.colorScheme.onPrimary
-    }
+
     val useBlackBackground =
         remember(isSystemInDarkTheme, darkTheme, pureBlack) {
             val useDarkTheme =
@@ -213,140 +447,58 @@ fun BottomSheetPlayer(
         mutableStateOf<Long?>(null)
     }
 
-    var gradientColors by remember {
-        mutableStateOf<List<Color>>(emptyList())
-    }
-
-    var changeColor by remember {
-        mutableStateOf(false)
-    }
-
+    // Estado del gradiente mejorado
+    val gradientState = rememberGradientState(
+        thumbnailUrl = mediaMetadata?.thumbnailUrl,
+        playerBackground = playerBackground,
+        useBlackBackground = useBlackBackground
+    )
 
     val playerButtonsStyle by rememberEnumPreference(
         key = PlayerButtonsStyleKey,
         defaultValue = PlayerButtonsStyle.DEFAULT
     )
+
     if (!canSkipNext && automix.isNotEmpty()) {
         playerConnection.service.addToQueueAutomix(automix[0], 0)
     }
 
-    LaunchedEffect(mediaMetadata, playerBackground) {
-        if (useBlackBackground && playerBackground != PlayerBackgroundStyle.BLUR) {
-            gradientColors = listOf(Color.Black, Color.Black)
-        }
-        if (useBlackBackground && playerBackground != PlayerBackgroundStyle.GRADIENT) {
-            gradientColors = listOf(Color.Black, Color.Black)
-        } else if (playerBackground == PlayerBackgroundStyle.GRADIENT) {
-            withContext(Dispatchers.IO) {
-                val result =
-                    (
-                            ImageLoader(context)
-                                .execute(
-                                    ImageRequest
-                                        .Builder(context)
-                                        .data(mediaMetadata?.thumbnailUrl)
-                                        .allowHardware(false)
-                                        .build(),
-                                ).drawable as? BitmapDrawable
-                            )?.bitmap?.extractGradientColors()
-
-                result?.let {
-                    gradientColors = it
-                }
-            }
-        } else {
-            gradientColors = emptyList()
-        }
-    }
-
     val changeBound = state.expandedBound / 3
 
-    val TextBackgroundColor =
-        when (playerBackground) {
-            PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.onBackground
-            PlayerBackgroundStyle.BLUR -> Color.White
-            else -> {
-                val whiteContrast =
-                    if (gradientColors.size >= 2) {
-                        ColorUtils.calculateContrast(
-                            gradientColors.first().toArgb(),
-                            Color.White.toArgb(),
-                        )
-                    } else {
-                        2.0
-                    }
-                val blackContrast: Double =
-                    if (gradientColors.size >= 2) {
-                        ColorUtils.calculateContrast(
-                            gradientColors.last().toArgb(),
-                            Color.Black.toArgb(),
-                        )
-                    } else {
-                        2.0
-                    }
-                if (gradientColors.size >= 2 &&
-                    whiteContrast < 2f &&
-                    blackContrast > 2f
-                ) {
-                    changeColor = true
-                    Color.Black
-                } else if (whiteContrast > 2f && blackContrast < 2f) {
-                    changeColor = true
-                    Color.White
-                } else {
-                    changeColor = false
-                    Color.White
-                }
-            }
+    // Colores calculados automáticamente basados en el gradiente
+    val onBackgroundColor = when (playerBackground) {
+        PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.secondary
+        PlayerBackgroundStyle.GRADIENT -> {
+            if (gradientState.isGradientReady) gradientState.textColor
+            else if (useDarkTheme) MaterialTheme.colorScheme.onSurface
+            else MaterialTheme.colorScheme.onPrimary
         }
-
-    val icBackgroundColor =
-        when (playerBackground) {
-            PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.surface
-            PlayerBackgroundStyle.BLUR -> Color.Black
-            else -> {
-                val whiteContrast =
-                    if (gradientColors.size >= 2) {
-                        ColorUtils.calculateContrast(
-                            gradientColors.first().toArgb(),
-                            Color.White.toArgb(),
-                        )
-                    } else {
-                        2.0
-                    }
-                val blackContrast: Double =
-                    if (gradientColors.size >= 2) {
-                        ColorUtils.calculateContrast(
-                            gradientColors.last().toArgb(),
-                            Color.Black.toArgb(),
-                        )
-                    } else {
-                        2.0
-                    }
-                if (gradientColors.size >= 2 &&
-                    whiteContrast < 2f &&
-                    blackContrast > 2f
-                ) {
-                    changeColor = true
-                    Color.White
-                } else if (whiteContrast > 2f && blackContrast < 2f) {
-                    changeColor = true
-                    Color.Black
-                } else {
-                    changeColor = false
-                    Color.Black
-                }
-            }
-        }
+        else -> if (useDarkTheme) MaterialTheme.colorScheme.onSurface
+        else MaterialTheme.colorScheme.onPrimary
+    }
 
     val (textButtonColor, iconButtonColor) = when (playerButtonsStyle) {
-        PlayerButtonsStyle.DEFAULT -> Pair(TextBackgroundColor, icBackgroundColor)
+        PlayerButtonsStyle.DEFAULT -> {
+            when (playerBackground) {
+                PlayerBackgroundStyle.GRADIENT -> {
+                    if (gradientState.isGradientReady) {
+                        Pair(gradientState.textColor, gradientState.iconColor)
+                    } else {
+                        Pair(MaterialTheme.colorScheme.onBackground, MaterialTheme.colorScheme.surface)
+                    }
+                }
+                PlayerBackgroundStyle.BLUR -> Pair(Color.White, Color.Black)
+                else -> Pair(
+                    MaterialTheme.colorScheme.onBackground,
+                    MaterialTheme.colorScheme.surface
+                )
+            }
+        }
         PlayerButtonsStyle.SECONDARY -> Pair(
             MaterialTheme.colorScheme.secondary,
             MaterialTheme.colorScheme.onSecondary
         )
     }
-
 
     val download by LocalDownloadUtil.current.getDownload(mediaMetadata?.id ?: "")
         .collectAsState(initial = null)
@@ -447,8 +599,6 @@ fun BottomSheetPlayer(
         mutableStateOf(false)
     }
 
-
-
     LaunchedEffect(playbackState) {
         if (playbackState == STATE_READY) {
             while (isActive) {
@@ -545,20 +695,16 @@ fun BottomSheetPlayer(
     BottomSheet(
         state = state,
         modifier = modifier,
-        brushBackgroundColor =
-            if (gradientColors.size >=
-                2 &&
-                state.value > changeBound
-            ) {
-                Brush.verticalGradient(gradientColors)
-            } else {
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.surfaceContainer,
-                        MaterialTheme.colorScheme.surfaceContainer,
-                    ),
+        brushBackgroundColor = if (gradientState.isGradientReady && state.value > changeBound) {
+            Brush.verticalGradient(gradientState.colors)
+        } else {
+            Brush.verticalGradient(
+                listOf(
+                    MaterialTheme.colorScheme.surfaceContainer,
+                    MaterialTheme.colorScheme.surfaceContainer,
                 )
-            },
+            )
+        },
         onDismiss = {
             playerConnection.service.clearAutomix()
             playerConnection.player.stop()
@@ -577,9 +723,6 @@ fun BottomSheetPlayer(
                 animationSpec = tween(durationMillis = 90, easing = LinearEasing),
                 label = "playPauseRoundness",
             )
-
-
-
 
             Row(
                 horizontalArrangement =
@@ -616,7 +759,6 @@ fun BottomSheetPlayer(
             }
 
             Spacer(Modifier.height(6.dp))
-
 
             Row(
                 horizontalArrangement =
@@ -750,9 +892,6 @@ fun BottomSheetPlayer(
                     )
                 }
 
-
-
-
                 Spacer(modifier = Modifier.size(12.dp))
 
                 Box(
@@ -851,11 +990,11 @@ fun BottomSheetPlayer(
                             sliderPosition = null
                         },
                         colors = SliderDefaults.colors(
-                            activeTrackColor = TextBackgroundColor,
+                            activeTrackColor = textButtonColor,
                             inactiveTrackColor = Color.Gray,
-                            activeTickColor = TextBackgroundColor,
+                            activeTickColor = textButtonColor,
                             inactiveTickColor = Color.Gray,
-                            thumbColor = TextBackgroundColor
+                            thumbColor = textButtonColor
                         ),
                         modifier = Modifier.padding(horizontal = PlayerHorizontalPadding),
                     )
@@ -876,11 +1015,11 @@ fun BottomSheetPlayer(
                             sliderPosition = null
                         },
                         colors = SliderDefaults.colors(
-                            activeTrackColor = TextBackgroundColor,
+                            activeTrackColor = textButtonColor,
                             inactiveTrackColor = Color.Gray,
-                            activeTickColor = TextBackgroundColor,
+                            activeTickColor = textButtonColor,
                             inactiveTickColor = Color.Gray,
-                            thumbColor = TextBackgroundColor
+                            thumbColor = textButtonColor
                         ),
                         modifier = Modifier.padding(horizontal = PlayerHorizontalPadding),
                         squigglesSpec =
@@ -910,9 +1049,9 @@ fun BottomSheetPlayer(
                             PlayerSliderTrack(
                                 sliderState = sliderState,
                                 colors = SliderDefaults.colors(
-                                    activeTrackColor = TextBackgroundColor,
+                                    activeTrackColor = textButtonColor,
                                     inactiveTrackColor = Color.Gray,
-                                    activeTickColor = TextBackgroundColor,
+                                    activeTickColor = textButtonColor,
                                     inactiveTickColor = Color.Gray
                                 )
                             )
@@ -935,7 +1074,7 @@ fun BottomSheetPlayer(
                 Text(
                     text = makeTimeString(sliderPosition ?: position),
                     style = MaterialTheme.typography.labelMedium,
-                    color = TextBackgroundColor,
+                    color = textButtonColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -943,7 +1082,7 @@ fun BottomSheetPlayer(
                 Text(
                     text = if (duration != C.TIME_UNSET) makeTimeString(duration) else "",
                     style = MaterialTheme.typography.labelMedium,
-                    color = TextBackgroundColor,
+                    color = textButtonColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -965,7 +1104,7 @@ fun BottomSheetPlayer(
                             Player.REPEAT_MODE_ONE -> R.drawable.repeat_one
                             else -> throw IllegalStateException()
                         },
-                        color = TextBackgroundColor,
+                        color = textButtonColor,
                         modifier = Modifier
                             .size(32.dp)
                             .padding(4.dp)
@@ -981,7 +1120,7 @@ fun BottomSheetPlayer(
                     ResizableIconButton(
                         icon = R.drawable.skip_previous,
                         enabled = canSkipPrevious,
-                        color = TextBackgroundColor,
+                        color = textButtonColor,
                         modifier =
                             Modifier
                                 .size(32.dp)
@@ -1035,7 +1174,7 @@ fun BottomSheetPlayer(
                     ResizableIconButton(
                         icon = R.drawable.skip_next,
                         enabled = canSkipNext,
-                        color = TextBackgroundColor,
+                        color = textButtonColor,
                         modifier =
                             Modifier
                                 .size(32.dp)
@@ -1047,7 +1186,7 @@ fun BottomSheetPlayer(
                 Box(modifier = Modifier.weight(1f)) {
                     ResizableIconButton(
                         icon = if (currentSong?.song?.liked == true) R.drawable.favorite else R.drawable.favorite_border,
-                        color = if (currentSong?.song?.liked == true) MaterialTheme.colorScheme.error else TextBackgroundColor,
+                        color = if (currentSong?.song?.liked == true) MaterialTheme.colorScheme.error else textButtonColor,
                         modifier =
                             Modifier
                                 .size(32.dp)
@@ -1059,43 +1198,15 @@ fun BottomSheetPlayer(
             }
         }
 
-        AnimatedVisibility(
-            visible = state.isExpanded,
-            enter = fadeIn(tween(1000)),
-            exit = fadeOut()
-        ) {
-            if (playerBackground == PlayerBackgroundStyle.BLUR) {
-                AsyncImage(
-                    model = mediaMetadata?.thumbnailUrl,
-                    contentDescription = null,
-                    contentScale = ContentScale.FillBounds,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .blur(150.dp)
-                )
+        // Fondo mejorado con composable separado
+        PlayerBackground(
+            gradientState = gradientState,
+            playerBackground = playerBackground,
+            thumbnailUrl = mediaMetadata?.thumbnailUrl,
+            isExpanded = state.isExpanded,
+            showLyrics = showLyrics
+        )
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f))
-                )
-            } else if (playerBackground == PlayerBackgroundStyle.GRADIENT && gradientColors.size >= 2) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Brush.verticalGradient(gradientColors))
-                )
-            }
-
-            if (playerBackground != PlayerBackgroundStyle.DEFAULT && showLyrics) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.3f))
-                )
-            }
-        }
-//
         when (LocalConfiguration.current.orientation) {
             Configuration.ORIENTATION_LANDSCAPE -> {
                 Row(
@@ -1171,7 +1282,7 @@ fun BottomSheetPlayer(
                     MaterialTheme.colorScheme.surfaceContainer
                 },
             onBackgroundColor = onBackgroundColor,
-            TextBackgroundColor = TextBackgroundColor,
+            TextBackgroundColor = textButtonColor,
         )
     }
 }
