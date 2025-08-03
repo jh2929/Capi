@@ -774,11 +774,35 @@ class MainActivity : ComponentActivity() {
                                                     )
                                                 }
                                             },
+
                                             actions = {
                                                 Row(
                                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                                                     verticalAlignment = Alignment.CenterVertically
                                                 ) {
+                                                    val context = LocalContext.current
+
+                                                    // Ícono de notificación para nuevos lanzamientos
+                                                    IconButton(
+                                                        onClick = {
+                                                            try {
+                                                                navController.navigate("new_release")
+                                                            } catch (e: Exception) {
+                                                                logErrorToDownloads(context, e)
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    R.string.navigation_error,
+                                                                    Toast.LENGTH_SHORT
+                                                                ).show()
+                                                            }
+                                                        }
+                                                    ) {
+                                                        Icon(
+                                                            painter = painterResource(R.drawable.notification_on),
+                                                            contentDescription = stringResource(R.string.new_release_albums),
+                                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
                                                     IconButton(
                                                         onClick = { onActiveChange(true) }
                                                     ) {
@@ -789,7 +813,6 @@ class MainActivity : ComponentActivity() {
                                                         )
                                                     }
 
-                                                    val context = LocalContext.current
 
                                                     ProfileIconWithUpdateBadge(
                                                         currentVersion = BuildConfig.VERSION_NAME,
