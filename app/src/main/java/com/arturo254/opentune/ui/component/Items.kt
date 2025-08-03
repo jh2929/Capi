@@ -718,7 +718,10 @@ fun ArtistGridItem(
         AsyncImage(
             model = artist.artist.thumbnailUrl,
             contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(ThumbnailCornerRadius)),
+
         )
     },
     thumbnailShape = CircleShape,
