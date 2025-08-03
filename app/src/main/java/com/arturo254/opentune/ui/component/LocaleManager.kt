@@ -25,6 +25,8 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,8 +48,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AssistChip
@@ -394,7 +398,7 @@ class LocaleManager private constructor(private val context: Context) {
     }
 }
 
-/** Composable principal para la selección de idioma con ModalBottomSheet mejorado */
+/** Composable principal para la selección de idioma con diseño minimalista */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LanguageSelector(
@@ -409,7 +413,6 @@ fun LanguageSelector(
     val isChangingLanguage by localeManager.isChangingLanguage.collectAsState()
     val availableLanguages by remember { derivedStateOf { localeManager.getAvailableLanguages() } }
 
-    // Estado para manejar el cambio de idioma seleccionado
     var selectedLanguageCode by remember { mutableStateOf<String?>(null) }
     val listState = rememberLazyListState()
 
@@ -436,63 +439,34 @@ fun LanguageSelector(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        modifier = Modifier
-            .padding(WindowInsets.navigationBars.asPaddingValues()),
+        modifier = Modifier.padding(WindowInsets.navigationBars.asPaddingValues()),
         dragHandle = {
-            Surface(
-                modifier = Modifier.padding(vertical = 12.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Box(
-                    modifier = Modifier.size(width = 32.dp, height = 4.dp)
-                )
-            }
+            Box(
+                modifier = Modifier
+                    .padding(vertical = 8.dp)
+                    .size(width = 32.dp, height = 4.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(2.dp)
+                    )
+            )
         }
-    )
-    {
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
         ) {
-            // Header mejorado
-            Surface(
-                color = Color.Transparent,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.language),
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(28.dp)
-                        )
+            // Header minimalista
+            Text(
+                text = stringResource(R.string.language),
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
+            )
 
-                        Text(
-                            text = stringResource(R.string.language),
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    Text(
-                        text = "Selecciona tu idioma preferido",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
-
-            // Loading indicator mejorado
+            // Indicador de carga minimalista
             AnimatedVisibility(
                 visible = isChangingLanguage,
                 enter = slideInVertically(
@@ -510,42 +484,34 @@ fun LanguageSelector(
                     )
                 ) + fadeOut()
             ) {
-                Surface(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp, vertical = 8.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(16.dp)
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.5.dp,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = "Aplicando cambios...",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Aplicando cambios...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
-            // Lista de idiomas mejorada
+            // Lista de idiomas minimalista
             LazyColumn(
                 state = listState,
                 modifier = Modifier
                     .fillMaxWidth()
                     .selectableGroup(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 items(
                     items = availableLanguages,
@@ -553,7 +519,7 @@ fun LanguageSelector(
                 ) { language ->
                     val isSelected = language.code == currentLanguage
 
-                    LanguageItemCard(
+                    LanguageItem(
                         language = language,
                         isSelected = isSelected,
                         isEnabled = !isChangingLanguage,
@@ -567,39 +533,29 @@ fun LanguageSelector(
                 }
             }
 
-            // Espaciado inferior para evitar cortes
             Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
-/** Composable mejorado para un elemento de idioma con mejor Material Design 3 */
+/** Composable minimalista para un elemento de idioma */
 @Composable
-private fun LanguageItemCard(
+private fun LanguageItem(
     language: LanguageItem,
     isSelected: Boolean,
     isEnabled: Boolean,
     onClick: () -> Unit
 ) {
-    val animatedElevation by animateDpAsState(
-        targetValue = if (isSelected) 6.dp else 1.dp,
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (isSelected) 1f else 0.7f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
         ),
-        label = "elevation"
+        label = "alpha"
     )
 
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.02f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "scale"
-    )
-
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .animateContentSize(
@@ -608,44 +564,73 @@ private fun LanguageItemCard(
                     stiffness = Spring.StiffnessMedium
                 )
             )
-            .graphicsLayer {
-                scaleX = animatedScale
-                scaleY = animatedScale
-            }
             .selectable(
                 selected = isSelected,
                 enabled = isEnabled,
                 role = Role.RadioButton,
                 onClick = onClick
             ),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) {
-                MaterialTheme.colorScheme.primaryContainer
-            } else {
-                MaterialTheme.colorScheme.surface
-            }
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = animatedElevation
-        ),
-        shape = RoundedCornerShape(16.dp)
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.surfaceVariant
+        } else {
+            Color.Transparent
+        },
+        shape = RoundedCornerShape(8.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(vertical = 12.dp, horizontal = 16.dp)
+                .graphicsLayer { alpha = animatedAlpha },
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Radio button
-            RadioButton(
-                selected = isSelected,
-                onClick = null, // Manejado por el Card
-                enabled = isEnabled,
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = MaterialTheme.colorScheme.primary,
-                    unselectedColor = MaterialTheme.colorScheme.onSurfaceVariant
+            // Radio button minimalista
+            Box(
+                modifier = Modifier.size(20.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                // Círculo exterior
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .border(
+                            width = 2.dp,
+                            color = if (isSelected) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.outline
+                            },
+                            shape = CircleShape
+                        )
                 )
-            )
+
+                // Círculo interior animado
+                this@Row.AnimatedVisibility(
+                    visible = isSelected,
+                    enter = scaleIn(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    ) + fadeIn(),
+                    exit = scaleOut(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    ) + fadeOut()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primary,
+                                shape = CircleShape
+                            )
+                    )
+                }
+
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -656,12 +641,8 @@ private fun LanguageItemCard(
                 Text(
                     text = language.displayName,
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                    color = if (isSelected) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
+                    fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -672,73 +653,34 @@ private fun LanguageItemCard(
                 ) {
                     Text(
                         text = language.nativeName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (isSelected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                        modifier = Modifier.padding(top = 2.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 1.dp),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
-            // Badge de estado
+            // Badge de estado minimalista
             if (language.completionStatus != CompletionStatus.COMPLETE) {
-                AssistChip(
-                    onClick = { /* Solo visual */ },
-                    label = {
-                        Text(
-                            text = language.completionStatus.label,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium
-                        )
-                    },
-                    modifier = Modifier.padding(start = 8.dp),
-                    colors = AssistChipDefaults.assistChipColors(
-                        containerColor = language.completionStatus.color.copy(alpha = 0.12f),
-                        labelColor = language.completionStatus.color
-                    ),
-                    border = BorderStroke(
-                        width = 1.dp,
-                        color = language.completionStatus.color.copy(alpha = 0.2f)
-                    ),
-                    enabled = false // Solo visual
-                )
-            }
-
-            // Indicador de selección
-            AnimatedVisibility(
-                visible = isSelected,
-                enter = scaleIn(
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                        stiffness = Spring.StiffnessHigh
-                    )
-                ) + fadeIn(),
-                exit = scaleOut(
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioNoBouncy,
-                        stiffness = Spring.StiffnessHigh
-                    )
-                ) + fadeOut()
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Seleccionado",
-                    tint = MaterialTheme.colorScheme.primary,
+                Text(
+                    text = language.completionStatus.label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = language.completionStatus.color,
                     modifier = Modifier
-                        .size(24.dp)
-                        .padding(start = 8.dp)
+                        .background(
+                            color = language.completionStatus.color.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
         }
     }
 }
 
-/** Composable para integrar con las preferencias existentes */
+/** Composable para integrar con las preferencias existentes - versión minimalista */
 @Composable
 fun LanguagePreference() {
     var showLanguageSelector by remember { mutableStateOf(false) }
@@ -753,7 +695,7 @@ fun LanguagePreference() {
             ?.displayName ?: selectedCode
     }
 
-    // Preferencia clickeable mejorada
+    // Preferencia minimalista
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -766,19 +708,10 @@ fun LanguagePreference() {
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                painterResource(R.drawable.language),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.size(24.dp)
-            )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.language),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Medium
                 )
@@ -792,15 +725,14 @@ fun LanguagePreference() {
             }
 
             Icon(
-                imageVector = Icons.Default.Settings,
+                imageVector = Icons.Default.ArrowForward,
                 contentDescription = "Cambiar idioma",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(16.dp)
             )
         }
     }
 
-    // Modal de selección mejorado
     if (showLanguageSelector) {
         LanguageSelector(
             onDismiss = { showLanguageSelector = false }
