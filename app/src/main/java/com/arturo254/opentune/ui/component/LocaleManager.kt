@@ -675,6 +675,7 @@ private fun LanguageItemCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
             .animateContentSize()
             .selectable(
                 selected = isSelected,
@@ -822,6 +823,7 @@ fun LanguagePreference(
     Card(
         modifier = modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(30.dp))
             .clickable(enabled = !isChanging) {
                 showLanguageSelector = true
             },

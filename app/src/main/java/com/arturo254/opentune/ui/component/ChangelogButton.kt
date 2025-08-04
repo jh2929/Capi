@@ -9,40 +9,17 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -53,6 +30,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,18 +47,22 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import org.json.JSONObject
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
+// Data classes mejoradas
 data class ChangelogState(
     val releases: List<Release> = emptyList(),
-    val isLoading: Boolean = true,
-    val error: String? = null,
+    val commits: List<Commit> = emptyList(),
+    val isLoadingReleases: Boolean = true,
+    val isLoadingCommits: Boolean = true,
+    val releasesError: String? = null,
+    val commitsError: String? = null,
     val lastUpdated: String? = null
 )
 
@@ -90,8 +72,23 @@ data class Release(
     val body: String,
     val publishedAt: String,
     val isPrerelease: Boolean,
-    val htmlUrl: String
+    val htmlUrl: String,
+    val author: String? = null
 )
+
+data class Commit(
+    val sha: String,
+    val message: String,
+    val author: String,
+    val date: String,
+    val htmlUrl: String,
+    val shortSha: String = sha.take(7)
+)
+
+enum class ChangelogTab(val title: String) {
+    RELEASES("Releases"),
+    COMMITS("Commits")
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,7 +127,7 @@ fun ChangelogButton(
                     .verticalScroll(rememberScrollState())
             ) {
                 ChangelogScreen(viewModel)
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(32.dp))
             }
         }
     }
@@ -139,6 +136,7 @@ fun ChangelogButton(
 @Composable
 fun ChangelogScreen(viewModel: ChangelogViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
+    var selectedTab by remember { mutableStateOf(ChangelogTab.RELEASES) }
 
     LaunchedEffect(Unit) {
         viewModel.loadChangelog("Arturo254", "OpenTune")
@@ -148,6 +146,7 @@ fun ChangelogScreen(viewModel: ChangelogViewModel = viewModel()) {
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Header con título principal
         Text(
             text = stringResource(R.string.changelogs),
             style = MaterialTheme.typography.headlineMedium,
@@ -155,26 +154,30 @@ fun ChangelogScreen(viewModel: ChangelogViewModel = viewModel()) {
             modifier = Modifier.padding(horizontal = 8.dp)
         )
 
-        when {
-            uiState.isLoading -> {
-                LoadingIndicator()
-            }
+        // Tabs mejoradas con Material Design 3
+        ImprovedTabRow(
+            selectedTab = selectedTab,
+            onTabSelected = { selectedTab = it }
+        )
 
-            uiState.error != null -> {
-                ErrorContent(
-                    error = uiState.error!!,
+        // Contenido basado en la tab seleccionada
+        when (selectedTab) {
+            ChangelogTab.RELEASES -> {
+                ReleasesContent(
+                    releases = uiState.releases,
+                    isLoading = uiState.isLoadingReleases,
+                    error = uiState.releasesError,
+                    lastUpdated = uiState.lastUpdated,
                     onRetry = { viewModel.loadChangelog("Arturo254", "OpenTune") }
                 )
             }
-
-            uiState.releases.isEmpty() -> {
-                EmptyContent()
-            }
-
-            else -> {
-                SuccessContent(
-                    releases = uiState.releases,
-                    lastUpdated = uiState.lastUpdated
+            ChangelogTab.COMMITS -> {
+                CommitsContent(
+                    commits = uiState.commits,
+                    isLoading = uiState.isLoadingCommits,
+                    error = uiState.commitsError,
+                    lastUpdated = uiState.lastUpdated,
+                    onRetry = { viewModel.loadChangelog("Arturo254", "OpenTune") }
                 )
             }
         }
@@ -182,13 +185,93 @@ fun ChangelogScreen(viewModel: ChangelogViewModel = viewModel()) {
 }
 
 @Composable
-private fun LoadingIndicator() {
+private fun ImprovedTabRow(
+    selectedTab: ChangelogTab,
+    onTabSelected: (ChangelogTab) -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            ChangelogTab.values().forEach { tab ->
+                val isSelected = selectedTab == tab
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onTabSelected(tab) },
+                    color = if (isSelected)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        Color.Transparent,
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = tab.title,
+                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (isSelected)
+                            MaterialTheme.colorScheme.onPrimary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReleasesContent(
+    releases: List<Release>,
+    isLoading: Boolean,
+    error: String?,
+    lastUpdated: String?,
+    onRetry: () -> Unit
+) {
+    when {
+        isLoading -> LoadingIndicator("Cargando releases...")
+        error != null -> ErrorContent(error, onRetry)
+        releases.isEmpty() -> EmptyContent("No hay releases disponibles")
+        else -> SuccessReleasesContent(releases, lastUpdated)
+    }
+}
+
+@Composable
+private fun CommitsContent(
+    commits: List<Commit>,
+    isLoading: Boolean,
+    error: String?,
+    lastUpdated: String?,
+    onRetry: () -> Unit
+) {
+    when {
+        isLoading -> LoadingIndicator("Cargando commits...")
+        error != null -> ErrorContent(error, onRetry)
+        commits.isEmpty() -> EmptyContent("No hay commits disponibles")
+        else -> SuccessCommitsContent(commits, lastUpdated)
+    }
+}
+
+@Composable
+private fun LoadingIndicator(message: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(
             modifier = Modifier
@@ -205,7 +288,7 @@ private fun LoadingIndicator() {
                     strokeWidth = 3.dp
                 )
                 Text(
-                    text = "Cargando changelog...",
+                    text = message,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -215,10 +298,7 @@ private fun LoadingIndicator() {
 }
 
 @Composable
-private fun ErrorContent(
-    error: String,
-    onRetry: () -> Unit
-) {
+private fun ErrorContent(error: String, onRetry: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -227,9 +307,15 @@ private fun ErrorContent(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            Icon(
+                painter = painterResource(R.drawable.schedule), // Cambiar por icono de error
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(24.dp)
+            )
             Text(
                 text = "Error al cargar",
                 style = MaterialTheme.typography.titleMedium,
@@ -240,9 +326,13 @@ private fun ErrorContent(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )
-            OutlinedButton(
+            Button(
                 onClick = onRetry,
-                modifier = Modifier.align(Alignment.End)
+                modifier = Modifier.align(Alignment.End),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
+                )
             ) {
                 Text("Reintentar")
             }
@@ -251,43 +341,134 @@ private fun ErrorContent(
 }
 
 @Composable
-private fun EmptyContent() {
+private fun EmptyContent(message: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Text(
-            text = stringResource(R.string.no_changes),
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(32.dp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.schedule), // Cambiar por icono apropiado
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(48.dp)
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
 @Composable
-private fun SuccessContent(
+private fun SuccessReleasesContent(
     releases: List<Release>,
     lastUpdated: String?
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        lastUpdated?.let {
-            Text(
-                text = "Última actualización: $it",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
-        }
-
+        LastUpdatedIndicator(lastUpdated)
         releases.forEach { release ->
             ReleaseCard(release = release)
+        }
+    }
+}
+
+@Composable
+private fun SuccessCommitsContent(
+    commits: List<Commit>,
+    lastUpdated: String?
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LastUpdatedIndicator(lastUpdated)
+        commits.forEach { commit ->
+            CommitCard(commit = commit)
+        }
+    }
+}
+
+@Composable
+private fun LastUpdatedIndicator(lastUpdated: String?) {
+    lastUpdated?.let {
+        Surface(
+            color = MaterialTheme.colorScheme.primaryContainer,
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text(
+                text = "Última actualización: $it",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun CommitCard(commit: Commit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer
+                        ) {
+                            Text(
+                                text = commit.shortSha,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontFamily = FontFamily.Monospace
+                                ),
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                        Text(
+                            text = commit.author,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = commit.message.lines().first(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Text(
+                    text = formatDate(commit.date),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -304,9 +485,9 @@ private fun ReleaseCard(release: Release) {
             containerColor = if (release.isPrerelease)
                 MaterialTheme.colorScheme.tertiaryContainer
             else
-                MaterialTheme.colorScheme.surfaceContainer
+                MaterialTheme.colorScheme.surfaceContainerLow
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (expanded) 4.dp else 1.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -322,18 +503,19 @@ private fun ReleaseCard(release: Release) {
                         Text(
                             text = release.tagName,
                             style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
                         )
                         if (release.isPrerelease) {
                             Surface(
-                                shape = RoundedCornerShape(4.dp),
+                                shape = RoundedCornerShape(12.dp),
                                 color = MaterialTheme.colorScheme.tertiary
                             ) {
                                 Text(
                                     text = "Pre-release",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onTertiary,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
                         }
@@ -342,34 +524,54 @@ private fun ReleaseCard(release: Release) {
                         Text(
                             text = release.name,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
+                    release.author?.let { author ->
+                        Text(
+                            text = "por $author",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
                         )
                     }
                 }
-                Text(
-                    text = formatDate(release.publishedAt),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = formatDate(release.publishedAt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Icon(
+                        painter = painterResource(
+                            if (expanded) R.drawable.schedule else R.drawable.schedule // Cambiar por iconos de expandir/contraer
+                        ),
+                        contentDescription = if (expanded) "Contraer" else "Expandir",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .padding(top = 4.dp)
+                    )
+                }
             }
 
             AnimatedVisibility(
                 visible = expanded,
                 enter = fadeIn(animationSpec = tween(300)) + expandVertically(
-                    animationSpec = tween(
-                        300
-                    )
+                    animationSpec = tween(300)
                 ),
                 exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(
-                    animationSpec = tween(
-                        300
-                    )
+                    animationSpec = tween(300)
                 )
             ) {
                 Column {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        thickness = 1.dp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                     AdvancedMarkdownText(
                         markdown = release.body,
                         modifier = Modifier.fillMaxWidth()
@@ -380,12 +582,12 @@ private fun ReleaseCard(release: Release) {
     }
 }
 
+// [El resto de las funciones de markdown permanecen igual...]
 @Composable
 fun AdvancedMarkdownText(
     markdown: String,
     modifier: Modifier = Modifier
 ) {
-    // Limpieza y procesamiento del markdown
     val cleanedMarkdown = cleanMarkdown(markdown)
     val lines = cleanedMarkdown.lines()
 
@@ -400,9 +602,7 @@ fun AdvancedMarkdownText(
             val trimmedLine = line.trim()
 
             when {
-                // Bloque de código
                 trimmedLine.startsWith("```") -> {
-                    // Finalizar lista si estaba activa
                     if (inList) {
                         ListContainer(listItems.toList())
                         listItems.clear()
@@ -427,7 +627,6 @@ fun AdvancedMarkdownText(
                     codeBlockContent += line + "\n"
                 }
 
-                // Headers
                 trimmedLine.matches(Regex("^#{1,6}\\s+.*")) -> {
                     if (inList) {
                         ListContainer(listItems.toList())
@@ -440,7 +639,6 @@ fun AdvancedMarkdownText(
                     HeaderText(text = text, level = level)
                 }
 
-                // Listas no ordenadas
                 trimmedLine.matches(Regex("^[-*+]\\s+.*")) -> {
                     val content = trimmedLine.substring(2).trim()
                     if (!inList) {
@@ -450,7 +648,6 @@ fun AdvancedMarkdownText(
                     listItems.add(content)
                 }
 
-                // Listas ordenadas
                 trimmedLine.matches(Regex("^\\d+\\.\\s+.*")) -> {
                     val content = trimmedLine.substringAfter(". ").trim()
                     if (!inList) {
@@ -460,7 +657,6 @@ fun AdvancedMarkdownText(
                     listItems.add(content)
                 }
 
-                // Citas
                 trimmedLine.startsWith("> ") -> {
                     if (inList) {
                         ListContainer(listItems.toList())
@@ -470,7 +666,6 @@ fun AdvancedMarkdownText(
                     BlockQuote(trimmedLine.substring(2))
                 }
 
-                // Separadores
                 trimmedLine.matches(Regex("^[-*_]{3,}$")) -> {
                     if (inList) {
                         ListContainer(listItems.toList())
@@ -480,7 +675,6 @@ fun AdvancedMarkdownText(
                     HorizontalRule()
                 }
 
-                // Línea vacía
                 trimmedLine.isEmpty() -> {
                     if (inList) {
                         ListContainer(listItems.toList())
@@ -490,7 +684,6 @@ fun AdvancedMarkdownText(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                // Texto normal
                 else -> {
                     if (inList) {
                         ListContainer(listItems.toList())
@@ -502,37 +695,25 @@ fun AdvancedMarkdownText(
             }
         }
 
-        // Finalizar lista si quedó pendiente
         if (inList && listItems.isNotEmpty()) {
             ListContainer(listItems.toList())
         }
     }
 }
 
-// Función para limpiar HTML y otros elementos no deseados del markdown
 private fun cleanMarkdown(markdown: String): String {
     var cleaned = markdown
 
-    // Remover tags HTML completos
     cleaned = cleaned.replace(Regex("<[^>]+>"), "")
-
-    // Remover imágenes markdown ![alt](url)
     cleaned = cleaned.replace(Regex("!\\[([^\\]]*)\\]\\([^)]*\\)"), "")
-
-    // Convertir enlaces [texto](url) a solo el texto
     cleaned = cleaned.replace(Regex("\\[([^\\]]+)\\]\\([^)]*\\)")) { matchResult ->
         matchResult.groupValues[1]
     }
-
-    // Remover referencias de enlaces [texto][ref]
     cleaned = cleaned.replace(Regex("\\[([^\\]]+)\\]\\[[^\\]]*\\]")) { matchResult ->
         matchResult.groupValues[1]
     }
-
-    // Remover definiciones de enlaces [ref]: url
     cleaned = cleaned.replace(Regex("^\\[[^\\]]+\\]:.*$", RegexOption.MULTILINE), "")
 
-    // Limpiar entidades HTML comunes
     val htmlEntities = mapOf(
         "&amp;" to "&",
         "&lt;" to "<",
@@ -551,9 +732,7 @@ private fun cleanMarkdown(markdown: String): String {
         cleaned = cleaned.replace(entity, replacement)
     }
 
-    // Remover múltiples líneas vacías consecutivas
     cleaned = cleaned.replace(Regex("\n{3,}"), "\n\n")
-
     return cleaned.trim()
 }
 
@@ -577,12 +756,22 @@ private fun HeaderText(text: String, level: Int) {
 
 @Composable
 private fun ListContainer(items: List<String>) {
-    Column(
-        modifier = Modifier.padding(vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        items.forEach { item ->
-            UnorderedListItem(item)
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            items.forEach { item ->
+                UnorderedListItem(item)
+            }
         }
     }
 }
@@ -590,15 +779,17 @@ private fun ListContainer(items: List<String>) {
 @Composable
 private fun UnorderedListItem(content: String) {
     Row(
-        modifier = Modifier.padding(vertical = 1.dp),
+        modifier = Modifier.padding(vertical = 2.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Text(
-            text = "•",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(end = 8.dp, top = 2.dp)
-        )
+        Surface(
+            modifier = Modifier
+                .size(6.dp)
+                .padding(top = 8.dp),
+            shape = RoundedCornerShape(3.dp),
+            color = MaterialTheme.colorScheme.primary
+        ) {}
+        Spacer(modifier = Modifier.width(12.dp))
         FormattedText(
             text = content,
             modifier = Modifier.weight(1f)
@@ -607,37 +798,15 @@ private fun UnorderedListItem(content: String) {
 }
 
 @Composable
-private fun OrderedListItem(line: String) {
-    // Esta función ya no se usa directamente, pero la mantenemos por compatibilidad
-    val numberMatch = Regex("^(\\d+)\\.\\s+(.*)").find(line)
-    if (numberMatch != null) {
-        val (number, content) = numberMatch.destructured
-        Row(
-            modifier = Modifier.padding(vertical = 2.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Text(
-                text = "$number.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(end = 8.dp, top = 2.dp)
-            )
-            FormattedText(
-                text = content,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
 private fun BlockQuote(content: String) {
-    Surface(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(4.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row {
             Box(
@@ -648,7 +817,7 @@ private fun BlockQuote(content: String) {
             )
             FormattedText(
                 text = content,
-                modifier = Modifier.padding(12.dp),
+                modifier = Modifier.padding(16.dp),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     fontStyle = FontStyle.Italic
                 ),
@@ -660,24 +829,26 @@ private fun BlockQuote(content: String) {
 
 @Composable
 private fun CodeBlock(code: String, language: String) {
-    Surface(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-        shape = RoundedCornerShape(8.dp)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
             if (language.isNotEmpty()) {
                 Surface(
                     color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+                    shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)
                 ) {
                     Text(
                         text = language,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
             }
@@ -687,26 +858,9 @@ private fun CodeBlock(code: String, language: String) {
                     fontFamily = FontFamily.Monospace
                 ),
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(12.dp)
+                modifier = Modifier.padding(16.dp)
             )
         }
-    }
-}
-
-@Composable
-private fun InlineCode(text: String) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = RoundedCornerShape(4.dp)
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontFamily = FontFamily.Monospace
-            ),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-        )
     }
 }
 
@@ -715,12 +869,11 @@ private fun HorizontalRule() {
     HorizontalDivider(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        thickness = 2.dp,
+            .padding(vertical = 16.dp),
+        thickness = 1.dp,
         color = MaterialTheme.colorScheme.outline
     )
 }
-
 
 @Composable
 private fun FormattedText(
@@ -745,16 +898,14 @@ private fun parseMarkdownText(text: String, builder: AnnotatedString.Builder) {
     var currentIndex = 0
     val processedText = text.trim()
 
-    // Patrones ordenados por prioridad (más específicos primero)
     val patterns = listOf(
-        // Código inline: `código` (debe ir antes que otros formatos)
         Triple(
             Regex("`([^`]+)`"),
             { match: MatchResult ->
                 builder.withStyle(
                     SpanStyle(
                         fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp
+                        fontSize = 13.sp,
                     )
                 ) {
                     append(match.groupValues[1])
@@ -762,8 +913,6 @@ private fun parseMarkdownText(text: String, builder: AnnotatedString.Builder) {
             },
             1
         ),
-
-        // Negrita fuerte: **texto**
         Triple(
             Regex("\\*\\*([^*]+)\\*\\*"),
             { match: MatchResult ->
@@ -773,8 +922,6 @@ private fun parseMarkdownText(text: String, builder: AnnotatedString.Builder) {
             },
             2
         ),
-
-        // Negrita alternativa: __texto__
         Triple(
             Regex("__([^_]+)__"),
             { match: MatchResult ->
@@ -784,8 +931,6 @@ private fun parseMarkdownText(text: String, builder: AnnotatedString.Builder) {
             },
             2
         ),
-
-        // Cursiva: *texto* (evitar conflicto con **)
         Triple(
             Regex("(?<!\\*)\\*([^*\\s][^*]*[^*\\s])\\*(?!\\*)"),
             { match: MatchResult ->
@@ -795,8 +940,6 @@ private fun parseMarkdownText(text: String, builder: AnnotatedString.Builder) {
             },
             3
         ),
-
-        // Cursiva alternativa: _texto_
         Triple(
             Regex("(?<!_)_([^_\\s][^_]*[^_\\s])_(?!_)"),
             { match: MatchResult ->
@@ -806,8 +949,6 @@ private fun parseMarkdownText(text: String, builder: AnnotatedString.Builder) {
             },
             3
         ),
-
-        // Tachado: ~~texto~~
         Triple(
             Regex("~~([^~]+)~~"),
             { match: MatchResult ->
@@ -819,43 +960,32 @@ private fun parseMarkdownText(text: String, builder: AnnotatedString.Builder) {
         )
     )
 
-    // Encontrar todos los matches y ordenarlos por posición
     val allMatches = patterns.flatMap { (pattern, handler, priority) ->
         pattern.findAll(processedText).map { match ->
             Triple(match, handler, priority)
         }
     }.sortedWith(compareBy({ it.first.range.first }, { it.third }))
 
-    // Procesar matches evitando solapamientos
     val processedRanges = mutableListOf<IntRange>()
 
     for ((match, handler, _) in allMatches) {
         val range = match.range
-
-        // Verificar si este match se solapa con alguno ya procesado
         val overlaps = processedRanges.any { it.intersect(range).isNotEmpty() }
 
         if (!overlaps) {
-            // Añadir texto antes del match
             if (range.first > currentIndex) {
                 builder.append(processedText.substring(currentIndex, range.first))
             }
-
-            // Aplicar formato
             handler(match)
-
-            // Actualizar índice
             currentIndex = range.last + 1
             processedRanges.add(range)
         }
     }
 
-    // Añadir texto restante
     if (currentIndex < processedText.length) {
         builder.append(processedText.substring(currentIndex))
     }
 
-    // Si no se procesó nada, añadir el texto original
     if (builder.length == 0) {
         builder.append(processedText)
     }
@@ -868,72 +998,127 @@ private fun formatDate(dateString: String): String {
         val date = inputFormat.parse(dateString)
         outputFormat.format(date ?: Date())
     } catch (e: Exception) {
-        dateString
+        try {
+            // Formato alternativo para commits
+            val inputFormat2 = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault())
+            val outputFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+            val date = inputFormat2.parse(dateString)
+            outputFormat.format(date ?: Date())
+        } catch (e2: Exception) {
+            dateString
+        }
     }
 }
 
+// ViewModel mejorado con funcionalidad de commits
 class ChangelogViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(ChangelogState())
     val uiState: StateFlow<ChangelogState> = _uiState.asStateFlow()
 
-    private val cache = ConcurrentHashMap<String, Pair<List<Release>, Long>>()
+    private val cache = ConcurrentHashMap<String, Pair<Any, Long>>()
     private val cacheTimeMs = 30 * 60 * 1000 // 30 minutos
 
     fun loadChangelog(repoOwner: String, repoName: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
+            // Cargar releases y commits en paralelo
+            launch { loadReleases(repoOwner, repoName) }
+            launch { loadCommits(repoOwner, repoName) }
+        }
+    }
 
-            try {
-                val cacheKey = "$repoOwner/$repoName"
-                val cachedData = getCachedReleases(cacheKey)
+    private suspend fun loadReleases(repoOwner: String, repoName: String) {
+        _uiState.update { it.copy(isLoadingReleases = true, releasesError = null) }
 
-                if (cachedData != null) {
-                    _uiState.update {
-                        it.copy(
-                            releases = cachedData,
-                            isLoading = false,
-                            lastUpdated = getCurrentTimestamp()
-                        )
-                    }
-                    return@launch
-                }
+        try {
+            val cacheKey = "releases_$repoOwner/$repoName"
+            val cachedData = getCachedData<List<Release>>(cacheKey)
 
-                val releases = fetchReleases(repoOwner, repoName)
-                cacheReleases(cacheKey, releases)
-
+            if (cachedData != null) {
                 _uiState.update {
                     it.copy(
-                        releases = releases,
-                        isLoading = false,
+                        releases = cachedData,
+                        isLoadingReleases = false,
                         lastUpdated = getCurrentTimestamp()
                     )
                 }
-            } catch (e: Exception) {
-                Log.e("ChangelogViewModel", "Error cargando changelog", e)
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        error = "Error al cargar los cambios: ${e.message}"
-                    )
-                }
+                return
+            }
+
+            val releases = fetchReleases(repoOwner, repoName)
+            cacheData(cacheKey, releases)
+
+            _uiState.update {
+                it.copy(
+                    releases = releases,
+                    isLoadingReleases = false,
+                    lastUpdated = getCurrentTimestamp()
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("ChangelogViewModel", "Error cargando releases", e)
+            _uiState.update {
+                it.copy(
+                    isLoadingReleases = false,
+                    releasesError = "Error al cargar releases: ${e.message}"
+                )
             }
         }
     }
 
-    private fun getCachedReleases(key: String): List<Release>? {
+    private suspend fun loadCommits(repoOwner: String, repoName: String) {
+        _uiState.update { it.copy(isLoadingCommits = true, commitsError = null) }
+
+        try {
+            val cacheKey = "commits_$repoOwner/$repoName"
+            val cachedData = getCachedData<List<Commit>>(cacheKey)
+
+            if (cachedData != null) {
+                _uiState.update {
+                    it.copy(
+                        commits = cachedData,
+                        isLoadingCommits = false,
+                        lastUpdated = getCurrentTimestamp()
+                    )
+                }
+                return
+            }
+
+            val commits = fetchCommits(repoOwner, repoName)
+            cacheData(cacheKey, commits)
+
+            _uiState.update {
+                it.copy(
+                    commits = commits,
+                    isLoadingCommits = false,
+                    lastUpdated = getCurrentTimestamp()
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("ChangelogViewModel", "Error cargando commits", e)
+            _uiState.update {
+                it.copy(
+                    isLoadingCommits = false,
+                    commitsError = "Error al cargar commits: ${e.message}"
+                )
+            }
+        }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun <T> getCachedData(key: String): T? {
         val cached = cache[key] ?: return null
-        val (releases, timestamp) = cached
+        val (data, timestamp) = cached
 
         if (System.currentTimeMillis() - timestamp > cacheTimeMs) {
             cache.remove(key)
             return null
         }
 
-        return releases
+        return data as? T
     }
 
-    private fun cacheReleases(key: String, releases: List<Release>) {
-        cache[key] = releases to System.currentTimeMillis()
+    private fun cacheData(key: String, data: Any) {
+        cache[key] = data to System.currentTimeMillis()
     }
 
     private suspend fun fetchReleases(owner: String, repo: String): List<Release> =
@@ -945,6 +1130,7 @@ class ChangelogViewModel : ViewModel() {
                     connection.connectTimeout = 15000
                     connection.readTimeout = 15000
                     connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                    connection.setRequestProperty("User-Agent", "OpenTune-App")
 
                     if (connection.responseCode != HttpURLConnection.HTTP_OK) {
                         if (attempt == 2) throw IOException("Error HTTP: ${connection.responseCode}")
@@ -956,9 +1142,10 @@ class ChangelogViewModel : ViewModel() {
                     val jsonArray = JSONArray(response)
                     val releases = mutableListOf<Release>()
 
-                    for (i in 0 until jsonArray.length()
-                        .coerceAtMost(10)) { // Limitar a 10 releases
+                    for (i in 0 until jsonArray.length().coerceAtMost(15)) {
                         val releaseJson = jsonArray.getJSONObject(i)
+                        val author = releaseJson.optJSONObject("author")?.optString("login")
+
                         releases.add(
                             Release(
                                 tagName = releaseJson.optString("tag_name", ""),
@@ -966,7 +1153,8 @@ class ChangelogViewModel : ViewModel() {
                                 body = releaseJson.optString("body", ""),
                                 publishedAt = releaseJson.optString("published_at", ""),
                                 isPrerelease = releaseJson.optBoolean("prerelease", false),
-                                htmlUrl = releaseJson.optString("html_url", "")
+                                htmlUrl = releaseJson.optString("html_url", ""),
+                                author = author
                             )
                         )
                     }
@@ -979,6 +1167,53 @@ class ChangelogViewModel : ViewModel() {
             }
 
             throw IOException("No se pudo obtener la información después de los reintentos")
+        }
+
+    private suspend fun fetchCommits(owner: String, repo: String): List<Commit> =
+        withContext(Dispatchers.IO) {
+            repeat(3) { attempt ->
+                try {
+                    val url = URL("https://api.github.com/repos/$owner/$repo/commits?per_page=20")
+                    val connection = url.openConnection() as HttpURLConnection
+                    connection.connectTimeout = 15000
+                    connection.readTimeout = 15000
+                    connection.setRequestProperty("Accept", "application/vnd.github.v3+json")
+                    connection.setRequestProperty("User-Agent", "OpenTune-App")
+
+                    if (connection.responseCode != HttpURLConnection.HTTP_OK) {
+                        if (attempt == 2) throw IOException("Error HTTP: ${connection.responseCode}")
+                        delay(1000)
+                        return@repeat
+                    }
+
+                    val response = connection.inputStream.bufferedReader().use { it.readText() }
+                    val jsonArray = JSONArray(response)
+                    val commits = mutableListOf<Commit>()
+
+                    for (i in 0 until jsonArray.length().coerceAtMost(20)) {
+                        val commitJson = jsonArray.getJSONObject(i)
+                        val commitData = commitJson.getJSONObject("commit")
+                        val author = commitData.getJSONObject("author")
+
+                        commits.add(
+                            Commit(
+                                sha = commitJson.optString("sha", ""),
+                                message = commitData.optString("message", ""),
+                                author = author.optString("name", "Unknown"),
+                                date = author.optString("date", ""),
+                                htmlUrl = commitJson.optString("html_url", "")
+                            )
+                        )
+                    }
+
+                    return@withContext commits
+                } catch (e: Exception) {
+                    if (attempt == 2) throw e
+                    delay(1000)
+                }
+            }
+
+            throw IOException("No se pudo obtener los commits después de los reintentos")
         }
 
     private fun getCurrentTimestamp(): String {

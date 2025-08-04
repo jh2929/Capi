@@ -787,14 +787,14 @@ fun SettingsScreen(
 //        )
         PreferenceEntry(
             title = { Text(stringResource(R.string.Donate)) },
-            icon = { Icon(painterResource(R.drawable.donate), null) },
-            onClick = { uriHandler.openUri("https://buymeacoffee.com/arturocervantes") }
+            icon = { Icon(painterResource(R.drawable.paypal), null) },
+            onClick = { uriHandler.openUri("https://www.paypal.com/paypalme/opentune") }
         )
 
         PreferenceEntry(
             title = { Text(stringResource(R.string.Telegramchanel)) },
             icon = { Icon(painterResource(R.drawable.telegram), null) },
-            onClick = { uriHandler.openUri("https://t.me/OpenTune_chat") }
+            onClick = { uriHandler.openUri("https://t.me/opentune_updates") }
         )
 
         TranslatePreference(uriHandler = uriHandler)
