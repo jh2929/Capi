@@ -1,8 +1,11 @@
 package com.arturo254.opentune.ui.component
 
-
 import android.view.ViewConfiguration
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
@@ -28,9 +31,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -45,7 +52,7 @@ import kotlin.math.roundToInt
 @Composable
 fun VerticalFastScroller(
     listState: LazyListState,
-    thumbColor: Color = MaterialTheme.colorScheme.onBackground,
+    thumbColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
     topContentPadding: Dp = Dp.Hairline,
     endContentPadding: Dp = Dp.Hairline,
     content: @Composable () -> Unit,
@@ -77,6 +84,61 @@ fun VerticalFastScroller(
             val thumbHeightPx = with(LocalDensity.current) { ThumbLength.toPx() }
             val trackHeightPx = heightPx - thumbHeightPx
 
+            // Haptic feedback
+            val hapticFeedback = LocalHapticFeedback.current
+
+            // Animaciones mejoradas para Material Design 3
+            val thumbScale = remember { Animatable(1f) }
+            val thumbElevation = remember { Animatable(3f) } // Elevación base
+
+            // Colores animados para transiciones suaves
+            val thumbColorAnimated by animateColorAsState(
+                targetValue = if (isThumbDragged) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    thumbColor
+                },
+                animationSpec = tween(300),
+                label = "thumb_color"
+            )
+
+            // Animación de grosor del track
+            val trackAlphaAnimated by animateFloatAsState(
+                targetValue = if (isThumbDragged) 0.5f else 0.3f,
+                animationSpec = tween(300),
+                label = "track_alpha"
+            )
+
+            // Efectos de interacción mejorados con más dinamismo
+            LaunchedEffect(isThumbDragged) {
+                if (isThumbDragged) {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                    thumbScale.animateTo(
+                        targetValue = 1.3f, // Más escala para mejor feedback
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessHigh
+                        )
+                    )
+                    thumbElevation.animateTo(
+                        targetValue = 12f, // Mayor elevación
+                        animationSpec = spring(stiffness = Spring.StiffnessHigh)
+                    )
+                } else {
+                    thumbScale.animateTo(
+                        targetValue = 1f,
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    )
+                    thumbElevation.animateTo(
+                        targetValue = 3f, // Elevación base más pronunciada
+                        animationSpec = spring(stiffness = Spring.StiffnessMedium)
+                    )
+                }
+            }
+
             // When thumb dragged
             LaunchedEffect(thumbOffsetY) {
                 if (layoutInfo.totalItemsCount == 0 || !isThumbDragged) return@LaunchedEffect
@@ -103,7 +165,7 @@ fun VerticalFastScroller(
                 scrolled.tryEmit(Unit)
             }
 
-            // Thumb alpha
+            // Thumb alpha con transición suave
             val alpha = remember { Animatable(0f) }
             val isThumbVisible = alpha.value > 0f
             LaunchedEffect(scrolled, alpha) {
@@ -113,6 +175,22 @@ fun VerticalFastScroller(
                 }
             }
 
+            // Indicador de track mejorado con animaciones
+            Box(
+                modifier = Modifier
+                    .offset { IntOffset(0, thumbTopPadding.roundToInt()) }
+                    .height(with(LocalDensity.current) { trackHeightPx.toDp() })
+                    .padding(horizontal = 8.dp)
+                    .padding(end = endContentPadding)
+                    .width(TrackThickness)
+                    .alpha(alpha.value * trackAlphaAnimated)
+                    .background(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                        shape = RoundedCornerShape(TrackThickness / 2)
+                    )
+            )
+
+            // Thumb principal mejorado con más características
             Box(
                 modifier = Modifier
                     .offset { IntOffset(0, thumbOffsetY.roundToInt()) }
@@ -123,11 +201,21 @@ fun VerticalFastScroller(
                             Modifier.systemGestureExclusion()
                         } else Modifier,
                     )
-                    .padding(horizontal = 8.dp)
+                    .padding(horizontal = 6.dp) // Menos padding para thumb más ancho
                     .padding(end = endContentPadding)
                     .width(ThumbThickness)
+                    .scale(thumbScale.value)
                     .alpha(alpha.value)
-                    .background(color = thumbColor, shape = ThumbShape)
+                    .shadow(
+                        elevation = thumbElevation.value.dp,
+                        shape = ThumbShape,
+                        clip = false,
+                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                    )
+                    .background(
+                        color = thumbColorAnimated,
+                        shape = ThumbShape
+                    )
                     .then(
                         // Recompose opts
                         if (!listState.isScrollInProgress) {
@@ -141,6 +229,11 @@ fun VerticalFastScroller(
                                         thumbTopPadding,
                                         thumbTopPadding + trackHeightPx
                                     )
+
+                                    // Haptic feedback sutil durante el arrastre
+                                    if (abs(delta) > 2f) {
+                                        hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    }
                                 },
                             )
                         } else Modifier,
@@ -185,8 +278,10 @@ private fun computeScrollRange(state: LazyListState): Int {
     return (laidOutArea.toFloat() / laidOutRange * state.layoutInfo.totalItemsCount).roundToInt()
 }
 
+// Valores mejorados siguiendo Material Design 3
 private val ThumbLength = 48.dp
-private val ThumbThickness = 8.dp
+private val ThumbThickness = 12.dp // Más ancho para mejor agarre
+private val TrackThickness = 6.dp
 private val ThumbShape = RoundedCornerShape(ThumbThickness / 2)
 private val FadeOutAnimationSpec = tween<Float>(
     durationMillis = ViewConfiguration.getScrollBarFadeDuration(),
