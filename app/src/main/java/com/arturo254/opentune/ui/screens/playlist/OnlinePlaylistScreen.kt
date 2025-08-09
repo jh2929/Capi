@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.ScrollableDefaults
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -170,7 +171,19 @@ fun OnlinePlaylistScreen(
         }
     }
 
-    val wrappedSongs = filteredSongs.map { item -> ItemWrapper(item) }.toMutableList()
+
+
+
+
+
+
+
+    LaunchedEffect(playlist?.id) {
+        // Restaurar posición si cambias de playlist
+        if (playlist?.id != null) {
+            lazyListState.scrollToItem(0)
+        }
+    }
 
     val showTopBarTitle by remember {
         derivedStateOf {
@@ -181,6 +194,7 @@ fun OnlinePlaylistScreen(
     // Calcular el padding del contenido considerando WindowInsets
     val contentPadding = LocalPlayerAwareWindowInsets.current.union(WindowInsets.ime)
         .asPaddingValues()
+    val wrappedSongs = filteredSongs.map { item -> ItemWrapper(item) }.toMutableList()
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -193,6 +207,8 @@ fun OnlinePlaylistScreen(
             LazyColumn(
                 state = lazyListState,
                 contentPadding = contentPadding,
+                flingBehavior = ScrollableDefaults.flingBehavior(),
+                userScrollEnabled = true,
             ) {
                 playlist.let { playlist ->
                     if (playlist != null) {

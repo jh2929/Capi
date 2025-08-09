@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
@@ -139,39 +140,95 @@ fun VerticalFastScroller(
                 }
             }
 
-            // When thumb dragged
+            // When thumb dragged - Mejorado para mejor precisión
             LaunchedEffect(thumbOffsetY) {
                 if (layoutInfo.totalItemsCount == 0 || !isThumbDragged) return@LaunchedEffect
                 val scrollRatio = (thumbOffsetY - thumbTopPadding) / trackHeightPx
                 val scrollItem = layoutInfo.totalItemsCount * scrollRatio
-                val scrollItemRounded = scrollItem.roundToInt()
-                val scrollItemSize =
-                    layoutInfo.visibleItemsInfo.find { it.index == scrollItemRounded }?.size ?: 0
-                val scrollItemOffset = scrollItemSize * (scrollItem - scrollItemRounded)
-                listState.scrollToItem(
-                    index = scrollItemRounded,
-                    scrollOffset = scrollItemOffset.roundToInt()
-                )
-                scrolled.tryEmit(Unit)
+                val scrollItemRounded = scrollItem.roundToInt().coerceIn(0, layoutInfo.totalItemsCount - 1)
+
+                // Mejora: Cálculo más preciso del offset dentro del item
+                val scrollItemSize = layoutInfo.visibleItemsInfo
+                    .find { it.index == scrollItemRounded }?.size
+                    ?: run {
+                        // Fallback: usar tamaño promedio si el item no está visible
+                        val averageItemSize = layoutInfo.visibleItemsInfo
+                            .takeIf { it.isNotEmpty() }
+                            ?.map { it.size }
+                            ?.average()?.toInt()
+                            ?: 200 // Valor por defecto razonable
+                        averageItemSize
+                    }
+
+                val scrollItemOffset = (scrollItemSize * (scrollItem - scrollItemRounded))
+                    .coerceIn(0f, scrollItemSize.toFloat())
+
+                try {
+                    listState.scrollToItem(
+                        index = scrollItemRounded,
+                        scrollOffset = scrollItemOffset.roundToInt()
+                    )
+                    scrolled.tryEmit(Unit)
+                } catch (e: Exception) {
+                    // Fallback silencioso si hay error de scroll
+                }
             }
 
-            // When list scrolled
-            LaunchedEffect(listState.firstVisibleItemScrollOffset) {
+            // When list scrolled - Optimizado para máxima fluidez
+            LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
                 if (listState.layoutInfo.totalItemsCount == 0 || isThumbDragged) return@LaunchedEffect
-                val scrollOffset = computeScrollOffset(state = listState)
-                val scrollRange = computeScrollRange(state = listState)
-                val proportion = scrollOffset.toFloat() / (scrollRange.toFloat() - heightPx)
-                thumbOffsetY = trackHeightPx * proportion + thumbTopPadding
-                scrolled.tryEmit(Unit)
+
+                // Usar snapshotFlow para mejor rendimiento
+                snapshotFlow {
+                    Triple(
+                        listState.firstVisibleItemIndex,
+                        listState.firstVisibleItemScrollOffset,
+                        listState.layoutInfo.totalItemsCount
+                    )
+                }.collect { (_, _, totalItems) ->
+                    if (totalItems == 0) return@collect
+
+                    val scrollOffset = computeScrollOffset(state = listState)
+                    val scrollRange = computeScrollRange(state = listState)
+
+                    if (scrollRange > heightPx) {
+                        val proportion = scrollOffset.toFloat() / (scrollRange.toFloat() - heightPx)
+                        val newThumbOffset = (trackHeightPx * proportion.coerceIn(0f, 1f) + thumbTopPadding)
+
+                        // Interpolación suave para reducir jank
+                        val smoothFactor = 0.8f
+                        thumbOffsetY = thumbOffsetY * (1f - smoothFactor) + newThumbOffset * smoothFactor
+                        scrolled.tryEmit(Unit)
+                    }
+                }
             }
 
-            // Thumb alpha con transición suave
+            // Thumb alpha con transición más suave y inteligente
             val alpha = remember { Animatable(0f) }
             val isThumbVisible = alpha.value > 0f
+
+            // Detección de velocidad de scroll para mejor UX
+            var lastScrollTime by remember { mutableStateOf(0L) }
+            var scrollVelocity by remember { mutableStateOf(0f) }
+
             LaunchedEffect(scrolled, alpha) {
                 scrolled.collectLatest {
+                    val currentTime = System.currentTimeMillis()
+                    scrollVelocity = if (lastScrollTime > 0) {
+                        1000f / (currentTime - lastScrollTime).coerceAtLeast(1)
+                    } else 0f
+                    lastScrollTime = currentTime
+
                     alpha.snapTo(1f)
-                    alpha.animateTo(0f, animationSpec = FadeOutAnimationSpec)
+                    // Tiempo de fade adaptativo según velocidad
+                    val fadeDelay = if (scrollVelocity > 10f) 3000 else 2000
+                    alpha.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(
+                            durationMillis = ViewConfiguration.getScrollBarFadeDuration(),
+                            delayMillis = fadeDelay
+                        )
+                    )
                 }
             }
 
@@ -224,14 +281,17 @@ fun VerticalFastScroller(
                                 orientation = Orientation.Vertical,
                                 enabled = isThumbVisible,
                                 state = rememberDraggableState { delta ->
-                                    val newOffsetY = thumbOffsetY + delta
+                                    val sensitivity = 1.2f // Factor de sensibilidad ajustable
+                                    val adjustedDelta = delta * sensitivity
+
+                                    val newOffsetY = thumbOffsetY + adjustedDelta
                                     thumbOffsetY = newOffsetY.coerceIn(
                                         thumbTopPadding,
                                         thumbTopPadding + trackHeightPx
                                     )
 
-                                    // Haptic feedback sutil durante el arrastre
-                                    if (abs(delta) > 2f) {
+                                    // Haptic feedback más inteligente
+                                    if (abs(adjustedDelta) > 3f) {
                                         hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     }
                                 },
@@ -256,6 +316,8 @@ fun VerticalFastScroller(
 private fun computeScrollOffset(state: LazyListState): Int {
     if (state.layoutInfo.totalItemsCount == 0) return 0
     val visibleItems = state.layoutInfo.visibleItemsInfo
+    if (visibleItems.isEmpty()) return 0
+
     val startChild = visibleItems.first()
     val endChild = visibleItems.last()
     val minPosition = min(startChild.index, endChild.index)
@@ -264,18 +326,38 @@ private fun computeScrollOffset(state: LazyListState): Int {
     val startDecoratedTop = startChild.top
     val laidOutArea = abs(endChild.bottom - startDecoratedTop)
     val itemRange = abs(minPosition - maxPosition) + 1
-    val avgSizePerRow = laidOutArea.toFloat() / itemRange
-    return (itemsBefore * avgSizePerRow + (0 - startDecoratedTop)).roundToInt()
+
+    // Mejora: Manejo más robusto de divisiones por cero
+    val avgSizePerRow = if (itemRange > 0 && laidOutArea > 0) {
+        laidOutArea.toFloat() / itemRange
+    } else {
+        200f // Valor por defecto
+    }
+
+    return (itemsBefore * avgSizePerRow + (0 - startDecoratedTop)).roundToInt().coerceAtLeast(0)
 }
 
 private fun computeScrollRange(state: LazyListState): Int {
     if (state.layoutInfo.totalItemsCount == 0) return 0
     val visibleItems = state.layoutInfo.visibleItemsInfo
+    if (visibleItems.isEmpty()) return 0
+
     val startChild = visibleItems.first()
     val endChild = visibleItems.last()
     val laidOutArea = endChild.bottom - startChild.top
     val laidOutRange = abs(startChild.index - endChild.index) + 1
-    return (laidOutArea.toFloat() / laidOutRange * state.layoutInfo.totalItemsCount).roundToInt()
+
+    // Mejora: Cálculo más preciso del rango total
+    val averageItemSize = if (laidOutRange > 0 && laidOutArea > 0) {
+        laidOutArea.toFloat() / laidOutRange
+    } else {
+        200f // Valor por defecto
+    }
+
+    val totalRange = (averageItemSize * state.layoutInfo.totalItemsCount).roundToInt()
+
+    // Añadir padding si existe
+    return totalRange + state.layoutInfo.beforeContentPadding + state.layoutInfo.afterContentPadding
 }
 
 // Valores mejorados siguiendo Material Design 3
