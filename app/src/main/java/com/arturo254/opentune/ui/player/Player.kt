@@ -142,6 +142,7 @@ import kotlin.math.roundToInt
 fun BottomSheetPlayer(
     state: BottomSheetState,
     navController: NavController,
+    onOpenFullscreenLyrics: () -> Unit, // NUEVO PARÁMETRO
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -149,6 +150,8 @@ fun BottomSheetPlayer(
     val menuState = LocalMenuState.current
 
     val clipboardManager = LocalClipboardManager.current
+
+    var showFullscreenLyrics by remember { mutableStateOf(false) }
 
     val playerConnection = LocalPlayerConnection.current ?: return
 
@@ -1110,8 +1113,10 @@ fun BottomSheetPlayer(
                     ) {
                         val screenWidth = LocalConfiguration.current.screenWidthDp
                         val thumbnailSize = (screenWidth * 0.4).dp
+
                         Thumbnail(
                             sliderPositionProvider = { sliderPosition },
+                            onOpenFullscreenLyrics = onOpenFullscreenLyrics, // Pasar la función
                             modifier = Modifier.size(thumbnailSize)
                         )
                     }
@@ -1148,6 +1153,7 @@ fun BottomSheetPlayer(
                         Thumbnail(
                             sliderPositionProvider = { sliderPosition },
                             modifier = Modifier.nestedScroll(state.preUpPostDownNestedScrollConnection),
+                            onOpenFullscreenLyrics = onOpenFullscreenLyrics, // Pasar la función del parámetro
                         )
                     }
 

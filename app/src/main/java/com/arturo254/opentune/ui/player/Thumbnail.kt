@@ -39,17 +39,16 @@ import com.arturo254.opentune.constants.ShowLyricsKey
 import com.arturo254.opentune.constants.SwipeThumbnailKey
 import com.arturo254.opentune.ui.component.AppConfig
 import com.arturo254.opentune.ui.component.Lyrics
-
 import com.arturo254.opentune.utils.rememberPreference
 import kotlin.math.roundToInt
 
 @Composable
 fun Thumbnail(
     sliderPositionProvider: () -> Long?,
+    onOpenFullscreenLyrics: () -> Unit, // NUEVO PARÁMETRO
     modifier: Modifier = Modifier,
     changeColor: Boolean = false,
-
-    ) {
+) {
     val playerConnection = LocalPlayerConnection.current ?: return
     val currentView = LocalView.current
 
@@ -112,7 +111,7 @@ fun Thumbnail(
                 var cornerRadius by remember { mutableFloatStateOf(16f) } // Valor por defecto
                 val context = LocalContext.current
 
-// Recuperar el valor de DataStore de manera segura
+                // Recuperar el valor de DataStore de manera segura
                 LaunchedEffect(Unit) {
                     cornerRadius = AppConfig.getThumbnailCornerRadius(context)
                 }
@@ -129,7 +128,8 @@ fun Thumbnail(
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onTap = {
-                                    showLyrics = !showLyrics
+                                    // MODIFICADO: Ahora abre letras en pantalla completa
+                                    onOpenFullscreenLyrics()
                                 },
                                 onDoubleTap = { offset ->
                                     if (offset.x < size.width / 2) {

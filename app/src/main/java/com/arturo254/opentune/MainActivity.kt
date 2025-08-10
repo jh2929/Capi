@@ -27,12 +27,14 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -219,6 +221,14 @@ import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.days
+import androidx.compose.runtime.*
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.compose.foundation.layout.*
+import androidx.compose.animation.*
+
+import com.arturo254.opentune.ui.screens.FullScreenLyricsScreen
 
 // El codigo original de la aplicacion pertenece a : Arturo Cervantes Galindo (Arturo254) Cualquier parecido es copia y pega de mi codigo original
 
@@ -294,6 +304,7 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
         window.decorView.layoutDirection = View.LAYOUT_DIRECTION_LTR
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -324,6 +335,9 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+
+            var showFullscreenLyrics by remember { mutableStateOf(false) }
+
 
             val enableDynamicTheme by rememberPreference(DynamicThemeKey, defaultValue = true)
             val darkTheme by rememberEnumPreference(DarkModeKey, defaultValue = DarkMode.AUTO)
@@ -1036,7 +1050,34 @@ class MainActivity : ComponentActivity() {
                                     BottomSheetPlayer(
                                         state = playerBottomSheetState,
                                         navController = navController,
+                                        onOpenFullscreenLyrics = {
+                                            showFullscreenLyrics = true
+                                        },
+                                        modifier = Modifier.fillMaxSize()
                                     )
+
+                                    AnimatedVisibility(
+                                        visible = showFullscreenLyrics,
+                                        enter = slideInVertically(
+                                            initialOffsetY = { it },
+                                            animationSpec = tween(300)
+                                        ) + fadeIn(animationSpec = tween(300)),
+                                        exit = slideOutVertically(
+                                            targetOffsetY = { it },
+                                            animationSpec = tween(300)
+                                        ) + fadeOut(animationSpec = tween(300))
+                                    ) {
+                                        FullScreenLyricsScreen(
+                                            sliderPositionProvider = {
+                                                // Obtener posición del slider desde el player connection
+                                                null // o la lógica que tengas para obtener la posición del slider
+                                            },
+                                            onNavigateBack = {
+                                                showFullscreenLyrics = false
+                                            },
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
 
                                     NavigationBar(
                                         modifier = Modifier
