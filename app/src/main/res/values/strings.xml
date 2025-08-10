@@ -524,4 +524,5 @@
     <string name="subscribed">Subscribed</string>
     <string name="subscribe">Subscribe</string>
     <string name="language">Application language</string>
+    <string name="selection_mode_active">Active selection mode</string>
 </resources>
