@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -40,6 +41,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
@@ -893,23 +895,30 @@ fun FullScreenLyricsScreen(
         }
 
         // Lista de letras
+        // Lista de letras mejorada
         BoxWithConstraints(
-            contentAlignment = Alignment.Center,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(
-                    top = if (showControls) 140.dp else 0.dp,
-                    bottom = if (showControls) 160.dp else 0.dp
+                    top = 100.dp,  // Espacio optimizado para el header
+                    bottom = if (showControls) 180.dp else 0.dp  // Espacio para controles
                 )
         ) {
+            val topPadding = with(LocalDensity.current) {
+                // Calcula padding superior dinámico considerando la status bar
+                100.dp + WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+            }
+
             LazyColumn(
                 state = lazyListState,
-                contentPadding = WindowInsets.systemBars
-                    .only(WindowInsetsSides.Bottom)
-                    .add(WindowInsets(top = maxHeight / 8, bottom = maxHeight / 8))
-                    .asPaddingValues(),
+                contentPadding = PaddingValues(
+                    top = topPadding,
+                    bottom = if (showControls) 180.dp else 0.dp,
+                    start = 8.dp,
+                    end = 8.dp
+                ),
                 modifier = Modifier
-                    .fadingEdge(vertical = 60.dp)
+                    .fadingEdge(vertical = 32.dp)
                     .nestedScroll(remember {
                         object : NestedScrollConnection {
                             override fun onPostScroll(
@@ -941,18 +950,24 @@ fun FullScreenLyricsScreen(
                 if (lyrics == null) {
                     item {
                         ShimmerHost {
-                            repeat(8) {
-                                Box(
-                                    contentAlignment = when (lyricsTextPosition) {
-                                        LyricsPosition.LEFT -> Alignment.CenterStart
-                                        LyricsPosition.CENTER -> Alignment.Center
-                                        LyricsPosition.RIGHT -> Alignment.CenterEnd
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 24.dp, vertical = 8.dp)
-                                ) {
-                                    TextPlaceholder()
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                            ) {
+                                repeat(6) {
+                                    Box(
+                                        contentAlignment = when (lyricsTextPosition) {
+                                            LyricsPosition.LEFT -> Alignment.CenterStart
+                                            LyricsPosition.CENTER -> Alignment.Center
+                                            LyricsPosition.RIGHT -> Alignment.CenterEnd
+                                        },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 6.dp)
+                                    ) {
+                                        TextPlaceholder()
+                                    }
                                 }
                             }
                         }
@@ -967,7 +982,7 @@ fun FullScreenLyricsScreen(
 
                         val itemModifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(8.dp))
                             .combinedClickable(
                                 enabled = true,
                                 onClick = {
@@ -989,10 +1004,10 @@ fun FullScreenLyricsScreen(
                                         scope.launch {
                                             lazyListState.animateScrollToItem(
                                                 index,
-                                                with(density) { 72.dp.toPx().toInt() } +
+                                                with(density) { 60.dp.toPx().toInt() } +
                                                         with(density) {
                                                             val count = item.text.count { it == '\n' }
-                                                            (if (landscapeOffset) 16.dp.toPx() else 20.dp.toPx()).toInt() * count
+                                                            (if (landscapeOffset) 12.dp.toPx() else 16.dp.toPx()).toInt() * count
                                                         }
                                             )
                                         }
@@ -1019,7 +1034,7 @@ fun FullScreenLyricsScreen(
                                     else -> Color.Transparent
                                 }
                             )
-                            .padding(horizontal = 24.dp, vertical = 12.dp)
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
                             .alpha(
                                 when {
                                     !isSynced -> 1f
@@ -1033,16 +1048,16 @@ fun FullScreenLyricsScreen(
                         Text(
                             text = item.text,
                             style = when {
-                                isCurrentLine -> MaterialTheme.typography.headlineSmall.copy(
+                                isCurrentLine -> MaterialTheme.typography.titleLarge.copy(
                                     fontWeight = FontWeight.SemiBold,
-                                    fontSize = 22.sp
+                                    fontSize = 20.sp
                                 )
                                 isSelected -> MaterialTheme.typography.bodyLarge.copy(
                                     fontWeight = FontWeight.Medium,
-                                    fontSize = 18.sp
-                                )
-                                else -> MaterialTheme.typography.bodyLarge.copy(
                                     fontSize = 16.sp
+                                )
+                                else -> MaterialTheme.typography.bodyMedium.copy(
+                                    fontSize = 14.sp
                                 )
                             },
                             color = when {
@@ -1056,9 +1071,9 @@ fun FullScreenLyricsScreen(
                                 LyricsPosition.RIGHT -> TextAlign.Right
                             },
                             lineHeight = when {
-                                isCurrentLine -> 28.sp
-                                isSelected -> 24.sp
-                                else -> 22.sp
+                                isCurrentLine -> 24.sp
+                                isSelected -> 20.sp
+                                else -> 18.sp
                             },
                             modifier = itemModifier
                         )
@@ -1066,41 +1081,42 @@ fun FullScreenLyricsScreen(
                 }
             }
 
-            // Estado vacío
+            // Estado vacío optimizado
             if (lyrics == LYRICS_NOT_FOUND) {
                 Card(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
+                        .align(Alignment.Center)
+                        .fillMaxWidth(0.8f)
+                        .padding(vertical = 32.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
                     ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(24.dp),
+                            .padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.music_note),
                             contentDescription = null,
-                            modifier = Modifier.size(40.dp),
+                            modifier = Modifier.size(32.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         Text(
                             text = stringResource(R.string.lyrics_not_found),
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurface,
                             textAlign = TextAlign.Center
                         )
 
                         Text(
                             text = "Las letras no están disponibles para esta canción",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
