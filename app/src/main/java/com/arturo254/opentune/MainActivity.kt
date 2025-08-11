@@ -222,8 +222,7 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.days
 import androidx.compose.animation.*
-import com.arturo254.opentune.ui.screens.FullScreenLyricsScreen
-
+import com.arturo254.opentune.ui.component.FullScreenLyricsScreen
 
 // El codigo original de la aplicacion pertenece a : Arturo Cervantes Galindo (Arturo254) Cualquier parecido es copia y pega de mi codigo original
 
