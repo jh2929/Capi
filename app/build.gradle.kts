@@ -18,8 +18,8 @@ android {
         applicationId = "com.Arturo254.opentune"
         minSdk = 24
         targetSdk = 35
-        versionCode = 118
-        versionName = "2.0.4"
+        versionCode = 119
+        versionName = "2.0.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
