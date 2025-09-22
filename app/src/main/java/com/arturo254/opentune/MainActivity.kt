@@ -222,7 +222,7 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.days
 import androidx.compose.animation.*
-import com.arturo254.opentune.ui.component.FullScreenLyricsScreen
+import com.arturo254.opentune.ui.component.Lyrics
 
 // El codigo original de la aplicacion pertenece a : Arturo Cervantes Galindo (Arturo254) Cualquier parecido es copia y pega de mi codigo original
 
@@ -1061,7 +1061,7 @@ class MainActivity : ComponentActivity() {
                                             animationSpec = tween(300)
                                         ) + fadeOut(animationSpec = tween(300))
                                     ) {
-                                        FullScreenLyricsScreen(
+                                        Lyrics(
                                             sliderPositionProvider = {
                                                 // Obtener posición del slider desde el player connection
                                                 null // o la lógica que tengas para obtener la posición del slider
@@ -1778,4 +1778,3 @@ fun logErrorToDownloads(context: Context, e: Exception) {
         Toast.makeText(context, "Error al guardar log: ${ex.message}", Toast.LENGTH_LONG).show()
     }
 }
-
