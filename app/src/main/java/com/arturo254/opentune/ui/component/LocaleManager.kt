@@ -860,13 +860,8 @@ fun LanguagePreference(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                painterResource(R.drawable.language),
+                painterResource(R.drawable.translate),
                 contentDescription = null,
-                tint = if (isChanging) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
                 modifier = Modifier.size(24.dp)
             )
 
