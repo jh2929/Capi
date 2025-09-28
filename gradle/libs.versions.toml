@@ -17,6 +17,8 @@ loggingInterceptor = "5.0.0-alpha.14"
 blurry = "4.0.1"
 materialRipple = "1.9.0-beta02"
 roomRuntimeAndroid = "2.7.2"
+extractor = "06b7ae2"
+uiAndroid = "1.9.2"
 
 [libraries]
 annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
@@ -89,6 +91,7 @@ logging-interceptor = { group = "com.squareup.okhttp3", name = "logging-intercep
 blurry = { group = "jp.wasabeef", name = "blurry", version.ref = "blurry" }
 material-ripple = { group = "androidx.compose.material", name = "material-ripple", version.ref = "materialRipple" }
 room-runtime-android = { group = "androidx.room", name = "room-runtime-android", version.ref = "roomRuntimeAndroid" }
+ui-android = { group = "androidx.compose.ui", name = "ui-android", version.ref = "uiAndroid" }
 
 [plugins]
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

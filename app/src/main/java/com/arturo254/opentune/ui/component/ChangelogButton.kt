@@ -123,9 +123,9 @@ fun ChangelogButton(
 ) {
     var showBottomSheet by remember { mutableStateOf(false) }
 
-    PreferenceEntry(
+    SettingsCategoryItem(
         title = { Text(stringResource(R.string.Changelog)) },
-        icon = { Icon(painterResource(R.drawable.schedule), null) },
+        icon = painterResource(R.drawable.schedule),
         onClick = { showBottomSheet = true }
     )
 

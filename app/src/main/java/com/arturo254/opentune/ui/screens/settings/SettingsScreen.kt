@@ -84,9 +84,10 @@ import com.arturo254.opentune.ui.component.AvatarPreferenceManager
 import com.arturo254.opentune.ui.component.AvatarSelection
 import com.arturo254.opentune.ui.component.ChangelogButton
 import com.arturo254.opentune.ui.component.IconButton
-import com.arturo254.opentune.ui.component.PreferenceEntry
 import com.arturo254.opentune.ui.utils.backToMain
 import com.arturo254.opentune.utils.rememberPreference
+import com.arturo254.opentune.ui.component.SettingsCategory
+import com.arturo254.opentune.ui.component.SettingsCategoryItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -788,62 +789,64 @@ fun SettingsScreen(
             }
         }
 
-        PreferenceEntry(
-            title = { Text(stringResource(R.string.appearance)) },
-            icon = { Icon(painterResource(R.drawable.palette), null) },
-            onClick = { navController.navigate("settings/appearance") },
-        )
-        PreferenceEntry(
-            title = { Text(stringResource(R.string.account)) },
-            icon = { Icon(painterResource(R.drawable.person), null) },
-            onClick = { navController.navigate("settings/account") },
-        )
-        PreferenceEntry(
-            title = { Text(stringResource(R.string.content)) },
-            icon = { Icon(painterResource(R.drawable.language), null) },
-            onClick = { navController.navigate("settings/content") },
-        )
-        PreferenceEntry(
-            title = { Text(stringResource(R.string.player_and_audio)) },
-            icon = { Icon(painterResource(R.drawable.play), null) },
-            onClick = { navController.navigate("settings/player") },
-        )
-        PreferenceEntry(
-            title = { Text(stringResource(R.string.storage)) },
-            icon = { Icon(painterResource(R.drawable.storage), null) },
-            onClick = { navController.navigate("settings/storage") },
-        )
-        PreferenceEntry(
-            title = { Text(stringResource(R.string.privacy)) },
-            icon = { Icon(painterResource(R.drawable.security), null) },
-            onClick = { navController.navigate("settings/privacy") },
-        )
-        PreferenceEntry(
-            title = { Text(stringResource(R.string.backup_restore)) },
-            icon = { Icon(painterResource(R.drawable.restore), null) },
-            onClick = { navController.navigate("settings/backup_restore") },
-        )
-        PreferenceEntry(
-            title = { Text(stringResource(R.string.about)) },
-            icon = { Icon(painterResource(R.drawable.info), null) },
-            onClick = { navController.navigate("settings/about") }
-        )
-//        PreferenceEntry(
-//            title = { Text(stringResource(R.string.problem_solver)) },
-//            icon = { Icon(painterResource(R.drawable.apps), null) },
-//            onClick = { navController.navigate("settings/problem_solver") }
-//        )
-        PreferenceEntry(
-            title = { Text(stringResource(R.string.Donate)) },
-            icon = { Icon(painterResource(R.drawable.paypal), null) },
-            onClick = { uriHandler.openUri("https://www.paypal.com/paypalme/opentune") }
+        SettingsCategory(
+            title = stringResource(R.string.general_settings), // Añade este string resource
+            items = listOf(
+                SettingsCategoryItem(
+                    icon = painterResource(R.drawable.palette),
+                    title = { Text(stringResource(R.string.appearance)) },
+                    onClick = { navController.navigate("settings/appearance") }
+                ),
+                SettingsCategoryItem(
+                    icon = painterResource(R.drawable.person),
+                    title = { Text(stringResource(R.string.account)) },
+                    onClick = { navController.navigate("settings/account") }
+                ),
+                SettingsCategoryItem(
+                    icon = painterResource(R.drawable.language),
+                    title = { Text(stringResource(R.string.content)) },
+                    onClick = { navController.navigate("settings/content") }
+                ),
+                SettingsCategoryItem(
+                    icon = painterResource(R.drawable.play),
+                    title = { Text(stringResource(R.string.player_and_audio)) },
+                    onClick = { navController.navigate("settings/player") }
+                ),
+                SettingsCategoryItem(
+                    icon = painterResource(R.drawable.storage),
+                    title = { Text(stringResource(R.string.storage)) },
+                    onClick = { navController.navigate("settings/storage") }
+                ),
+                SettingsCategoryItem(
+                    icon = painterResource(R.drawable.security),
+                    title = { Text(stringResource(R.string.privacy)) },
+                    onClick = { navController.navigate("settings/privacy") }
+                ),
+                SettingsCategoryItem(
+                    icon = painterResource(R.drawable.restore),
+                    title = { Text(stringResource(R.string.backup_restore)) },
+                    onClick = { navController.navigate("settings/backup_restore") }
+                ),
+                SettingsCategoryItem(
+                    icon = painterResource(R.drawable.info),
+                    title = { Text(stringResource(R.string.about)) },
+                    onClick = { navController.navigate("settings/about") }
+                ),
+                SettingsCategoryItem(
+                    icon = painterResource(R.drawable.paypal),
+                    title = { Text(stringResource(R.string.Donate)) },
+                    isHighlighted = true, // Destacar la donación
+                    onClick = { uriHandler.openUri("https://www.paypal.com/paypalme/opentune") }
+                ),
+                SettingsCategoryItem(
+                    icon = painterResource(R.drawable.telegram),
+                    title = { Text(stringResource(R.string.Telegramchanel)) },
+                    onClick = { uriHandler.openUri("https://t.me/opentune_updates") }
+                )
+            )
         )
 
-        PreferenceEntry(
-            title = { Text(stringResource(R.string.Telegramchanel)) },
-            icon = { Icon(painterResource(R.drawable.telegram), null) },
-            onClick = { uriHandler.openUri("https://t.me/opentune_updates") }
-        )
+
 
         TranslatePreference(uriHandler = uriHandler)
 
@@ -890,9 +893,9 @@ fun SettingsScreen(
 fun TranslatePreference(uriHandler: UriHandler) {
     var showDialog by remember { mutableStateOf(false) }
 
-    PreferenceEntry(
+    SettingsCategoryItem(
         title = { Text(stringResource(R.string.Translate)) },
-        icon = { Icon(painterResource(R.drawable.translate), null) },
+        icon = painterResource(R.drawable.translate),
         onClick = { showDialog = true }
     )
 
