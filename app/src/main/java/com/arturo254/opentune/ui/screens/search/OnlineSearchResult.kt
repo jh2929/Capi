@@ -9,8 +9,7 @@ import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
@@ -190,6 +189,7 @@ fun OnlineSearchResult(
         contentPadding =
             LocalPlayerAwareWindowInsets.current
                 .add(WindowInsets(top = SearchFilterHeight))
+                .add(WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal))
                 .asPaddingValues(),
     ) {
         if (searchFilter == null) {
@@ -215,7 +215,7 @@ fun OnlineSearchResult(
             }
         } else {
             items(
-                items = itemsPage?.items.orEmpty(),
+                items = itemsPage?.items.orEmpty().distinctBy { it.id },
                 key = { it.id },
                 itemContent = ytItemContent,
             )
@@ -273,9 +273,12 @@ fun OnlineSearchResult(
         },
         modifier =
             Modifier
-                .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top))
-                .padding(top = AppBarHeight)
                 .background(MaterialTheme.colorScheme.surface)
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing
+                        .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Top)
+                        .add(WindowInsets(top = AppBarHeight))
+                )
                 .fillMaxWidth()
     )
 }
