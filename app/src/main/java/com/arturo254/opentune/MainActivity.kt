@@ -275,7 +275,6 @@ class MainActivity : ComponentActivity() {
         super.onStop()
     }
 
-    @SuppressLint("ImplicitSamInstance")
     override fun onDestroy() {
         super.onDestroy()
         if (dataStore.get(
