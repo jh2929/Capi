@@ -525,4 +525,29 @@
     <string name="subscribe">Subscribe</string>
     <string name="language">Application language</string>
     <string name="selection_mode_active">Active selection mode</string>
+
+
+    <!-- Avatar Selection -->
+    <string name="avatar_selection">Avatar Selection</string>
+    <string name="choose_predefined_avatar">Choose a predefined avatar</string>
+
+    <!-- Avatar Descriptions for Predefined Avatars -->
+    <string name="geometric_avatar_1">Geometric Avatar 1</string>
+    <string name="geometric_avatar_2">Geometric Avatar 2</string>
+    <string name="geometric_avatar_3">Geometric Avatar 3</string>
+    <string name="geometric_avatar_4">Geometric Avatar 4</string>
+    <string name="geometric_avatar_5">Geometric Avatar 5</string>
+    <string name="geometric_avatar_6">Geometric Avatar 6</string>
+    <string name="purple_initial_avatar">Purple Initials Avatar</string>
+    <string name="blue_initial_avatar">Blue Initials Avatar</string>
+    <string name="green_initial_avatar">Green Initials Avatar</string>
+    <string name="orange_initial_avatar">Initials Avatar Orange</string>
+    <string name="red_initial_avatar">Red Initials Avatar</string>
+    <string name="teal_initial_avatar">Teal Initials Avatar</string>
+    <string name="dots_pattern_avatar">Dot Pattern Avatar</string>
+    <string name="waves_pattern_avatar">Wave Pattern Avatar</string>
+    <string name="gradient_pattern_avatar">Gradient Pattern Avatar</string>
+    <string name="music_note_avatar">Music Note Avatar</string>
+    <string name="equalizer_avatar">Equalizer Avatar</string>
+    <string name="headphones_avatar">Headphones Avatar</string>
 </resources>

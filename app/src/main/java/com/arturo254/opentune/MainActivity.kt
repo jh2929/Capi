@@ -182,7 +182,6 @@ import com.arturo254.opentune.ui.screens.Screens
 import com.arturo254.opentune.ui.screens.navigationBuilder
 import com.arturo254.opentune.ui.screens.search.LocalSearchScreen
 import com.arturo254.opentune.ui.screens.search.OnlineSearchScreen
-import com.arturo254.opentune.ui.screens.settings.AvatarPreferenceManager
 import com.arturo254.opentune.ui.screens.settings.DarkMode
 import com.arturo254.opentune.ui.screens.settings.NavigationTab
 import com.arturo254.opentune.ui.theme.ColorSaver
@@ -222,6 +221,8 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.days
 import androidx.compose.animation.*
+import com.arturo254.opentune.ui.component.AvatarPreferenceManager
+import com.arturo254.opentune.ui.component.AvatarSelection
 import com.arturo254.opentune.ui.component.Lyrics
 
 // El codigo original de la aplicacion pertenece a : Arturo Cervantes Galindo (Arturo254) Cualquier parecido es copia y pega de mi codigo original
@@ -1628,7 +1629,7 @@ fun ProfileIconWithUpdateBadge(
 ) {
     val context = LocalContext.current
     val avatarManager = remember { AvatarPreferenceManager(context) }
-    val customAvatarUri by avatarManager.getCustomAvatarUri.collectAsState(initial = null)
+    val currentSelection by avatarManager.getAvatarSelection.collectAsState(initial = AvatarSelection.Default)
     var showUpdateBadge by remember { mutableStateOf(false) }
     val updatedOnClick = rememberUpdatedState(onProfileClick)
 
@@ -1658,28 +1659,48 @@ fun ProfileIconWithUpdateBadge(
                 }
             }
     ) {
-        // Avatar o ícono predeterminado
+        // Avatar usando el nuevo sistema
         Box(contentAlignment = Alignment.Center) {
-            customAvatarUri?.toUri()?.let { uri ->
-                Image(
-                    painter = rememberAsyncImagePainter(
-                        ImageRequest.Builder(context)
-                            .data(uri)
+            when (currentSelection) {
+                is AvatarSelection.Custom -> {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data((currentSelection as AvatarSelection.Custom).uri.toUri())
                             .crossfade(true)
-                            .build()
-                    ),
-                    contentDescription = "Avatar personalizado",
-                    modifier = modifier
-                        .size(28.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-            } ?: run {
-                Icon(
-                    painter = painterResource(R.drawable.person),
-                    contentDescription = "Avatar predeterminado",
-                    modifier = modifier
-                )
+                            .error(R.drawable.person)
+                            .placeholder(R.drawable.person)
+                            .build(),
+                        contentDescription = "Avatar personalizado",
+                        modifier = modifier
+                            .size(28.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                is AvatarSelection.DiceBear -> {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data((currentSelection as AvatarSelection.DiceBear).url)
+                            .crossfade(true)
+                            .error(R.drawable.person)
+                            .placeholder(R.drawable.person)
+                            .build(),
+                        contentDescription = "Avatar DiceBear",
+                        modifier = modifier
+                            .size(28.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                else -> {
+                    Icon(
+                        painter = painterResource(R.drawable.person),
+                        contentDescription = "Avatar predeterminado",
+                        modifier = modifier
+                    )
+                }
             }
 
             // Badge de actualización
@@ -1706,7 +1727,6 @@ fun ProfileIconWithUpdateBadge(
         }
     }
 }
-
 
 fun logErrorToDownloads(context: Context, e: Exception) {
     val fileName = "error_log_${

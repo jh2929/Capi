@@ -80,6 +80,8 @@ import com.arturo254.opentune.LocalPlayerAwareWindowInsets
 import com.arturo254.opentune.R
 import com.arturo254.opentune.constants.AccountNameKey
 import com.arturo254.opentune.constants.InnerTubeCookieKey
+import com.arturo254.opentune.ui.component.AvatarPreferenceManager
+import com.arturo254.opentune.ui.component.AvatarSelection
 import com.arturo254.opentune.ui.component.ChangelogButton
 import com.arturo254.opentune.ui.component.IconButton
 import com.arturo254.opentune.ui.component.PreferenceEntry
@@ -564,7 +566,7 @@ fun SettingsScreen(
         )
         val context = LocalContext.current
         val avatarManager = remember { AvatarPreferenceManager(context) }
-        val customAvatarUri by avatarManager.getCustomAvatarUri.collectAsState(initial = null)
+        val currentSelection by avatarManager.getAvatarSelection.collectAsState(initial = AvatarSelection.Default)
         val accountName by rememberPreference(AccountNameKey, "")
         val innerTubeCookie by rememberPreference(InnerTubeCookieKey, "")
         val isLoggedIn = remember(innerTubeCookie) {
@@ -603,10 +605,12 @@ fun SettingsScreen(
                 ) {
                     when {
                         // Mostrar avatar personalizado si existe y no hay error
-                        customAvatarUri != null && !imageLoadError -> {
+                        // Para el código que mostraste anteriormente, aquí está la actualización:
+
+                        currentSelection is AvatarSelection.Custom && !imageLoadError -> {
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
-                                    .data(customAvatarUri!!.toUri())
+                                    .data((currentSelection as AvatarSelection.Custom).uri.toUri())
                                     .crossfade(true)
                                     .listener(
                                         onStart = { isImageLoading = true },
@@ -621,6 +625,50 @@ fun SettingsScreen(
                                     )
                                     .build(),
                                 contentDescription = "Avatar de $accountName",
+                                modifier = Modifier
+                                    .size(104.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+
+                            // Overlay de carga
+                            if (isImageLoading) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(104.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+
+                        currentSelection is AvatarSelection.DiceBear && !imageLoadError -> {
+                            AsyncImage(
+                                model = ImageRequest.Builder(LocalContext.current)
+                                    .data((currentSelection as AvatarSelection.DiceBear).url)
+                                    .crossfade(true)
+                                    .listener(
+                                        onStart = { isImageLoading = true },
+                                        onSuccess = { _, _ ->
+                                            isImageLoading = false
+                                            imageLoadError = false
+                                        },
+                                        onError = { _, _ ->
+                                            isImageLoading = false
+                                            imageLoadError = true
+                                        }
+                                    )
+                                    .build(),
+                                contentDescription = "Avatar DiceBear de $accountName",
                                 modifier = Modifier
                                     .size(104.dp)
                                     .clip(CircleShape),
