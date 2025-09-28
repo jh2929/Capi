@@ -125,25 +125,38 @@ sealed class AvatarSelection {
  * Estilos disponibles de DiceBear
  */
 enum class DiceBearStyle(val value: String, val displayName: String) {
-    ADVENTURER("adventurer", "Aventurero"),
+    ADVENTURER("adventurer", "Adventurer"),
+    ADVENTURER_NEUTRAL("adventurer-neutral", "Adventurer Neutral"),
     AVATAAARS("avataaars", "Avataaars"),
-    BOTTTS("bottts", "Robots"),
+    AVATAAARS_NEUTRAL("avataaars-neutral", "Avataaars Neutral"),
+    BIG_EARS("big-ears", "Big Ears"),
+    BIG_EARS_NEUTRAL("big-ears-neutral", "Big Ears Neutral"),
+    BIG_SMILE("big-smile", "Big Smile"),
+    BOTTTS("bottts", "Bottts"),
+    BOTTTS_NEUTRAL("bottts-neutral", "Bottts Neutral"),
     CROODLES("croodles", "Croodles"),
     CROODLES_NEUTRAL("croodles-neutral", "Croodles Neutral"),
-    FUN_EMOJI("fun-emoji", "Emoji Divertido"),
+    DYLAN("dylan", "Dylan"),
+    FUN_EMOJI("fun-emoji", "Fun Emoji"),
+    GLASS("glass", "Glass"),
+    ICONS("icons", "Icons"),
     IDENTICON("identicon", "Identicon"),
-    INITIALS("initials", "Iniciales"),
+    INITIALS("initials", "Initials"),
     LORELEI("lorelei", "Lorelei"),
     LORELEI_NEUTRAL("lorelei-neutral", "Lorelei Neutral"),
     MICAH("micah", "Micah"),
-    MINIAVS("miniavs", "Mini Avatars"),
-    NOTIONISTS("notionists", "Notion Style"),
+    MINIAVS("miniavs", "Miniavs"),
+    NOTIONISTS("notionists", "Notionists"),
+    NOTIONISTS_NEUTRAL("notionists-neutral", "Notionists Neutral"),
     OPEN_PEEPS("open-peeps", "Open Peeps"),
     PERSONAS("personas", "Personas"),
     PIXEL_ART("pixel-art", "Pixel Art"),
     PIXEL_ART_NEUTRAL("pixel-art-neutral", "Pixel Art Neutral"),
-    SHAPES("shapes", "Formas")
+    RINGS("rings", "Rings"),
+    SHAPES("shapes", "Shapes"),
+    THUMBS("thumbs", "Thumbs")
 }
+
 
 /**
  * Generador de URLs de DiceBear
@@ -173,24 +186,26 @@ object DiceBearGenerator {
 
     fun getPresetAvatars(style: DiceBearStyle = DiceBearStyle.SHAPES): List<String> {
         val seeds = listOf(
-            "Jude",
+            "Amaya",
+            "Destiny",
+            "Sarah",
+            "Alexander",
             "Jack",
-            "Sadie",
-            "Mason",
-            "Andrea",
             "Wyatt",
-            "Christopher",
-            "Liam",
-            "Adrian",
-            "Maria",
-            "Oliver",
-            "Vivian",
-            "Ryan",
-            "Nolan",
-            "Aidan",
-            "Mackenzie",
+            "Emery",
+            "Jameson",
+            "Avery",
+            "Sara",
+            "Aiden",
+            "Sophia",
+            "Riley",
+            "Brian",
+            "Jude",
             "Luis",
-            "Aiden"
+            "Christian",
+            "Eliza",
+            "Leo",
+            "Vivian"
         )
         return seeds.map { generateAvatarUrl(style, it) }
     }
