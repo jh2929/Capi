@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -27,6 +28,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,8 +50,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
@@ -123,7 +129,7 @@ fun ArtistScreen(
 
     val transparentAppBar by remember {
         derivedStateOf {
-            lazyListState.firstVisibleItemIndex <= 1
+            lazyListState.firstVisibleItemIndex == 0 && lazyListState.firstVisibleItemScrollOffset < 200
         }
     }
 
@@ -143,78 +149,162 @@ fun ArtistScreen(
             if (artistPage != null) {
                 item(key = "header") {
                     Column {
+                        // Header con imagen de fondo estilo YouTube Music
                         Box(
-                            modifier =
-                                Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(1.2f / 1),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(400.dp)
                         ) {
+                            // Imagen de fondo
                             AsyncImage(
                                 model = artistPage.artist.thumbnail.resize(1200, 1000),
                                 contentDescription = null,
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .align(Alignment.TopCenter)
-                                        .fadingEdge(
-                                            bottom = 400.dp,
-                                        ),
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxWidth()
                             )
-                            AutoResizeText(
-                                text = artistPage.artist.title,
-                                style = MaterialTheme.typography.displayLarge,
-                                fontSizeRange = FontSizeRange(32.sp, 58.sp),
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                textAlign = TextAlign.Center,
-                                modifier =
-                                    Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .padding(horizontal = 48.dp),
+
+                            // Gradiente oscuro en la parte inferior
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(400.dp)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.Transparent,
+                                                Color.Black.copy(alpha = 0.7f),
+                                                MaterialTheme.colorScheme.background
+                                            ),
+                                            startY = 0f,
+                                            endY = 1200f
+                                        )
+                                    )
                             )
+
+                            // Contenido sobre la imagen
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(24.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                // Imagen circular del artista (estilo YouTube Music)
+                                AsyncImage(
+                                    model = artistPage.artist.thumbnail.resize(200, 200),
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .clip(CircleShape)
+                                )
+
+                                // Nombre del artista
+                                Text(
+                                    text = artistPage.artist.title,
+                                    style = MaterialTheme.typography.displaySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
 
+                        // Botones de acción (estilo YouTube Music)
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 16.dp)
                         ) {
+                            // Botón de Suscribirse
+                            Button(
+                                onClick = {
+                                    database.transaction {
+                                        val artist = libraryArtist?.artist
+                                        if (artist != null) {
+                                            update(artist.toggleLike())
+                                        } else {
+                                            artistPage.artist.let {
+                                                insert(
+                                                    ArtistEntity(
+                                                        id = it.id,
+                                                        name = it.title,
+                                                        channelId = it.channelId,
+                                                        thumbnailUrl = it.thumbnail,
+                                                    ).toggleLike()
+                                                )
+                                            }
+                                        }
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (libraryArtist?.artist?.bookmarkedAt != null)
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                    else
+                                        MaterialTheme.colorScheme.primary
+                                ),
+                                shape = RoundedCornerShape(20.dp),
+                                modifier = Modifier.height(40.dp)
+                            ) {
+                                Text(
+                                    text = if (libraryArtist?.artist?.bookmarkedAt != null)
+                                        stringResource(R.string.subscribed)
+                                    else
+                                        stringResource(R.string.subscribe),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+
+                            Spacer(Modifier.weight(1f))
+
+                            // Botón de Mezclar (Shuffle)
                             artistPage.artist.shuffleEndpoint?.let { shuffleEndpoint ->
-                                Button(
+                                IconButton(
                                     onClick = {
                                         playerConnection.playQueue(YouTubeQueue(shuffleEndpoint))
                                     },
-                                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .background(
+                                            MaterialTheme.colorScheme.secondaryContainer,
+                                            CircleShape
+                                        )
                                 ) {
                                     Icon(
                                         painter = painterResource(R.drawable.shuffle),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(ButtonDefaults.IconSize),
-                                    )
-                                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                                    Text(
-                                        text = stringResource(R.string.shuffle),
+                                        contentDescription = stringResource(R.string.shuffle),
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
                                     )
                                 }
                             }
 
-                            artistPage.artist.radioEndpoint?.let { radioEndpoint ->
-                                OutlinedButton(
-                                    onClick = {
-                                        playerConnection.playQueue(YouTubeQueue(radioEndpoint))
-                                    },
-                                    contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.radio),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(ButtonDefaults.IconSize),
+                            Spacer(Modifier.width(8.dp))
+
+                            // Botón de Compartir
+                            IconButton(
+                                onClick = {
+                                    artistPage.artist.shareLink?.let { link ->
+                                        val clipboard =
+                                            context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                        val clip = ClipData.newPlainText("Artist Link", link)
+                                        clipboard.setPrimaryClip(clip)
+                                        Toast.makeText(context, R.string.link_copied, Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .background(
+                                        MaterialTheme.colorScheme.secondaryContainer,
+                                        CircleShape
                                     )
-                                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                                    Text(stringResource(R.string.radio))
-                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.link),
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
                             }
                         }
                     }
@@ -396,7 +486,6 @@ fun ArtistScreen(
 
                                                             is AlbumItem -> {
                                                                 try {
-                                                                    // Validar que el ID no esté vacío o nulo
                                                                     if (item.id.isNotEmpty()) {
                                                                         navController.navigate("album/${item.id}")
                                                                     } else {
@@ -565,61 +654,6 @@ fun ArtistScreen(
             ) {
                 Icon(
                     painterResource(R.drawable.arrow_back),
-                    contentDescription = null,
-                )
-            }
-        },
-        actions = {
-            IconButton(
-                onClick = {
-                    viewModel.artistPage?.artist?.shareLink?.let { link ->
-                        val clipboard =
-                            context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText("Artist Link", link)
-                        clipboard.setPrimaryClip(clip)
-                        Toast.makeText(context, R.string.link_copied, Toast.LENGTH_SHORT).show()
-                    }
-                },
-            ) {
-                Icon(
-                    painterResource(R.drawable.link),
-                    contentDescription = null,
-                )
-            }
-
-            IconButton(
-                onClick = {
-                    database.transaction {
-                        val artist = libraryArtist?.artist
-                        if (artist != null) {
-                            update(artist.toggleLike())
-                        } else {
-                            artistPage?.artist?.let {
-                                insert(
-                                    ArtistEntity(
-                                        id = it.id,
-                                        name = it.title,
-                                        channelId = it.channelId,
-                                        thumbnailUrl = it.thumbnail,
-                                    ).toggleLike()
-                                )
-                            }
-                        }
-                    }
-                },
-            ) {
-                Icon(
-                    painter =
-                        painterResource(
-                            if (libraryArtist?.artist?.bookmarkedAt !=
-                                null
-                            ) {
-                                R.drawable.favorite
-                            } else {
-                                R.drawable.favorite_border
-                            },
-                        ),
-                    tint = if (libraryArtist?.artist?.bookmarkedAt != null) MaterialTheme.colorScheme.error else LocalContentColor.current,
                     contentDescription = null,
                 )
             }
