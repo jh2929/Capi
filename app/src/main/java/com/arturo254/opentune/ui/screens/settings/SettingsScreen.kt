@@ -843,8 +843,6 @@ fun SettingsScreen(
                     title = { Text(stringResource(R.string.Telegramchanel)) },
                     onClick = { uriHandler.openUri("https://t.me/opentune_updates") }
                 )
-
-
             )
         )
 
