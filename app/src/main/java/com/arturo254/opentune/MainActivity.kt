@@ -224,6 +224,7 @@ import androidx.compose.animation.*
 import com.arturo254.opentune.ui.component.AvatarPreferenceManager
 import com.arturo254.opentune.ui.component.AvatarSelection
 import com.arturo254.opentune.ui.component.Lyrics
+import com.arturo254.opentune.ui.component.SwitchPreference
 
 // El codigo original de la aplicacion pertenece a : Arturo Cervantes Galindo (Arturo254) Cualquier parecido es copia y pega de mi codigo original
 
@@ -796,7 +797,7 @@ class MainActivity : ComponentActivity() {
                                                             try {
                                                                 navController.navigate("new_release")
                                                             } catch (e: Exception) {
-                                                                logErrorToDownloads(context, e)
+                                                                e.printStackTrace()
                                                                 Toast.makeText(
                                                                     context,
                                                                     R.string.navigation_error,
@@ -828,7 +829,7 @@ class MainActivity : ComponentActivity() {
                                                             try {
                                                                 navController.navigate("settings")
                                                             } catch (e: Exception) {
-                                                                logErrorToDownloads(context, e)
+                                                                e.printStackTrace()
                                                                 // Mostrar mensaje de error al usuario
                                                                 Toast.makeText(
                                                                     context,
@@ -1462,7 +1463,7 @@ fun NotificationPermissionPreference() {
         }
     }
 
-    SwitchPreference(
+  SwitchPreference(
         title = { Text(stringResource(R.string.notification)) },
         icon = {
             Icon(
@@ -1497,80 +1498,6 @@ fun NotificationPermissionPreference() {
     )
 }
 
-@Composable
-fun SwitchPreference(
-    title: @Composable () -> Unit,
-    icon: @Composable () -> Unit,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true, // Agregar parámetro enabled
-    subtitle: (@Composable () -> Unit)? = null // Agregar subtítulo opcional
-) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled) { onCheckedChange(!checked) }, // Hacer clickeable toda la superficie
-        color = MaterialTheme.colorScheme.surface
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier.size(24.dp),
-                contentAlignment = Alignment.Center // Centrar el icono
-            ) {
-                CompositionLocalProvider(
-                    LocalContentColor provides if (enabled) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    }
-                ) {
-                    icon()
-                }
-            }
-
-            Spacer(Modifier.width(16.dp))
-
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                CompositionLocalProvider(
-                    LocalContentColor provides if (enabled) {
-                        MaterialTheme.colorScheme.onSurface
-                    } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    }
-                ) {
-                    title()
-                }
-
-                subtitle?.let {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    CompositionLocalProvider(
-                        LocalContentColor provides if (enabled) {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                        }
-                    ) {
-                        it()
-                    }
-                }
-            }
-
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange,
-                enabled = enabled
-            )
-        }
-    }
-}
 
 // Función auxiliar para abrir configuración de notificaciones
 private fun openNotificationSettings(context: Context) {
@@ -1654,10 +1581,11 @@ fun ProfileIconWithUpdateBadge(
                 try {
                     updatedOnClick.value()
                 } catch (e: Exception) {
-                    logErrorToDownloads(context, e)
+                    e.printStackTrace()
                 }
             }
-    ) {
+    )
+    {
         // Avatar usando el nuevo sistema
         Box(contentAlignment = Alignment.Center) {
             when (currentSelection) {
@@ -1727,73 +1655,3 @@ fun ProfileIconWithUpdateBadge(
     }
 }
 
-fun logErrorToDownloads(context: Context, e: Exception) {
-    val fileName = "error_log_${
-        SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault()).format(Date())
-    }.txt"
-    val logText = buildString {
-        append("Exception: ${e.message}\n")
-        append("Stacktrace:\n")
-        e.stackTrace.forEach { append("$it\n") }
-    }
-
-    try {
-        val outputStream: OutputStream? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val resolver = context.contentResolver
-            val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
-                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
-            }
-
-            val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
-            if (uri == null) {
-                Toast.makeText(context, "Error al crear el archivo en Descargas", Toast.LENGTH_LONG)
-                    .show()
-                return
-            }
-
-            val stream = resolver.openOutputStream(uri)
-            if (stream == null) {
-                Toast.makeText(
-                    context,
-                    "No se pudo abrir el archivo para escribir",
-                    Toast.LENGTH_LONG
-                ).show()
-                return
-            }
-
-            // Escribimos antes de cambiar IS_PENDING
-            stream.use {
-                it.write(logText.toByteArray())
-            }
-
-            // Marcamos el archivo como disponible
-            contentValues.clear()
-            contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
-            resolver.update(uri, contentValues, null, null)
-
-            // Retornamos null porque ya lo usamos
-            null
-        } else {
-            val downloadsDir =
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (!downloadsDir.exists()) downloadsDir.mkdirs()
-            val file = File(downloadsDir, fileName)
-            FileOutputStream(file)
-        }
-
-        // Solo para API < 29
-        outputStream?.use {
-            it.write(logText.toByteArray())
-        }
-
-        Toast.makeText(context, "Log guardado en Descargas como $fileName", Toast.LENGTH_LONG)
-            .show()
-
-    } catch (ex: Exception) {
-        ex.printStackTrace()
-        Toast.makeText(context, "Error al guardar log: ${ex.message}", Toast.LENGTH_LONG).show()
-    }
-}
