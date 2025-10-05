@@ -391,7 +391,7 @@
     </plurals>
     <string name="mute">Silenzia</string>
     <string name="explore">Esplora</string>
-    <string name="custom_avatar">Avatar personalizzato (BETA)</string>
+    <string name="custom_avatar">"Avatar personalizzato (BETA)"</string>
     <string name="custom_avatar_beta">Avatar personalizzato (BETA)</string>
     <string name="select_image">Seleziona immagine</string>
     <string name="default_avatar">Avatar di default</string>
@@ -430,4 +430,15 @@
     <string name="redireccion">Redireccion</string>
     <string name="Version">Versione</string>
     <string name="notification">Attiva Notifiche</string>
+    <string name="cached_playlist">Cache</string>
+    <string name="added_to_queue">aggiunto alla coda</string>
+    <string name="warn">Nota: l\'APK viene scaricato dal repository GitHub ufficiale, non da F-Droid.</string>
+    <string name="edit_thumbnail">Edit thumbnail</string>
+    <string name="remove_thumbnail">Remove thumbnail</string>
+    <string name="add_thumbnail">Aggiungi miniatura</string>
+    <string name="storage_overview">Panoramica della memoria</string>
+    <string name="clear_downloads_confirmation">Sei sicuro di voler rimuovere tutte le canzoni scaricate? Questa azione non può essere annullata.</string>
+    <string name="clear_song_cache_confirmation">Sei sicuro di voler cancellare la cache dei brani? Questo libererà spazio ma potrebbe influenzare temporaneamente le prestazioni di riproduzione.</string>
+    <string name="clear_image_cache_confirmation">Sei sicuro di voler cancellare la cache dell\'immagine? L\'arte dell\'album e le immagini dell\'artista dovranno essere riscaricate.</string>
+    <string name="confirm">Conferma</string>
 </resources>
