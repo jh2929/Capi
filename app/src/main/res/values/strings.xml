@@ -550,4 +550,6 @@
     <string name="music_note_avatar">Music Note Avatar</string>
     <string name="equalizer_avatar">Equalizer Avatar</string>
     <string name="headphones_avatar">Headphones Avatar</string>
+    <string name="discord_use_details">Use details instead of state</string>
+    <string name="discord_use_details_description">Show song title prominently instead of artist names</string>
 </resources>

@@ -14,6 +14,7 @@ android {
     namespace = "com.arturo254.opentune"
     //noinspection GradleDependency
     compileSdk = 35
+
     defaultConfig {
         applicationId = "com.Arturo254.opentune"
         minSdk = 24
@@ -22,6 +23,7 @@ android {
         versionName = "2.0.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -36,6 +38,7 @@ android {
             applicationIdSuffix = ".debug"
         }
     }
+
     signingConfigs {
         getByName("debug") {
             if (System.getenv("MUSIC_DEBUG_SIGNING_STORE_PASSWORD") != null) {
@@ -46,29 +49,37 @@ android {
             }
         }
     }
+
     buildFeatures {
         buildConfig = true
         compose = true
     }
+
+    // ✅ Alineamos TODO a Java 21
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
+
     kotlin {
-        jvmToolchain(17)
+        jvmToolchain(21)
     }
+
     kotlinOptions {
         freeCompilerArgs = freeCompilerArgs + "-Xcontext-receivers"
-        jvmTarget = "17"
+        jvmTarget = "21"
     }
+
     testOptions {
         unitTests.isIncludeAndroidResources = true
         unitTests.isReturnDefaultValues = true
     }
+
     lint {
         disable += "MissingTranslation"
     }
+
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
@@ -78,6 +89,7 @@ android {
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
+
 dependencies {
     implementation(libs.guava)
     implementation(libs.coroutines.guava)
@@ -104,7 +116,6 @@ dependencies {
     implementation(projects.materialColorUtilities)
 
     implementation(libs.coil)
-
     implementation(libs.shimmer)
 
     implementation(libs.media3)

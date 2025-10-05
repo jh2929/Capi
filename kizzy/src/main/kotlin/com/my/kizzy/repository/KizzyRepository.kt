@@ -14,7 +14,6 @@ package com.my.kizzy.repository
 
 import com.my.kizzy.remote.ApiService
 import com.my.kizzy.utils.toImageAsset
-import java.io.File
 
 /**
  * Modified by Zion Huang
@@ -23,10 +22,6 @@ class KizzyRepository {
     private val api = ApiService()
 
     suspend fun getImage(url: String): String? {
-        return api.getImage(url).toImageAsset()
-    }
-
-    suspend fun uploadImage(file: File): String? {
-        return api.uploadImage(file).toImageAsset()
+        return api.getImage(url).getOrNull()?.toImageAsset()
     }
 }
