@@ -552,4 +552,6 @@
     <string name="headphones_avatar">Headphones Avatar</string>
     <string name="discord_use_details">Use details instead of state</string>
     <string name="discord_use_details_description">Show song title prominently instead of artist names</string>
+    <string name="community">Community</string>
+    <string name="app_info">App Info</string>
 </resources>

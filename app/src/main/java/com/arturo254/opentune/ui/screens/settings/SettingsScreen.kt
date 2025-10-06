@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,10 +42,13 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -82,7 +86,7 @@ import com.arturo254.opentune.constants.AccountNameKey
 import com.arturo254.opentune.constants.InnerTubeCookieKey
 import com.arturo254.opentune.ui.component.AvatarPreferenceManager
 import com.arturo254.opentune.ui.component.AvatarSelection
-import com.arturo254.opentune.ui.component.ChangelogButton
+import com.arturo254.opentune.ui.component.ChangelogScreen
 import com.arturo254.opentune.ui.component.IconButton
 import com.arturo254.opentune.ui.utils.backToMain
 import com.arturo254.opentune.utils.rememberPreference
@@ -104,18 +108,18 @@ fun getAppVersion(context: Context): String {
         val packageInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.packageManager.getPackageInfo(
                 context.packageName,
-                PackageManager.PackageInfoFlags.of(0) // ✅ Solo en Android 13+
+                PackageManager.PackageInfoFlags.of(0)
             )
         } else {
-            @Suppress("DEPRECATION") // Evita advertencias en compilación
+            @Suppress("DEPRECATION")
             context.packageManager.getPackageInfo(
                 context.packageName,
-                0 // ✅ Compatible con Android 12 y versiones anteriores
+                0
             )
         }
-        packageInfo.versionName ?: "Unknown" // Si versionName es null, retorna "Unknown"
+        packageInfo.versionName ?: "Unknown"
     } catch (e: PackageManager.NameNotFoundException) {
-        "Unknown" // Si ocurre un error, retorna "Unknown"
+        "Unknown"
     }
 }
 
@@ -125,46 +129,40 @@ fun VersionCard(uriHandler: UriHandler) {
     val context = LocalContext.current
     val appVersion = remember { getAppVersion(context) }
 
+    Spacer(Modifier.height(16.dp))
 
-    Spacer(Modifier.height(25.dp))
-    ElevatedCard(
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 6.dp
-        ),
-        modifier = Modifier
-//            .clip(RoundedCornerShape(38.dp))
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .height(85.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-
-            ),
-        shape = RoundedCornerShape(38.dp),
-        onClick = { uriHandler.openUri("https://github.com/Arturo254/OpenTune/releases/latest") }
-    ) {
-        Column(
-            modifier = Modifier
-                .clip(RoundedCornerShape(38.dp))
-                .padding(20.dp),
-            verticalArrangement = Arrangement.Center
-        ) {
-            Spacer(Modifier.height(3.dp))
-            Text(
-                text = "${stringResource(R.string.Version)} $appVersion",
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = 17.sp,
-                    fontFamily = FontFamily.Monospace
-                ),
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-
-
-                )
-        }
-    }
+    SettingsCategory(
+        title = stringResource(R.string.app_info), // Añade este string: "Información de la app"
+        items = listOf(
+            SettingsCategoryItem(
+                icon = painterResource(R.drawable.info),
+                title = {
+                    Column {
+                        Text(
+                            text = stringResource(R.string.Version),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = appVersion,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                },
+                trailingContent = {
+                    Icon(
+                        painter = painterResource(R.drawable.arrow_forward),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                onClick = { uriHandler.openUri("https://github.com/Arturo254/OpenTune/releases/latest") }
+            )
+        )
+    )
 }
-
 
 @Composable
 fun UpdateCard(latestVersion: String = "") {
@@ -173,8 +171,6 @@ fun UpdateCard(latestVersion: String = "") {
     var currentLatestVersion by remember { mutableStateOf(latestVersion) }
     var showDownloadDialog by remember { mutableStateOf(false) }
 
-
-    // Verificar actualizaciones al inicio
     LaunchedEffect(Unit) {
         val newVersion = checkForUpdates()
         if (newVersion != null && isNewerVersion(newVersion, BuildConfig.VERSION_NAME)) {
@@ -183,7 +179,6 @@ fun UpdateCard(latestVersion: String = "") {
         }
     }
 
-    // Diálogo de descarga
     if (showDownloadDialog) {
         UpdateDownloadDialog(
             latestVersion = currentLatestVersion,
@@ -191,7 +186,6 @@ fun UpdateCard(latestVersion: String = "") {
         )
     }
 
-    // Card de actualización disponible
     if (showUpdateCard) {
         Spacer(Modifier.height(25.dp))
         ElevatedCard(
@@ -221,7 +215,6 @@ fun UpdateCard(latestVersion: String = "") {
                 val tapToUpdate = stringResource(R.string.tap_to_update)
                 val warn = stringResource(R.string.warn)
 
-                // Línea principal: "NewVersion: currentLatestVersion"
                 Text(
                     text = "$newVersion: $currentLatestVersion",
                     style = MaterialTheme.typography.bodyLarge.copy(
@@ -233,7 +226,6 @@ fun UpdateCard(latestVersion: String = "") {
 
                 Spacer(Modifier.height(8.dp))
 
-                // Advertencia
                 Text(
                     text = "$warn ",
                     style = MaterialTheme.typography.bodyMedium.copy(
@@ -245,7 +237,6 @@ fun UpdateCard(latestVersion: String = "") {
 
                 Spacer(Modifier.height(8.dp))
 
-                // Tap to update (acción)
                 Text(
                     text = tapToUpdate,
                     style = MaterialTheme.typography.bodyMedium.copy(
@@ -254,7 +245,6 @@ fun UpdateCard(latestVersion: String = "") {
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-
         }
     }
 }
@@ -273,16 +263,13 @@ fun UpdateDownloadDialog(
     val installPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
-        // Cuando vuelve de la pantalla de permisos, verificamos de nuevo si podemos instalar
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             if (context.packageManager.canRequestPackageInstalls() && downloadedApkUri != null) {
-                // Ahora que tenemos el permiso, procedemos con la instalación
                 installApk(context, downloadedApkUri!!)
             }
         }
     }
 
-    // Dialog para mostrar progreso y opciones
     Dialog(onDismissRequest = {
         if (downloadStatus != DownloadStatus.DOWNLOADING) {
             onDismiss()
@@ -357,7 +344,6 @@ fun UpdateDownloadDialog(
                             TextButton(onClick = onDismiss) {
                                 Text(stringResource(R.string.close))
                             }
-                            // Modifica solo la parte del botón de instalar en el caso COMPLETED
                             Button(onClick = {
                                 if (downloadedApkUri != null) {
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -368,11 +354,9 @@ fun UpdateDownloadDialog(
 
                                             installPermissionLauncher.launch(intent)
                                         } else {
-                                            // Pasar directamente el objeto Uri, no una cadena
                                             installApk(context, downloadedApkUri!!)
                                         }
                                     } else {
-                                        // Pasar directamente el objeto Uri, no una cadena
                                         installApk(context, downloadedApkUri!!)
                                     }
                                 }
@@ -395,7 +379,6 @@ fun UpdateDownloadDialog(
     }
 }
 
-
 enum class DownloadStatus {
     NOT_STARTED,
     DOWNLOADING,
@@ -409,20 +392,16 @@ suspend fun downloadApk(
     onProgressUpdate: (Float) -> Unit
 ): Uri? = withContext(Dispatchers.IO) {
     try {
-        // URL del APK (ajusta esta URL según donde estén alojados tus archivos APK)
         val apkUrl =
             "https://github.com/Arturo254/OpenTune/releases/download/$version/app-release.apk"
 
-        // Crear archivo de destino
         val downloadDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)
         val apkFile = File(downloadDir, "app-release-$version.apk")
 
-        // Si ya existe, bórralo
         if (apkFile.exists()) {
             apkFile.delete()
         }
 
-        // Configurar el DownloadManager
         val request = DownloadManager.Request(apkUrl.toUri())
             .setTitle("Descargando OpenTune v$version")
             .setDescription("Descargando actualización...")
@@ -432,7 +411,6 @@ suspend fun downloadApk(
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val downloadId = downloadManager.enqueue(request)
 
-        // Monitorear el progreso
         var isDownloading = true
         while (isDownloading) {
             val query = DownloadManager.Query().setFilterById(downloadId)
@@ -472,10 +450,9 @@ suspend fun downloadApk(
                 }
             }
             cursor.close()
-            delay(100) // Esperar un poco antes de actualizar de nuevo
+            delay(100)
         }
 
-        // Crear Uri para la instalación con FileProvider
         return@withContext FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
@@ -487,9 +464,7 @@ suspend fun downloadApk(
     }
 }
 
-// Función corregida para instalar APK usando directamente la URI
 fun installApk(context: Context, apkUri: Uri) {
-    // Verificar y solicitar permiso para instalar APKs en Android 8+ (API 26+)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         val pm = context.packageManager
         val isAllowed = pm.canRequestPackageInstalls()
@@ -497,7 +472,7 @@ fun installApk(context: Context, apkUri: Uri) {
             val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES)
                 .setData("package:${context.packageName}".toUri())
             context.startActivity(intent)
-            return // Salimos para que el usuario conceda el permiso antes de continuar
+            return
         }
     }
 
@@ -509,7 +484,6 @@ fun installApk(context: Context, apkUri: Uri) {
     context.startActivity(installIntent)
 }
 
-// Estas funciones ya las tenías
 suspend fun checkForUpdates(): String? = withContext(Dispatchers.IO) {
     try {
         val url = URL("https://api.github.com/repos/Arturo254/OpenTune/releases/latest")
@@ -545,13 +519,9 @@ fun SettingsScreen(
     navController: NavController,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
-
-
     val uriHandler = LocalUriHandler.current
-
-
-//    var isBetaFunEnabled by remember { mutableStateOf(false) }
-
+    var showTranslateDialog by remember { mutableStateOf(false) }
+    var showChangelogSheet by remember { mutableStateOf(false) }
 
     Column(
         Modifier
@@ -584,7 +554,6 @@ fun SettingsScreen(
                 var imageLoadError by remember { mutableStateOf(false) }
                 var isImageLoading by remember { mutableStateOf(false) }
 
-                // Avatar circular para usuario
                 Box(
                     modifier = Modifier
                         .size(112.dp)
@@ -605,9 +574,6 @@ fun SettingsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     when {
-                        // Mostrar avatar personalizado si existe y no hay error
-                        // Para el código que mostraste anteriormente, aquí está la actualización:
-
                         currentSelection is AvatarSelection.Custom && !imageLoadError -> {
                             AsyncImage(
                                 model = ImageRequest.Builder(LocalContext.current)
@@ -632,7 +598,6 @@ fun SettingsScreen(
                                 contentScale = ContentScale.Crop
                             )
 
-                            // Overlay de carga
                             if (isImageLoading) {
                                 Box(
                                     modifier = Modifier
@@ -676,7 +641,6 @@ fun SettingsScreen(
                                 contentScale = ContentScale.Crop
                             )
 
-                            // Overlay de carga
                             if (isImageLoading) {
                                 Box(
                                     modifier = Modifier
@@ -696,7 +660,6 @@ fun SettingsScreen(
                             }
                         }
 
-                        // Mostrar iniciales como fallback
                         else -> {
                             val initials = remember(accountName) {
                                 val cleanName = accountName.replace("@", "").trim()
@@ -748,7 +711,6 @@ fun SettingsScreen(
                     overflow = TextOverflow.Ellipsis
                 )
             } else {
-                // Logo para usuario no autenticado
                 Box(
                     modifier = Modifier
                         .size(56.dp)
@@ -780,17 +742,9 @@ fun SettingsScreen(
             }
         }
 
-        // Extensión para convertir String a Uri de forma segura
-        fun String.toUri(): Uri? {
-            return try {
-                Uri.parse(this)
-            } catch (e: Exception) {
-                null
-            }
-        }
-
+        // Categoría principal de configuraciones
         SettingsCategory(
-            title = stringResource(R.string.general_settings), // Añade este string resource
+            title = stringResource(R.string.general_settings),
             items = listOf(
                 SettingsCategoryItem(
                     icon = painterResource(R.drawable.palette),
@@ -833,9 +787,28 @@ fun SettingsScreen(
                     onClick = { navController.navigate("settings/about") }
                 ),
                 SettingsCategoryItem(
+                    icon = painterResource(R.drawable.translate),
+                    title = { Text(stringResource(R.string.Translate)) },
+                    onClick = { showTranslateDialog = true }
+                )
+            )
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // Categoría de comunidad e información
+        SettingsCategory(
+            title = stringResource(R.string.community),
+            items = listOf(
+                SettingsCategoryItem(
+                    icon = painterResource(R.drawable.schedule),
+                    title = { Text(stringResource(R.string.Changelog)) },
+                    onClick = { showChangelogSheet = true }
+                ),
+                SettingsCategoryItem(
                     icon = painterResource(R.drawable.paypal),
                     title = { Text(stringResource(R.string.Donate)) },
-                    isHighlighted = true, // Destacar la donación
+                    isHighlighted = true,
                     onClick = { uriHandler.openUri("https://www.paypal.com/paypalme/opentune") }
                 ),
                 SettingsCategoryItem(
@@ -846,68 +819,27 @@ fun SettingsScreen(
             )
         )
 
+        Spacer(Modifier.height(16.dp))
 
-
-        TranslatePreference(uriHandler = uriHandler)
-
-        ChangelogButton()
-
-
-
+        // Card de actualización disponible
         UpdateCard()
-        Spacer(Modifier.height(25.dp))
 
-
+        // Card de versión
         VersionCard(uriHandler)
 
-        Spacer(Modifier.height(25.dp))
-
-
+        Spacer(Modifier.height(16.dp))
     }
 
-    TopAppBar(
-
-
-        title = { Text(stringResource(R.string.settings)) },
-        modifier = Modifier
-            .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)),
-        navigationIcon = {
-            IconButton(
-                onClick = navController::navigateUp,
-                onLongClick = navController::backToMain,
-            )
-
-            {
-                Icon(
-                    painterResource(R.drawable.arrow_back),
-                    contentDescription = null,
-                )
-            }
-        },
-        scrollBehavior = scrollBehavior
-
-    )
-}
-
-@Composable
-fun TranslatePreference(uriHandler: UriHandler) {
-    var showDialog by remember { mutableStateOf(false) }
-
-    SettingsCategoryItem(
-        title = { Text(stringResource(R.string.Translate)) },
-        icon = painterResource(R.drawable.translate),
-        onClick = { showDialog = true }
-    )
-
-    if (showDialog) {
+    // Diálogo de traducción
+    if (showTranslateDialog) {
         AlertDialog(
-            onDismissRequest = { showDialog = false },
+            onDismissRequest = { showTranslateDialog = false },
             title = { Text(stringResource(R.string.Redirección)) },
             text = { Text(stringResource(R.string.poeditor_redirect)) },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        showDialog = false
+                        showTranslateDialog = false
                         uriHandler.openUri("https://poeditor.com/join/project/208BwCVazA")
                     }
                 ) {
@@ -916,7 +848,52 @@ fun TranslatePreference(uriHandler: UriHandler) {
             }
         )
     }
+
+    // Bottom Sheet de Changelog
+    if (showChangelogSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showChangelogSheet = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            dragHandle = {
+                Surface(
+                    modifier = Modifier
+                        .padding(vertical = 12.dp)
+                        .width(32.dp)
+                        .height(4.dp),
+                    shape = RoundedCornerShape(2.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                ) {}
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                ChangelogScreen()
+                Spacer(Modifier.height(32.dp))
+            }
+        }
+    }
+
+    TopAppBar(
+        title = { Text(stringResource(R.string.settings)) },
+        modifier = Modifier
+            .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)),
+        navigationIcon = {
+            IconButton(
+                onClick = navController::navigateUp,
+                onLongClick = navController::backToMain,
+            ) {
+                Icon(
+                    painterResource(R.drawable.arrow_back),
+                    contentDescription = null,
+                )
+            }
+        },
+        scrollBehavior = scrollBehavior
+    )
 }
-
-
-
