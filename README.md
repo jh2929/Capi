@@ -39,7 +39,7 @@
 
 ## Visión General
 
-**OpenTune** es un cliente de YouTube Music de código abierto diseñado específicamente para dispositivos Android. Ofrece una experiencia de usuario superior con una interfaz moderna que implementa Material Design 3, proporcionando funcionalidades avanzadas para explorar, reproducir y gestionar contenido musical sin las limitaciones de la aplicación oficial.
+**OpenTune** es un cliente de YouTube Music de código abierto diseñado para dispositivos Android. Ofrece una experiencia de usuario superior con una interfaz moderna que implementa Material Design 3, proporcionando funcionalidades avanzadas para explorar, reproducir y gestionar contenido musical sin las limitaciones de la aplicación oficial.
 
 ### Beneficios Clave
 
