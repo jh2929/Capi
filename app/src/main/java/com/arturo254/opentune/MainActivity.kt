@@ -221,10 +221,13 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.days
 import androidx.compose.animation.*
+import androidx.compose.foundation.border
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.arturo254.opentune.ui.component.AvatarPreferenceManager
 import com.arturo254.opentune.ui.component.AvatarSelection
 import com.arturo254.opentune.ui.component.Lyrics
 import com.arturo254.opentune.ui.component.SwitchPreference
+import com.arturo254.opentune.viewmodels.NewReleaseViewModel
 
 // El codigo original de la aplicacion pertenece a : Arturo Cervantes Galindo (Arturo254) Cualquier parecido es copia y pega de mi codigo original
 
@@ -790,28 +793,56 @@ class MainActivity : ComponentActivity() {
                                                     verticalAlignment = Alignment.CenterVertically
                                                 ) {
                                                     val context = LocalContext.current
+                                                    val viewModel: NewReleaseViewModel = hiltViewModel()
+                                                    val hasNewReleases by viewModel.hasNewReleases.collectAsState()
 
                                                     // Ícono de notificación para nuevos lanzamientos
-                                                    IconButton(
-                                                        onClick = {
-                                                            try {
-                                                                navController.navigate("new_release")
-                                                            } catch (e: Exception) {
-                                                                e.printStackTrace()
-                                                                Toast.makeText(
-                                                                    context,
-                                                                    R.string.navigation_error,
-                                                                    Toast.LENGTH_SHORT
-                                                                ).show()
-                                                            }
-                                                        }
+                                                    Box(
+                                                        modifier = Modifier.size(48.dp)
                                                     ) {
-                                                        Icon(
-                                                            painter = painterResource(R.drawable.notification_on),
-                                                            contentDescription = stringResource(R.string.new_release_albums),
-                                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
+                                                        IconButton(
+                                                            onClick = {
+                                                                try {
+                                                                    // Marcar como vistos al navegar
+                                                                    viewModel.markNewReleasesAsSeen()
+                                                                    navController.navigate("new_release")
+                                                                } catch (e: Exception) {
+                                                                    e.printStackTrace()
+                                                                    Toast.makeText(
+                                                                        context,
+                                                                        R.string.navigation_error,
+                                                                        Toast.LENGTH_SHORT
+                                                                    ).show()
+                                                                }
+                                                            }
+                                                        ) {
+                                                            Icon(
+                                                                painter = painterResource(R.drawable.notification_on),
+                                                                contentDescription = stringResource(R.string.new_release_albums),
+                                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+
+                                                        // Badge para nuevos lanzamientos
+                                                        if (hasNewReleases) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .align(Alignment.TopEnd)
+                                                                    .size(10.dp)
+                                                                    .clip(CircleShape)
+                                                                    .background(
+                                                                        color = MaterialTheme.colorScheme.primary,
+                                                                        shape = CircleShape
+                                                                    )
+                                                                    .border(
+                                                                        width = 1.dp,
+                                                                        color = MaterialTheme.colorScheme.background,
+                                                                        shape = CircleShape
+                                                                    )
+                                                            )
+                                                        }
                                                     }
+
                                                     IconButton(
                                                         onClick = { onActiveChange(true) }
                                                     ) {
@@ -822,7 +853,6 @@ class MainActivity : ComponentActivity() {
                                                         )
                                                     }
 
-
                                                     ProfileIconWithUpdateBadge(
                                                         currentVersion = BuildConfig.VERSION_NAME,
                                                         onProfileClick = {
@@ -830,7 +860,6 @@ class MainActivity : ComponentActivity() {
                                                                 navController.navigate("settings")
                                                             } catch (e: Exception) {
                                                                 e.printStackTrace()
-                                                                // Mostrar mensaje de error al usuario
                                                                 Toast.makeText(
                                                                     context,
                                                                     R.string.navigation_error,
