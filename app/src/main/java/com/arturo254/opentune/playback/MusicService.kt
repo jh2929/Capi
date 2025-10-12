@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.arturo254.opentune.playback
 
 import android.app.PendingIntent
@@ -5,9 +7,15 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.database.SQLException
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.audiofx.AudioEffect
+import android.media.audiofx.LoudnessEnhancer
 import android.net.ConnectivityManager
 import android.os.Binder
+import android.os.Build
+import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -141,8 +149,6 @@ import java.net.UnknownHostException
 import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import kotlin.math.min
-import kotlin.math.pow
 import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
@@ -159,6 +165,12 @@ class MusicService :
 
     @Inject
     lateinit var mediaLibrarySessionCallback: MediaLibrarySessionCallback
+
+    private lateinit var audioManager: AudioManager
+    private var audioFocusRequest: AudioFocusRequest? = null
+    private var lastAudioFocusState = AudioManager.AUDIOFOCUS_NONE
+    private var wasPlayingBeforeAudioFocusLoss = false
+    private var hasAudioFocus = false
 
     private var scope = CoroutineScope(Dispatchers.Main) + Job()
     private val binder = MusicBinder()
@@ -185,7 +197,6 @@ class MusicService :
             database.format(mediaMetadata?.id)
         }
 
-    private val normalizeFactor = MutableStateFlow(1f)
     val playerVolume = MutableStateFlow(dataStore.get(PlayerVolumeKey, 1f).coerceIn(0f, 1f))
 
     lateinit var sleepTimer: SleepTimer
@@ -202,11 +213,13 @@ class MusicService :
     private lateinit var mediaSession: MediaLibrarySession
 
     private var isAudioEffectSessionOpened = false
+    private var loudnessEnhancer: LoudnessEnhancer? = null
 
     private var discordRpc: DiscordRPC? = null
 
     val automixItems = MutableStateFlow<List<MediaItem>>(emptyList())
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate() {
         super.onCreate()
         setMediaNotificationProvider(
@@ -233,7 +246,7 @@ class MusicService :
                         .setUsage(C.USAGE_MEDIA)
                         .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
                         .build(),
-                    true,
+                    false,
                 ).setSeekBackIncrementMs(5000)
                 .setSeekForwardIncrementMs(5000)
                 .build()
@@ -243,6 +256,10 @@ class MusicService :
                     addListener(sleepTimer)
                     addAnalyticsListener(PlaybackStatsListener(false, this@MusicService))
                 }
+
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        setupAudioFocusRequest()
+
         mediaLibrarySessionCallback.apply {
             toggleLike = ::toggleLike
             toggleLibrary = ::toggleLibrary
@@ -268,9 +285,7 @@ class MusicService :
 
         connectivityManager = getSystemService()!!
 
-        combine(playerVolume, normalizeFactor) { playerVolume, normalizeFactor ->
-            playerVolume * normalizeFactor
-        }.collectLatest(scope) {
+        playerVolume.collectLatest(scope) {
             player.volume = it
         }
 
@@ -325,12 +340,7 @@ class MusicService :
         ) { format, normalizeAudio ->
             format to normalizeAudio
         }.collectLatest(scope) { (format, normalizeAudio) ->
-            normalizeFactor.value =
-                if (normalizeAudio && format?.loudnessDb != null) {
-                    min(10f.pow(-format.loudnessDb.toFloat() / 20), 1f)
-                } else {
-                    1f
-                }
+            setupLoudnessEnhancer()
         }
 
         dataStore.data
@@ -387,6 +397,118 @@ class MusicService :
                 if (dataStore.get(PersistentQueueKey, true)) {
                     saveQueueToDisk()
                 }
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun setupAudioFocusRequest() {
+        audioFocusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+            .setAudioAttributes(
+                android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build()
+            )
+            .setOnAudioFocusChangeListener { focusChange ->
+                handleAudioFocusChange(focusChange)
+            }
+            .setAcceptsDelayedFocusGain(true)
+            .build()
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun handleAudioFocusChange(focusChange: Int) {
+        when (focusChange) {
+            AudioManager.AUDIOFOCUS_GAIN -> {
+                hasAudioFocus = true
+
+                if (wasPlayingBeforeAudioFocusLoss) {
+                    player.play()
+                    wasPlayingBeforeAudioFocusLoss = false
+                }
+
+                player.volume = playerVolume.value
+
+                lastAudioFocusState = focusChange
+            }
+
+            AudioManager.AUDIOFOCUS_LOSS -> {
+                hasAudioFocus = false
+                wasPlayingBeforeAudioFocusLoss = false
+
+                if (player.isPlaying) {
+                    player.pause()
+                }
+
+                abandonAudioFocus()
+
+                lastAudioFocusState = focusChange
+            }
+
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                hasAudioFocus = false
+                wasPlayingBeforeAudioFocusLoss = player.isPlaying
+
+                if (player.isPlaying) {
+                    player.pause()
+                }
+
+                lastAudioFocusState = focusChange
+            }
+
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                hasAudioFocus = false
+                wasPlayingBeforeAudioFocusLoss = player.isPlaying
+
+                if (player.isPlaying) {
+                    player.volume = (playerVolume.value * 0.2f)
+                }
+
+                lastAudioFocusState = focusChange
+            }
+
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT -> {
+                hasAudioFocus = true
+
+                if (wasPlayingBeforeAudioFocusLoss) {
+                    player.play()
+                    wasPlayingBeforeAudioFocusLoss = false
+                }
+
+                player.volume = playerVolume.value
+
+                lastAudioFocusState = focusChange
+            }
+
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK -> {
+                hasAudioFocus = true
+
+                player.volume = playerVolume.value
+
+                lastAudioFocusState = focusChange
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun requestAudioFocus(): Boolean {
+        if (hasAudioFocus) return true
+
+        audioFocusRequest?.let { request ->
+            val result = audioManager.requestAudioFocus(request)
+            hasAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+            return hasAudioFocus
+        }
+        return false
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    private fun abandonAudioFocus() {
+        if (hasAudioFocus) {
+            audioFocusRequest?.let { request ->
+                audioManager.abandonAudioFocusRequest(request)
+                hasAudioFocus = false
             }
         }
     }
@@ -638,9 +760,89 @@ class MusicService :
         }
     }
 
+    private fun setupLoudnessEnhancer() {
+        val audioSessionId = player.audioSessionId
+
+        if (audioSessionId == C.AUDIO_SESSION_ID_UNSET || audioSessionId <= 0) {
+            Log.w(TAG, "setupLoudnessEnhancer: invalid audioSessionId ($audioSessionId), cannot create effect yet")
+            return
+        }
+
+        // Create or recreate enhancer if needed
+        if (loudnessEnhancer == null) {
+            try {
+                loudnessEnhancer = LoudnessEnhancer(audioSessionId)
+                Log.d(TAG, "LoudnessEnhancer created for sessionId=$audioSessionId")
+            } catch (e: Exception) {
+                reportException(e)
+                loudnessEnhancer = null
+                return
+            }
+        }
+
+        scope.launch {
+            try {
+                val currentMediaId = withContext(Dispatchers.Main) {
+                    player.currentMediaItem?.mediaId
+                }
+
+                val normalizeAudio = withContext(Dispatchers.IO) {
+                    dataStore.data.map { it[AudioNormalizationKey] ?: true }.first()
+                }
+
+                if (normalizeAudio && currentMediaId != null) {
+                    val format = withContext(Dispatchers.IO) {
+                        database.format(currentMediaId).first()
+                    }
+
+                    val loudnessDb = format?.loudnessDb
+
+                    withContext(Dispatchers.Main) {
+                        if (loudnessDb != null) {
+                            val targetGain = (-loudnessDb * 100).toInt()
+                            val clampedGain = targetGain.coerceIn(MIN_GAIN_MB, MAX_GAIN_MB)
+                            try {
+                                loudnessEnhancer?.setTargetGain(clampedGain)
+                                loudnessEnhancer?.enabled = true
+                                Log.d(TAG, "LoudnessEnhancer gain applied: $clampedGain mB")
+                            } catch (e: Exception) {
+                                reportException(e)
+                                releaseLoudnessEnhancer()
+                            }
+                        } else {
+                            loudnessEnhancer?.enabled = false
+                            Log.w(TAG, "setupLoudnessEnhancer: loudnessDb is null, enhancer disabled")
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        loudnessEnhancer?.enabled = false
+                        Log.d(TAG, "setupLoudnessEnhancer: normalization disabled or mediaId unavailable")
+                    }
+                }
+            } catch (e: Exception) {
+                reportException(e)
+                releaseLoudnessEnhancer()
+            }
+        }
+    }
+
+    private fun releaseLoudnessEnhancer() {
+        try {
+            loudnessEnhancer?.release()
+            Log.d(TAG, "LoudnessEnhancer released")
+        } catch (e: Exception) {
+            reportException(e)
+            Log.e(TAG, "Error releasing LoudnessEnhancer: ${e.message}")
+        } finally {
+            loudnessEnhancer = null
+        }
+    }
+
     private fun openAudioEffectSession() {
         if (isAudioEffectSessionOpened) return
         isAudioEffectSessionOpened = true
+        setupLoudnessEnhancer()
         sendBroadcast(
             Intent(AudioEffect.ACTION_OPEN_AUDIO_EFFECT_CONTROL_SESSION).apply {
                 putExtra(AudioEffect.EXTRA_AUDIO_SESSION, player.audioSessionId)
@@ -653,6 +855,7 @@ class MusicService :
     private fun closeAudioEffectSession() {
         if (!isAudioEffectSessionOpened) return
         isAudioEffectSessionOpened = false
+        releaseLoudnessEnhancer()
         sendBroadcast(
             Intent(AudioEffect.ACTION_CLOSE_AUDIO_EFFECT_CONTROL_SESSION).apply {
                 putExtra(AudioEffect.EXTRA_AUDIO_SESSION, player.audioSessionId)
@@ -665,6 +868,8 @@ class MusicService :
         mediaItem: MediaItem?,
         reason: Int,
     ) {
+        setupLoudnessEnhancer()
+
         // Auto load more songs
         if (dataStore.get(AutoLoadMoreKey, true) &&
             reason != Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT &&
@@ -691,6 +896,13 @@ class MusicService :
         }
     }
 
+    override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+        if (playWhenReady) {
+            setupLoudnessEnhancer()
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onEvents(
         player: Player,
         events: Player.Events,
@@ -703,7 +915,10 @@ class MusicService :
             val isBufferingOrReady =
                 player.playbackState == Player.STATE_BUFFERING || player.playbackState == Player.STATE_READY
             if (isBufferingOrReady && player.playWhenReady) {
-                openAudioEffectSession()
+                val focusGranted = requestAudioFocus()
+                if (focusGranted) {
+                    openAudioEffectSession()
+                }
             } else {
                 closeAudioEffectSession()
             }
@@ -1044,6 +1259,7 @@ class MusicService :
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onDestroy() {
         if (dataStore.get(PersistentQueueKey, true)) {
             saveQueueToDisk()
@@ -1052,6 +1268,8 @@ class MusicService :
             discordRpc?.closeRPC()
         }
         discordRpc = null
+        abandonAudioFocus()
+        releaseLoudnessEnhancer()
         mediaSession.release()
         player.removeListener(this)
         player.removeListener(sleepTimer)
@@ -1086,5 +1304,11 @@ class MusicService :
         const val CHUNK_LENGTH = 512 * 1024L
         const val PERSISTENT_QUEUE_FILE = "persistent_queue.data"
         const val PERSISTENT_AUTOMIX_FILE = "persistent_automix.data"
+
+        // Constants for audio normalization
+        private const val MAX_GAIN_MB = 800 // Maximum gain in millibels (8 dB)
+        private const val MIN_GAIN_MB = -800 // Minimum gain in millibels (-8 dB)
+
+        private const val TAG = "MusicService"
     }
 }

@@ -88,7 +88,10 @@ val ArtistFilterKey = stringPreferencesKey("artistFilter")
 val AlbumFilterKey = stringPreferencesKey("albumFilter")
 
 
+val LyricsScrollKey = booleanPreferencesKey("lyricsScrollKey")
+
 val DiscordUseDetailsKey = booleanPreferencesKey("discordUseDetails")
+
 
 val ArtistViewTypeKey = stringPreferencesKey("artistViewType")
 val AlbumViewTypeKey = stringPreferencesKey("albumViewType")
