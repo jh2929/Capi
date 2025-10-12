@@ -608,6 +608,25 @@ fun Lyrics(
                             }
                         }
 
+                        // Botón para despejar pantalla
+                        IconButton(
+                            onClick = { showControls = !showControls },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = Color.Transparent
+                            )
+                        ) {
+                            Icon(
+                                painter = painterResource(
+                                    if (showControls) R.drawable.visibility_off else R.drawable.visibility
+                                ),
+                                contentDescription = if (showControls)
+                                    stringResource(R.string.hide_controls)
+                                else
+                                    stringResource(R.string.show_controls),
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
                         if (isSelectionModeActive) {
                             IconButton(
                                 onClick = {
