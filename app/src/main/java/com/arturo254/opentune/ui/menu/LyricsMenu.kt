@@ -62,6 +62,7 @@ fun LyricsMenu(
     lyricsProvider: () -> LyricsEntity?,
     mediaMetadataProvider: () -> MediaMetadata,
     onDismiss: () -> Unit,
+    onLyricsUpdated: () -> Unit = {}, // NUEVO: Callback para notificar actualización
     viewModel: LyricsMenuViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -87,6 +88,8 @@ fun LyricsMenu(
                         ),
                     )
                 }
+                // NUEVO: Notificar que las letras fueron actualizadas
+                onLyricsUpdated()
             },
         )
     }
@@ -211,7 +214,6 @@ fun LyricsMenu(
                         Modifier
                             .fillMaxWidth()
                             .clickable {
-                                onDismiss()
                                 viewModel.cancelSearch()
                                 database.query {
                                     upsert(
@@ -221,6 +223,9 @@ fun LyricsMenu(
                                         ),
                                     )
                                 }
+                                // NUEVO: Notificar actualización antes de cerrar
+                                onLyricsUpdated()
+                                onDismiss()
                             }
                             .padding(12.dp)
                             .animateContentSize(),
@@ -316,8 +321,10 @@ fun LyricsMenu(
             icon = R.drawable.cached,
             title = R.string.refetch,
         ) {
-            onDismiss()
             viewModel.refetchLyrics(mediaMetadataProvider(), lyricsProvider())
+            // NUEVO: Notificar actualización cuando se recargan las letras
+            onLyricsUpdated()
+            onDismiss()
         }
         GridMenuItem(
             icon = R.drawable.search,
