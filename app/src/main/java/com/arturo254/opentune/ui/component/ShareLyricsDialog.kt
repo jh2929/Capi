@@ -88,7 +88,7 @@ fun ShareLyricsDialog(
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
-    
+
     var showColorPickerDialog by remember { mutableStateOf(false) }
     var showProgressDialog by remember { mutableStateOf(false) }
 
@@ -289,7 +289,7 @@ fun ShareLyricsDialog(
             songTitle = songTitle,
             artists = artists,
             mediaMetadata = mediaMetadata,
-            onDismiss = { 
+            onDismiss = {
                 showColorPickerDialog = false
                 onDismiss()
             },
@@ -350,7 +350,7 @@ fun ShareLyricsImageCustomizationDialog(
     val previewBoxHeight = 340.dp
     val headerFooterEstimate = (48.dp + 14.dp + 16.dp + 20.dp + 8.dp + 28.dp * 2)
     val previewAvailableHeight = previewBoxHeight - headerFooterEstimate
-    
+
     val textStyleForMeasurement = TextStyle(
         color = previewTextColor,
         fontWeight = FontWeight.Bold,
@@ -423,8 +423,8 @@ fun ShareLyricsImageCustomizationDialog(
         }
 
         val textColors = (paletteColors + listOf(
-            Color.White, 
-            Color.Black, 
+            Color.White,
+            Color.Black,
             Color(0xFF1DB954)
         )).distinct().take(8).mapIndexed { index, color ->
             color to when (color) {
