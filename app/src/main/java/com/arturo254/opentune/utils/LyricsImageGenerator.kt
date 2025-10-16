@@ -185,12 +185,13 @@ object ComposeToImage {
             val imageLoader = ImageLoader(context)
             val request = ImageRequest.Builder(context)
                 .data(coverArtUrl)
-                .size(256)
+                .size(512, 512) // Aumentar tamaño para mejor calidad
                 .allowHardware(false)
                 .build()
             val result = imageLoader.execute(request)
-            result.drawable?.toBitmap(256, 256, Bitmap.Config.ARGB_8888)
+            result.drawable?.toBitmap(512, 512, Bitmap.Config.ARGB_8888)
         } catch (e: Exception) {
+            e.printStackTrace()
             null
         }
     }
@@ -198,8 +199,27 @@ object ComposeToImage {
     private fun renderCoverArt(canvas: Canvas, coverArt: Bitmap?, config: ImageConfig) {
         coverArt?.let { artwork ->
             val size = config.cardSize * config.coverArtRatio
-            val rect =
-                RectF(config.padding, config.padding, config.padding + size, config.padding + size)
+            val rect = RectF(
+                config.padding,
+                config.padding,
+                config.padding + size,
+                config.padding + size
+            )
+
+            // Primero dibujar un fondo redondeado para la portada
+            val backgroundPaint = Paint().apply {
+                color = 0xFF333333.toInt() // Color de fondo gris para la portada
+                isAntiAlias = true
+            }
+            canvas.drawRoundRect(rect, config.imageCornerRadius, config.imageCornerRadius, backgroundPaint)
+
+            // Luego dibujar la imagen de portada
+            val paint = Paint().apply {
+                isAntiAlias = true
+                isFilterBitmap = true
+            }
+
+            // Usar clipPath para recortar la imagen de forma redondeada
             val clipPath = Path().apply {
                 addRoundRect(
                     rect,
@@ -208,9 +228,19 @@ object ComposeToImage {
                     Path.Direction.CW
                 )
             }
+
             canvas.withClip(clipPath) {
-                drawBitmap(artwork, null, rect, null)
+                drawBitmap(artwork, null, rect, paint)
             }
+
+            // Opcional: dibujar un borde sutil alrededor de la portada
+            val borderPaint = Paint().apply {
+                color = 0x80FFFFFF.toInt() // Borde blanco semi-transparente
+                style = Paint.Style.STROKE
+                strokeWidth = 2f
+                isAntiAlias = true
+            }
+            canvas.drawRoundRect(rect, config.imageCornerRadius, config.imageCornerRadius, borderPaint)
         }
     }
 
@@ -248,7 +278,8 @@ object ComposeToImage {
             maxWidth.toInt()
         )
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-            .setMaxLines(1)
+            .setMaxLines(2) // Permitir 2 líneas para el título
+            .setEllipsize(android.text.TextUtils.TruncateAt.END)
             .build()
 
         val artistLayout = StaticLayout.Builder.obtain(
@@ -260,6 +291,7 @@ object ComposeToImage {
         )
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
             .setMaxLines(1)
+            .setEllipsize(android.text.TextUtils.TruncateAt.END)
             .build()
 
         val centerY = config.padding + coverArtSize / 2f
@@ -272,6 +304,7 @@ object ComposeToImage {
             artistLayout.draw(this)
         }
     }
+
 
     private fun renderLyricsContent(
         canvas: Canvas,

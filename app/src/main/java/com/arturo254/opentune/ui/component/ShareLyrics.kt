@@ -593,6 +593,7 @@ fun LyricsImageCard(
                         )
                     }
 
+                    // Footer con logo de la app
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -600,7 +601,7 @@ fun LyricsImageCard(
                         Card(
                             modifier = Modifier.size(28.dp),
                             shape = CircleShape,
-                            colors = CardDefaults.cardColors(containerColor = secondaryText)
+                            colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                         ) {
                             Box(
                                 modifier = Modifier

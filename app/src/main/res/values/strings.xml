@@ -557,4 +557,13 @@
     <string name="hide_controls">Hide controls</string>
     <string name="show_controls">Show controls</string>
     <string name="customize_lyrics_image">Customize lyrics image</string>
+
+
+    <string name="customize_image">Customize Image</string>
+    <string name="select_theme">Select Theme</string>
+    <string name="from_cover">From Cover</string>
+    <string name="presets">Predefined Themes</string>
+    <string name="share_lyrics_image">Share Lyrics as Image</string>
+    <string name="error_generating_image">Error generating image</string>
+    <string name="cover_color">Color Cover</string>
 </resources>

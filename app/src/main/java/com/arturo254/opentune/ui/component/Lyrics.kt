@@ -1098,7 +1098,7 @@ fun Lyrics(
                                 }
                             }
                         }
-                    } else {
+                    }  else {
                         itemsIndexed(
                             items = lines,
                             key = { index, item -> "$index-${item.time}" }
@@ -1220,7 +1220,7 @@ fun Lyrics(
                 }
 
                 // Mensaje cuando no se encuentran letras
-                if (lyrics == LYRICS_NOT_FOUND && !isLoadingLyrics) {
+                if (lyrics == LYRICS_NOT_FOUND) {
                     if (isFullscreen) {
                         Card(
                             modifier = Modifier
@@ -1262,19 +1262,21 @@ fun Lyrics(
                             }
                         }
                     } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = stringResource(R.string.lyrics_not_found),
-                                fontSize = 20.sp,
-                                color = MaterialTheme.colorScheme.secondary,
-                                textAlign = TextAlign.Center,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.alpha(0.5f)
-                            )
-                        }
+                        Text(
+                            text = stringResource(R.string.lyrics_not_found),
+                            fontSize = 20.sp,
+                            color = MaterialTheme.colorScheme.secondary,
+                            textAlign = when (lyricsTextPosition) {
+                                LyricsPosition.LEFT -> TextAlign.Left
+                                LyricsPosition.CENTER -> TextAlign.Center
+                                LyricsPosition.RIGHT -> TextAlign.Right
+                            },
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 8.dp)
+                                .alpha(0.5f)
+                        )
                     }
                 }
             }
