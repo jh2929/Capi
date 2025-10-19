@@ -1,7 +1,6 @@
 package com.arturo254.opentune.ui.component
 
 import android.content.Intent
-import androidx.compose.foundation.clickable
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
@@ -14,17 +13,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -34,37 +24,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SheetState
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
@@ -72,9 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -100,8 +64,6 @@ fun ShareLyricsDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val configuration = LocalConfiguration.current
-    val density = LocalDensity.current
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true,
@@ -111,7 +73,6 @@ fun ShareLyricsDialog(
     var showColorPickerSheet by remember { mutableStateOf(false) }
     var showProgressDialog by remember { mutableStateOf(false) }
 
-    // Share as text bottom sheet
     if (!showColorPickerSheet) {
         ModalBottomSheet(
             onDismissRequest = onDismiss,
@@ -125,13 +86,11 @@ fun ShareLyricsDialog(
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header simplificado
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Icono y título en la misma línea
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
@@ -163,7 +122,6 @@ fun ShareLyricsDialog(
                         )
                     }
 
-                    // Botón de cerrar compacto
                     IconButton(
                         onClick = onDismiss,
                         modifier = Modifier.size(32.dp)
@@ -179,7 +137,6 @@ fun ShareLyricsDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Información de la canción más compacta
                 Card(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
@@ -199,12 +156,10 @@ fun ShareLyricsDialog(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Opciones de compartir con mejor spacing
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Compartir como texto - Botón principal
                     Button(
                         onClick = {
                             val shareIntent = Intent().apply {
@@ -246,7 +201,6 @@ fun ShareLyricsDialog(
                         )
                     }
 
-                    // Compartir como imagen - Botón secundario
                     OutlinedButton(
                         onClick = {
                             showColorPickerSheet = true
@@ -279,7 +233,6 @@ fun ShareLyricsDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Botón de cancelar como texto button
                 TextButton(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth()
@@ -294,7 +247,6 @@ fun ShareLyricsDialog(
         }
     }
 
-    // Color picker bottom sheet
     if (showColorPickerSheet) {
         ShareLyricsImageCustomizationSheet(
             lyricsText = lyricsText,
@@ -311,10 +263,9 @@ fun ShareLyricsDialog(
         )
     }
 
-    // Progress dialog
     if (showProgressDialog) {
         ModalBottomSheet(
-            onDismissRequest = { /* Don't dismiss */ },
+            onDismissRequest = { },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
             shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
         ) {
@@ -361,10 +312,10 @@ fun ShareLyricsImageCustomizationSheet(
     val coverUrl = mediaMetadata?.thumbnailUrl
     val paletteColors = remember { mutableStateListOf<Color>() }
 
-    var selectedPreset by remember { mutableStateOf(colorPresets[0]) }
+    var selectedCustomization by remember { mutableStateOf(colorPresets[0].customization) }
     var isPresetSelectorExpanded by remember { mutableStateOf(false) }
+    var isAdvancedSettingsExpanded by remember { mutableStateOf(false) }
 
-    // Extract palette from cover art
     LaunchedEffect(coverUrl) {
         if (coverUrl != null) {
             withContext(Dispatchers.IO) {
@@ -411,7 +362,6 @@ fun ShareLyricsImageCustomizationSheet(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header con navegación
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -419,7 +369,6 @@ fun ShareLyricsImageCustomizationSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Botón de volver y título
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
@@ -446,7 +395,6 @@ fun ShareLyricsImageCustomizationSheet(
                     )
                 }
 
-                // Botón de cerrar
                 IconButton(
                     onClick = onDismiss,
                     modifier = Modifier.size(32.dp)
@@ -460,7 +408,6 @@ fun ShareLyricsImageCustomizationSheet(
                 }
             }
 
-            // Selector de temas
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -499,14 +446,6 @@ fun ShareLyricsImageCustomizationSheet(
                         }
                     }
 
-                    Text(
-                        text = selectedPreset.name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-
-                    // Selector de colores expandible
                     AnimatedVisibility(
                         visible = isPresetSelectorExpanded,
                         enter = slideInVertically() + fadeIn(),
@@ -515,7 +454,6 @@ fun ShareLyricsImageCustomizationSheet(
                         Column(
                             modifier = Modifier.padding(top = 16.dp)
                         ) {
-                            // Temas de la carátula
                             if (paletteColors.isNotEmpty()) {
                                 Text(
                                     text = stringResource(R.string.from_cover),
@@ -528,23 +466,22 @@ fun ShareLyricsImageCustomizationSheet(
                                     modifier = Modifier.padding(bottom = 16.dp)
                                 ) {
                                     items(paletteColors) { color ->
-                                        val preset = ColorPreset(
-                                            name = stringResource(R.string.cover_color),
+                                        val customization = ImageCustomization(
                                             backgroundColor = color,
                                             textColor = if (color.isDark()) Color.White else Color.Black,
                                             secondaryTextColor = if (color.isDark()) Color.White.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.7f),
                                             isDark = color.isDark()
                                         )
-                                        BottomSheetColorPresetItem(
-                                            preset = preset,
-                                            isSelected = selectedPreset == preset,
-                                            onClick = { selectedPreset = preset }
+                                        BottomSheetColorCustomizationItem(
+                                            customization = customization,
+                                            presetName = stringResource(R.string.cover_color),
+                                            isSelected = selectedCustomization == customization,
+                                            onClick = { selectedCustomization = customization }
                                         )
                                     }
                                 }
                             }
 
-                            // Temas predefinidos
                             Text(
                                 text = stringResource(R.string.presets),
                                 style = MaterialTheme.typography.labelLarge,
@@ -555,10 +492,261 @@ fun ShareLyricsImageCustomizationSheet(
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 items(colorPresets) { preset ->
-                                    BottomSheetColorPresetItem(
-                                        preset = preset,
-                                        isSelected = selectedPreset == preset,
-                                        onClick = { selectedPreset = preset }
+                                    BottomSheetColorCustomizationItem(
+                                        customization = preset.customization,
+                                        presetName = preset.name,
+                                        isSelected = selectedCustomization.backgroundColor == preset.customization.backgroundColor,
+                                        onClick = { selectedCustomization = preset.customization }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Configuración Avanzada",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        IconButton(
+                            onClick = { isAdvancedSettingsExpanded = !isAdvancedSettingsExpanded },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isAdvancedSettingsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = isAdvancedSettingsExpanded,
+                        enter = slideInVertically() + fadeIn(),
+                        exit = slideOutVertically() + fadeOut()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(top = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Estilo de Fondo",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FilterChip(
+                                        selected = selectedCustomization.backgroundStyle == BackgroundStyle.SOLID,
+                                        onClick = {
+                                            selectedCustomization = selectedCustomization.copy(
+                                                backgroundStyle = BackgroundStyle.SOLID
+                                            )
+                                        },
+                                        label = { Text("Sólido") }
+                                    )
+                                    FilterChip(
+                                        selected = selectedCustomization.backgroundStyle == BackgroundStyle.GRADIENT,
+                                        onClick = {
+                                            selectedCustomization = selectedCustomization.copy(
+                                                backgroundStyle = BackgroundStyle.GRADIENT
+                                            )
+                                        },
+                                        label = { Text("Gradiente") }
+                                    )
+                                    FilterChip(
+                                        selected = selectedCustomization.backgroundStyle == BackgroundStyle.PATTERN,
+                                        onClick = {
+                                            selectedCustomization = selectedCustomization.copy(
+                                                backgroundStyle = BackgroundStyle.PATTERN
+                                            )
+                                        },
+                                        label = { Text("Patrón") }
+                                    )
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Estilo de Fuente",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    FilterChip(
+                                        selected = selectedCustomization.fontStyle == FontStyle.REGULAR,
+                                        onClick = {
+                                            selectedCustomization = selectedCustomization.copy(
+                                                fontStyle = FontStyle.REGULAR
+                                            )
+                                        },
+                                        label = { Text("Normal") }
+                                    )
+                                    FilterChip(
+                                        selected = selectedCustomization.fontStyle == FontStyle.BOLD,
+                                        onClick = {
+                                            selectedCustomization = selectedCustomization.copy(
+                                                fontStyle = FontStyle.BOLD
+                                            )
+                                        },
+                                        label = { Text("Negrita") }
+                                    )
+                                    FilterChip(
+                                        selected = selectedCustomization.fontStyle == FontStyle.EXTRA_BOLD,
+                                        onClick = {
+                                            selectedCustomization = selectedCustomization.copy(
+                                                fontStyle = FontStyle.EXTRA_BOLD
+                                            )
+                                        },
+                                        label = { Text("Extra") }
+                                    )
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Mostrar Carátula",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Switch(
+                                    checked = selectedCustomization.showCoverArt,
+                                    onCheckedChange = {
+                                        selectedCustomization = selectedCustomization.copy(
+                                            showCoverArt = it
+                                        )
+                                    }
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Mostrar Logo",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Switch(
+                                    checked = selectedCustomization.showLogo,
+                                    onCheckedChange = {
+                                        selectedCustomization = selectedCustomization.copy(
+                                            showLogo = it
+                                        )
+                                    }
+                                )
+                            }
+
+                            if (selectedCustomization.showLogo) {
+                                Column {
+                                    Text(
+                                        text = "Posición del Logo",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        FilterChip(
+                                            selected = selectedCustomization.logoPosition == LogoPosition.BOTTOM_LEFT,
+                                            onClick = {
+                                                selectedCustomization = selectedCustomization.copy(
+                                                    logoPosition = LogoPosition.BOTTOM_LEFT
+                                                )
+                                            },
+                                            label = { Text("Abajo Izq.") },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        FilterChip(
+                                            selected = selectedCustomization.logoPosition == LogoPosition.BOTTOM_RIGHT,
+                                            onClick = {
+                                                selectedCustomization = selectedCustomization.copy(
+                                                    logoPosition = LogoPosition.BOTTOM_RIGHT
+                                                )
+                                            },
+                                            label = { Text("Abajo Der.") },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Column {
+                                Text(
+                                    text = "Radio de Esquinas: ${selectedCustomization.cornerRadius.toInt()}dp",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                Slider(
+                                    value = selectedCustomization.cornerRadius,
+                                    onValueChange = {
+                                        selectedCustomization = selectedCustomization.copy(
+                                            cornerRadius = it
+                                        )
+                                    },
+                                    valueRange = 0f..40f,
+                                    steps = 39
+                                )
+                            }
+
+                            if (selectedCustomization.backgroundStyle == BackgroundStyle.PATTERN) {
+                                Column {
+                                    Text(
+                                        text = "Opacidad del Patrón: ${(selectedCustomization.patternOpacity * 100).toInt()}%",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(bottom = 8.dp)
+                                    )
+                                    Slider(
+                                        value = selectedCustomization.patternOpacity,
+                                        onValueChange = {
+                                            selectedCustomization = selectedCustomization.copy(
+                                                patternOpacity = it
+                                            )
+                                        },
+                                        valueRange = 0.01f..0.15f
                                     )
                                 }
                             }
@@ -569,7 +757,6 @@ fun ShareLyricsImageCustomizationSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Preview de la imagen
             Text(
                 text = stringResource(R.string.preview),
                 style = MaterialTheme.typography.titleMedium,
@@ -580,7 +767,6 @@ fun ShareLyricsImageCustomizationSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Vista previa de la imagen
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -588,15 +774,10 @@ fun ShareLyricsImageCustomizationSheet(
                 contentAlignment = Alignment.Center
             ) {
                 if (mediaMetadata != null) {
-                    LyricsImageCard(
+                    LyricsImageCardPreview(
                         lyricText = lyricsText,
                         mediaMetadata = mediaMetadata,
-                        selectedPreset = selectedPreset,
-                        onPresetChange = { selectedPreset = it },
-                        onSaveImage = {
-                            // Handle save image
-                        },
-                        showControls = false,
+                        customization = selectedCustomization,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -604,7 +785,6 @@ fun ShareLyricsImageCustomizationSheet(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Botones de acción
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -639,9 +819,17 @@ fun ShareLyricsImageCustomizationSheet(
                                     lyrics = lyricsText,
                                     width = (screenWidth * density.density).toInt(),
                                     height = (screenHeight * density.density).toInt(),
-                                    backgroundColor = selectedPreset.backgroundColor.toArgb(),
-                                    textColor = selectedPreset.textColor.toArgb(),
-                                    secondaryTextColor = selectedPreset.secondaryTextColor.toArgb(),
+                                    backgroundColor = selectedCustomization.backgroundColor.toArgb(),
+                                    textColor = selectedCustomization.textColor.toArgb(),
+                                    secondaryTextColor = selectedCustomization.secondaryTextColor.toArgb(),
+                                    showCoverArt = selectedCustomization.showCoverArt,
+                                    showLogo = selectedCustomization.showLogo,
+                                    backgroundStyle = selectedCustomization.backgroundStyle.name,
+                                    gradientColors = selectedCustomization.gradientColors?.map { it.toArgb() }?.toIntArray(),
+                                    fontStyle = selectedCustomization.fontStyle.name,
+                                    logoPosition = selectedCustomization.logoPosition.name,
+                                    cornerRadius = selectedCustomization.cornerRadius,
+                                    patternOpacity = selectedCustomization.patternOpacity
                                 )
 
                                 val timestamp = System.currentTimeMillis()
@@ -694,16 +882,15 @@ fun ShareLyricsImageCustomizationSheet(
     }
 }
 
-// Extension para determinar si un color es oscuro
 fun Color.isDark(): Boolean {
     val luminance = 0.299f * this.red + 0.587f * this.green + 0.114f * this.blue
     return luminance < 0.5f
 }
 
-// Componente de item de color preset para BottomSheet (nombre diferente)
 @Composable
-fun BottomSheetColorPresetItem(
-    preset: ColorPreset,
+fun BottomSheetColorCustomizationItem(
+    customization: ImageCustomization,
+    presetName: String,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -724,7 +911,19 @@ fun BottomSheetColorPresetItem(
                 .size(48.dp)
                 .scale(scale)
                 .clip(RoundedCornerShape(12.dp))
-                .background(preset.backgroundColor)
+                .background(
+                    brush = if (customization.backgroundStyle == BackgroundStyle.GRADIENT
+                        && customization.gradientColors != null) {
+                        Brush.linearGradient(customization.gradientColors)
+                    } else {
+                        Brush.linearGradient(
+                            listOf(
+                                customization.backgroundColor,
+                                customization.backgroundColor
+                            )
+                        )
+                    }
+                )
                 .border(
                     width = if (isSelected) 2.dp else 1.dp,
                     color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.3f),
@@ -734,7 +933,7 @@ fun BottomSheetColorPresetItem(
         ) {
             Text(
                 text = "Aa",
-                color = preset.textColor,
+                color = customization.textColor,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -743,7 +942,7 @@ fun BottomSheetColorPresetItem(
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = preset.name,
+            text = presetName,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurface.copy(
                 alpha = if (isSelected) 1f else 0.7f

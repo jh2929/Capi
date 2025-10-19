@@ -11,6 +11,8 @@ import android.graphics.PorterDuffColorFilter
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.graphics.LinearGradient
+import android.graphics.Shader
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -79,41 +81,6 @@ object ComposeToImage {
         )
     }
 
-
-    private data class ImageConfig(
-        val cardSize: Int,
-        val padding: Float = 32f,
-        val cornerRadius: Float = 20f,
-        val imageCornerRadius: Float = 12f,
-        val coverArtRatio: Float = 0.15f,
-        val logoRatio: Float = 0.05f
-    )
-
-    private data class TextConfig(
-        val titleSizeRatio: Float = 0.045f,
-        val artistSizeRatio: Float = 0.035f,
-        val lyricsSizeRatio: Float = 0.08f,
-        val appNameSizeRatio: Float = 0.042f,
-        val maxLyricsWidthRatio: Float = 0.85f,
-        val lineSpacing: Float = 8f,
-        val lineSpacingMultiplier: Float = 1.3f,
-        val letterSpacing: Float = 0.01f
-    )
-
-    private data class ColorScheme(
-        val backgroundColor: Int,
-        val mainTextColor: Int,
-        val secondaryTextColor: Int
-    ) {
-        companion object {
-            fun createDefault() = ColorScheme(
-                backgroundColor = 0xFF121212.toInt(),
-                mainTextColor = 0xFFFFFFFF.toInt(),
-                secondaryTextColor = 0xB3FFFFFF.toInt()
-            )
-        }
-    }
-
     @RequiresApi(Build.VERSION_CODES.M)
     suspend fun createLyricsImage(
         context: Context,
@@ -125,58 +92,165 @@ object ComposeToImage {
         height: Int,
         backgroundColor: Int? = null,
         textColor: Int? = null,
-        secondaryTextColor: Int? = null
+        secondaryTextColor: Int? = null,
+        showCoverArt: Boolean = true,
+        showLogo: Boolean = true,
+        backgroundStyle: String = "SOLID",
+        gradientColors: IntArray? = null,
+        fontStyle: String = "EXTRA_BOLD",
+        logoPosition: String = "BOTTOM_LEFT",
+        cornerRadius: Float = 28f,
+        patternOpacity: Float = 0.03f
     ): Bitmap = withContext(Dispatchers.Default) {
-        val config = ImageConfig(cardSize = calculateOptimalSize(width, height))
-        val colorScheme = buildColorScheme(backgroundColor, textColor, secondaryTextColor)
-
-        val bitmap = initializeBitmap(config.cardSize)
+        // Usar tamaño cuadrado de alta calidad (1080x1080 como Instagram/Spotify)
+        val imageSize = 1080
+        val bitmap = createBitmap(imageSize, imageSize)
         val canvas = Canvas(bitmap)
 
-        renderBackground(canvas, config, colorScheme.backgroundColor)
+        val bgColor = backgroundColor ?: 0xFF0A0A0A.toInt()
+        val mainTextColor = textColor ?: 0xFFFFFFFF.toInt()
+        val secTextColor = secondaryTextColor ?: 0xFFB0B0B0.toInt()
 
-        val coverArt = loadCoverArtwork(context, coverArtUrl)
-        renderCoverArt(canvas, coverArt, config)
+        // Padding y tamaños proporcionales
+        val outerPadding = imageSize * 0.084f // 32dp en 380dp = 0.084
+        val thumbnailSize = imageSize * 0.21f // 80dp en 380dp = 0.21
+        val logoSize = imageSize * 0.073f // ~28dp
+        val cornerRadiusPx = (cornerRadius / 28f) * (imageSize * 0.073f) // Proporcional
 
-        renderSongMetadata(canvas, songTitle, artistName, config, colorScheme)
-        renderLyricsContent(canvas, lyrics, config, colorScheme)
-
-        renderAppLogo(
-            context,
+        // 1. Fondo con borde redondeado
+        val bgRect = RectF(0f, 0f, imageSize.toFloat(), imageSize.toFloat())
+        renderBackground(
             canvas,
-            config.cardSize,
-            config.padding,
-            colorScheme.secondaryTextColor,
-            colorScheme.backgroundColor
+            bgRect,
+            cornerRadiusPx,
+            bgColor,
+            mainTextColor,
+            backgroundStyle,
+            gradientColors,
+            patternOpacity,
+            imageSize
         )
+
+        // 2. Carátula y metadata (si está habilitado)
+        if (showCoverArt) {
+            val coverArt = loadCoverArtwork(context, coverArtUrl)
+            renderCoverArtHighRes(
+                canvas,
+                coverArt,
+                outerPadding,
+                thumbnailSize,
+                mainTextColor
+            )
+            renderSongMetadataHighRes(
+                canvas,
+                songTitle,
+                artistName,
+                outerPadding,
+                thumbnailSize,
+                imageSize,
+                mainTextColor,
+                secTextColor,
+                fontStyle
+            )
+        }
+
+        // 3. Letras centradas
+        renderLyricsHighRes(
+            canvas,
+            lyrics,
+            imageSize,
+            outerPadding,
+            thumbnailSize,
+            mainTextColor,
+            bgColor,
+            fontStyle,
+            showCoverArt
+        )
+
+        // 4. Logo de la app
+        if (showLogo) {
+            renderAppLogoHighRes(
+                context,
+                canvas,
+                imageSize,
+                outerPadding,
+                logoSize,
+                secTextColor,
+                logoPosition
+            )
+        }
 
         bitmap
     }
 
-    private fun calculateOptimalSize(width: Int, height: Int): Int = min(width, height) - 32
+    private fun renderBackground(
+        canvas: Canvas,
+        rect: RectF,
+        cornerRadius: Float,
+        backgroundColor: Int,
+        textColor: Int,
+        backgroundStyle: String,
+        gradientColors: IntArray?,
+        patternOpacity: Float,
+        imageSize: Int
+    ) {
+        when (backgroundStyle) {
+            "SOLID" -> {
+                val paint = Paint().apply {
+                    color = backgroundColor
+                    isAntiAlias = true
+                }
+                canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
+            }
+            "GRADIENT" -> {
+                val colors = gradientColors ?: intArrayOf(backgroundColor, backgroundColor)
+                val paint = Paint().apply {
+                    isAntiAlias = true
+                    shader = LinearGradient(
+                        0f, 0f,
+                        rect.width(), rect.height(),
+                        colors,
+                        null,
+                        Shader.TileMode.CLAMP
+                    )
+                }
+                canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
+            }
+            "PATTERN" -> {
+                // Primero el fondo sólido
+                val paint = Paint().apply {
+                    color = backgroundColor
+                    isAntiAlias = true
+                }
+                canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
 
-    private fun buildColorScheme(
-        backgroundColor: Int?,
-        textColor: Int?,
-        secondaryTextColor: Int?
-    ): ColorScheme {
-        val defaultScheme = ColorScheme.createDefault()
-        return ColorScheme(
-            backgroundColor = backgroundColor ?: defaultScheme.backgroundColor,
-            mainTextColor = textColor ?: defaultScheme.mainTextColor,
-            secondaryTextColor = secondaryTextColor ?: defaultScheme.secondaryTextColor
-        )
-    }
+                // Clip para que el patrón respete las esquinas redondeadas
+                val clipPath = Path().apply {
+                    addRoundRect(rect, cornerRadius, cornerRadius, Path.Direction.CW)
+                }
+                canvas.save()
+                canvas.clipPath(clipPath)
 
-    private fun initializeBitmap(size: Int): Bitmap = createBitmap(size, size)
-
-    private fun renderBackground(canvas: Canvas, config: ImageConfig, backgroundColor: Int) {
-        val paint = Paint().apply {
-            color = backgroundColor
-            isAntiAlias = true
+                // Luego el patrón
+                val patternPaint = Paint().apply {
+                    color = textColor
+                    alpha = (patternOpacity * 255).toInt()
+                    isAntiAlias = true
+                }
+                val pattern = imageSize * 0.037f // 40dp proporcional
+                val radius = imageSize * 0.00185f // 2dp proporcional
+                var x = 0f
+                while (x <= rect.width()) {
+                    var y = 0f
+                    while (y <= rect.height()) {
+                        canvas.drawCircle(x, y, radius, patternPaint)
+                        y += pattern
+                    }
+                    x += pattern
+                }
+                canvas.restore()
+            }
         }
-        val rect = RectF(0f, 0f, config.cardSize.toFloat(), config.cardSize.toFloat())
-        canvas.drawRoundRect(rect, config.cornerRadius, config.cornerRadius, paint)
     }
 
     private suspend fun loadCoverArtwork(context: Context, coverArtUrl: String?): Bitmap? {
@@ -185,176 +259,190 @@ object ComposeToImage {
             val imageLoader = ImageLoader(context)
             val request = ImageRequest.Builder(context)
                 .data(coverArtUrl)
-                .size(512, 512) // Aumentar tamaño para mejor calidad
+                .size(800, 800) // Alta resolución
                 .allowHardware(false)
                 .build()
             val result = imageLoader.execute(request)
-            result.drawable?.toBitmap(512, 512, Bitmap.Config.ARGB_8888)
+            result.drawable?.toBitmap(800, 800, Bitmap.Config.ARGB_8888)
         } catch (e: Exception) {
             e.printStackTrace()
             null
         }
     }
 
-    private fun renderCoverArt(canvas: Canvas, coverArt: Bitmap?, config: ImageConfig) {
+    private fun renderCoverArtHighRes(
+        canvas: Canvas,
+        coverArt: Bitmap?,
+        padding: Float,
+        size: Float,
+        textColor: Int
+    ) {
         coverArt?.let { artwork ->
-            val size = config.cardSize * config.coverArtRatio
-            val rect = RectF(
-                config.padding,
-                config.padding,
-                config.padding + size,
-                config.padding + size
-            )
+            val rect = RectF(padding, padding, padding + size, padding + size)
+            val cornerRadius = size * 0.25f // 20dp en 80dp = 0.25
 
-            // Primero dibujar un fondo redondeado para la portada
-            val backgroundPaint = Paint().apply {
-                color = 0xFF333333.toInt() // Color de fondo gris para la portada
+            // Fondo
+            val bgPaint = Paint().apply {
+                color = textColor
+                alpha = 25 // 0.1 * 255
                 isAntiAlias = true
             }
-            canvas.drawRoundRect(rect, config.imageCornerRadius, config.imageCornerRadius, backgroundPaint)
+            canvas.drawRoundRect(rect, cornerRadius, cornerRadius, bgPaint)
 
-            // Luego dibujar la imagen de portada
+            // Imagen con clip redondeado
             val paint = Paint().apply {
                 isAntiAlias = true
                 isFilterBitmap = true
             }
-
-            // Usar clipPath para recortar la imagen de forma redondeada
             val clipPath = Path().apply {
-                addRoundRect(
-                    rect,
-                    config.imageCornerRadius,
-                    config.imageCornerRadius,
-                    Path.Direction.CW
-                )
+                addRoundRect(rect, cornerRadius, cornerRadius, Path.Direction.CW)
             }
+            canvas.save()
+            canvas.clipPath(clipPath)
+            canvas.drawBitmap(artwork, null, rect, paint)
+            canvas.restore()
 
-            canvas.withClip(clipPath) {
-                drawBitmap(artwork, null, rect, paint)
-            }
-
-            // Opcional: dibujar un borde sutil alrededor de la portada
+            // Borde
             val borderPaint = Paint().apply {
-                color = 0x80FFFFFF.toInt() // Borde blanco semi-transparente
+                color = textColor
+                alpha = 51 // 0.2 * 255
                 style = Paint.Style.STROKE
                 strokeWidth = 2f
                 isAntiAlias = true
             }
-            canvas.drawRoundRect(rect, config.imageCornerRadius, config.imageCornerRadius, borderPaint)
+            canvas.drawRoundRect(rect, cornerRadius, cornerRadius, borderPaint)
         }
     }
 
-    private fun renderSongMetadata(
+    private fun renderSongMetadataHighRes(
         canvas: Canvas,
         songTitle: String,
         artistName: String,
-        config: ImageConfig,
-        colorScheme: ColorScheme
+        padding: Float,
+        thumbnailSize: Float,
+        imageSize: Int,
+        mainTextColor: Int,
+        secondaryTextColor: Int,
+        fontStyle: String
     ) {
-        val textConfig = TextConfig()
-        val coverArtSize = config.cardSize * config.coverArtRatio
+        val spacing = imageSize * 0.042f // 16dp
+        val startX = padding + thumbnailSize + spacing
+        val maxWidth = (imageSize - startX - padding).toInt()
 
+        val titleTypeface = when (fontStyle) {
+            "REGULAR" -> Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            "BOLD" -> Typeface.create("sans-serif-black", Typeface.NORMAL)
+            "EXTRA_BOLD" -> Typeface.create("sans-serif-black", Typeface.BOLD)
+            else -> Typeface.create("sans-serif-black", Typeface.BOLD)
+        }
+
+        // Título - 20sp en 380dp = 0.0526
         val titlePaint = TextPaint().apply {
-            color = colorScheme.mainTextColor
-            textSize = config.cardSize * textConfig.titleSizeRatio
-            typeface = Typeface.DEFAULT_BOLD
+            color = mainTextColor
+            textSize = imageSize * 0.0526f
+            typeface = titleTypeface
             isAntiAlias = true
-        }
-        val artistPaint = TextPaint().apply {
-            color = colorScheme.secondaryTextColor
-            textSize = config.cardSize * textConfig.artistSizeRatio
-            typeface = Typeface.DEFAULT
-            isAntiAlias = true
+            letterSpacing = -0.025f
         }
 
-        val maxWidth = config.cardSize - (config.padding * 2 + coverArtSize + 16f)
-        val startX = config.padding + coverArtSize + 16f
+        // Artista - 16sp en 380dp = 0.042
+        val artistPaint = TextPaint().apply {
+            color = secondaryTextColor
+            textSize = imageSize * 0.042f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            isAntiAlias = true
+            letterSpacing = 0.0125f
+        }
 
         val titleLayout = StaticLayout.Builder.obtain(
-            songTitle,
-            0,
-            songTitle.length,
-            titlePaint,
-            maxWidth.toInt()
+            songTitle, 0, songTitle.length, titlePaint, maxWidth
         )
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-            .setMaxLines(2) // Permitir 2 líneas para el título
+            .setMaxLines(2)
+            .setLineSpacing(0f, 1.2f)
             .setEllipsize(android.text.TextUtils.TruncateAt.END)
             .build()
 
         val artistLayout = StaticLayout.Builder.obtain(
-            artistName,
-            0,
-            artistName.length,
-            artistPaint,
-            maxWidth.toInt()
+            artistName, 0, artistName.length, artistPaint, maxWidth
         )
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
             .setMaxLines(1)
             .setEllipsize(android.text.TextUtils.TruncateAt.END)
             .build()
 
-        val centerY = config.padding + coverArtSize / 2f
-        val textBlockHeight = titleLayout.height + artistLayout.height + 8f
+        // Centrar verticalmente en el thumbnail
+        val centerY = padding + thumbnailSize / 2f
+        val textBlockHeight = titleLayout.height + artistLayout.height + (imageSize * 0.0105f) // 4dp
         val startY = centerY - textBlockHeight / 2f
 
         canvas.withTranslation(startX, startY) {
             titleLayout.draw(this)
-            translate(0f, titleLayout.height.toFloat() + 8f)
+            translate(0f, titleLayout.height + imageSize * 0.0105f)
             artistLayout.draw(this)
         }
     }
 
-
-    private fun renderLyricsContent(
+    private fun renderLyricsHighRes(
         canvas: Canvas,
         lyrics: String,
-        config: ImageConfig,
-        colorScheme: ColorScheme
+        imageSize: Int,
+        padding: Float,
+        thumbnailSize: Float,
+        textColor: Int,
+        backgroundColor: Int,
+        fontStyle: String,
+        showCoverArt: Boolean
     ) {
-        val textConfig = TextConfig()
-        val alignment = determineMixedTextAlignment(lyrics)
-
-        val paint = TextPaint().apply {
-            color = colorScheme.mainTextColor
-            textSize = config.cardSize * textConfig.lyricsSizeRatio
-            typeface = Typeface.DEFAULT_BOLD
-            isAntiAlias = true
+        val lyricsTypeface = when (fontStyle) {
+            "REGULAR" -> Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            "BOLD" -> Typeface.create("sans-serif-black", Typeface.NORMAL)
+            "EXTRA_BOLD" -> Typeface.create("sans-serif-black", Typeface.BOLD)
+            else -> Typeface.create("sans-serif-black", Typeface.BOLD)
         }
 
-        // Ajuste dinámico del tamaño de texto para que encaje en el área
-        var textSize = paint.textSize
-        val maxWidth = (config.cardSize * textConfig.maxLyricsWidthRatio).toInt()
-        val maxHeight = config.cardSize * 0.5f
-        val minTextSize = 24f
+        val maxWidth = (imageSize * 0.85f).toInt()
+        val headerHeight = if (showCoverArt) padding + thumbnailSize + (imageSize * 0.084f) else padding
+        val footerHeight = imageSize * 0.148f // ~80dp para el logo
+        val maxHeight = imageSize - headerHeight - footerHeight
+
+        // Tamaño inicial proporcional
+        var textSize = imageSize * 0.055f // Ajustar según diseño
+        val minTextSize = imageSize * 0.037f
+
+        val paint = TextPaint().apply {
+            color = textColor
+            typeface = lyricsTypeface
+            isAntiAlias = true
+            letterSpacing = 0.015f
+        }
 
         var layout: StaticLayout
-
         do {
             paint.textSize = textSize
             layout = StaticLayout.Builder.obtain(lyrics, 0, lyrics.length, paint, maxWidth)
-                .setAlignment(alignment)
+                .setAlignment(Layout.Alignment.ALIGN_CENTER)
                 .setIncludePad(false)
-                .setLineSpacing(textConfig.lineSpacing, textConfig.lineSpacingMultiplier)
+                .setLineSpacing(0f, 1.3f)
                 .build()
             if (layout.height <= maxHeight) break
-            textSize -= 3f
+            textSize -= imageSize * 0.0028f
         } while (textSize > minTextSize)
 
         if (textSize < minTextSize) {
             paint.textSize = minTextSize
             layout = StaticLayout.Builder.obtain(lyrics, 0, lyrics.length, paint, maxWidth)
-                .setAlignment(alignment)
+                .setAlignment(Layout.Alignment.ALIGN_CENTER)
                 .setIncludePad(false)
-                .setLineSpacing(textConfig.lineSpacing, textConfig.lineSpacingMultiplier)
+                .setLineSpacing(0f, 1.3f)
                 .build()
         }
 
-        val headerHeight = config.padding + (config.cardSize * config.coverArtRatio) + 32f
-        val footerHeight = 80f
-        val availableHeight = config.cardSize - headerHeight - footerHeight
+        // Sombra sutil
+        paint.setShadowLayer(imageSize * 0.0037f, imageSize * 0.00185f, imageSize * 0.00185f, backgroundColor)
 
-        val posX = (config.cardSize - layout.width) / 2f
+        val posX = (imageSize - layout.width) / 2f
+        val availableHeight = imageSize - headerHeight - footerHeight
         val posY = headerHeight + (availableHeight - layout.height) / 2f
 
         canvas.withTranslation(posX, posY) {
@@ -362,55 +450,79 @@ object ComposeToImage {
         }
     }
 
-    private fun renderAppLogo(
+    private fun renderAppLogoHighRes(
         context: Context,
         canvas: Canvas,
-        cardSize: Int,
+        imageSize: Int,
         padding: Float,
-        logoColor: Int,
-        backgroundColor: Int
+        logoSize: Float,
+        textColor: Int,
+        logoPosition: String
     ) {
-        val logoSize = cardSize * 0.05f
-
         val logoBitmap = getBitmapFromVectorDrawable(
             context, R.drawable.opentune, logoSize.toInt(), logoSize.toInt()
         ) ?: return
 
-        // Pintar el logo
+        // Posición del logo
+        val (logoX, logoY) = when (logoPosition) {
+            "BOTTOM_LEFT" -> Pair(padding, imageSize - padding - logoSize)
+            "BOTTOM_RIGHT" -> Pair(imageSize - padding - logoSize - (imageSize * 0.185f), imageSize - padding - logoSize)
+            "TOP_LEFT" -> Pair(padding, padding)
+            "TOP_RIGHT" -> Pair(imageSize - padding - logoSize - (imageSize * 0.185f), padding)
+            else -> Pair(padding, imageSize - padding - logoSize)
+        }
+
+        // Fondo circular del logo
+        val circleRadius = logoSize * 1.29f // 36dp para 28dp de logo
+        val circleCenterX = logoX + logoSize / 2f
+        val circleCenterY = logoY + logoSize / 2f
+
+        val circleBgPaint = Paint().apply {
+            color = textColor
+            alpha = 38 // 0.15 * 255
+            isAntiAlias = true
+        }
+        canvas.drawCircle(circleCenterX, circleCenterY, circleRadius / 2f, circleBgPaint)
+
+        val circleBorderPaint = Paint().apply {
+            color = textColor
+            alpha = 76 // 0.3 * 255
+            style = Paint.Style.STROKE
+            strokeWidth = imageSize * 0.00093f // 1dp
+            isAntiAlias = true
+        }
+        canvas.drawCircle(circleCenterX, circleCenterY, circleRadius / 2f, circleBorderPaint)
+
+        // Logo con tinte
         val paint = Paint().apply {
-            colorFilter = PorterDuffColorFilter(logoColor, PorterDuff.Mode.SRC_IN)
+            colorFilter = PorterDuffColorFilter(textColor, PorterDuff.Mode.SRC_IN)
             isAntiAlias = true
         }
 
-        val logoX = padding
-        val logoY = cardSize - padding - logoSize
+        // Centrar el logo en el círculo
+        val logoOffsetX = logoX + (circleRadius - logoSize) / 2f
+        val logoOffsetY = logoY + (circleRadius - logoSize) / 2f
+        canvas.drawBitmap(logoBitmap, logoOffsetX, logoOffsetY, paint)
 
-        canvas.drawBitmap(logoBitmap, logoX, logoY, paint)
-
-        // Obtener el nombre de la app
+        // Texto del nombre de la app
         val appName = context.getString(R.string.app_name)
-
-        // Configurar la pintura del texto
         val textPaint = TextPaint().apply {
-            color = logoColor
-            textSize = cardSize * 0.042f
+            color = textColor
+            textSize = imageSize * 0.0395f // 15sp
             typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
             isAntiAlias = true
-            letterSpacing = 0.01f
+            letterSpacing = 0.02f
         }
 
-        // Medir altura para ajustar alineación vertical
         val textBounds = Rect()
         textPaint.getTextBounds(appName, 0, appName.length, textBounds)
         val textHeight = textBounds.height()
 
-        val textX = logoX + logoSize + 12f
-        val textY = logoY + logoSize / 2f + textHeight / 2f - 4f
+        val textX = logoX + circleRadius + (imageSize * 0.0315f) // 12dp spacing
+        val textY = logoY + logoSize / 2f + textHeight / 2f - (imageSize * 0.0105f) // -4dp ajuste
 
-        // Dibujar el nombre de la app
         canvas.drawText(appName, textX, textY, textPaint)
     }
-
 
     private fun getBitmapFromVectorDrawable(
         context: Context,
@@ -424,13 +536,5 @@ object ComposeToImage {
         drawable.setBounds(0, 0, width, height)
         drawable.draw(canvas)
         return bitmap
-    }
-
-    private fun determineMixedTextAlignment(text: String): Layout.Alignment {
-        val hasRTL = text.any {
-            Character.getDirectionality(it)
-                .toInt() == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC.toInt()
-        }
-        return if (hasRTL) Layout.Alignment.ALIGN_CENTER else Layout.Alignment.ALIGN_NORMAL
     }
 }
