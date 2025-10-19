@@ -82,6 +82,7 @@ fun LibraryPlaylistsScreen(
     viewModel: LibraryPlaylistsViewModel = hiltViewModel(),
     initialTextFieldValue: String? = null,
     allowSyncing: Boolean = true,
+
 ) {
     val menuState = LocalMenuState.current
     LocalHapticFeedback.current

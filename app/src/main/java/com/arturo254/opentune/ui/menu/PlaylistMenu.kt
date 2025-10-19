@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 
+
 @Composable
 fun PlaylistMenu(
     playlist: Playlist,
@@ -273,8 +274,7 @@ fun PlaylistMenu(
                 }
             }
         },
-
-        )
+    )
 
     HorizontalDivider()
 
