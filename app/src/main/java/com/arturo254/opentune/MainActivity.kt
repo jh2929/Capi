@@ -221,6 +221,8 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.days
 import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.arturo254.opentune.ui.component.AvatarPreferenceManager
@@ -1274,40 +1276,69 @@ class MainActivity : ComponentActivity() {
                                     NavigationTab.EXPLORE -> Screens.Explore
                                     NavigationTab.LIBRARY -> Screens.Library
                                 }.route,
+
                                 enterTransition = {
-                                    if (initialState.destination.route in topLevelScreens && targetState.destination.route in topLevelScreens) {
-                                        fadeIn(tween(250))
+                                    // Transición Material 3: entrada con leve desplazamiento + fade + spring
+                                    if (initialState.destination.route in topLevelScreens &&
+                                        targetState.destination.route in topLevelScreens
+                                    ) {
+                                        fadeIn(spring(dampingRatio = Spring.DampingRatioNoBouncy))
                                     } else {
-                                        fadeIn(tween(250)) + slideInHorizontally { it / 2 }
+                                        fadeIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) +
+                                                slideInHorizontally(
+                                                    initialOffsetX = { it / 3 },
+                                                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                                                )
                                     }
                                 },
+
                                 exitTransition = {
-                                    if (initialState.destination.route in topLevelScreens && targetState.destination.route in topLevelScreens) {
-                                        fadeOut(tween(200))
+                                    // Suavizado de salida con deslizamiento y atenuación
+                                    if (initialState.destination.route in topLevelScreens &&
+                                        targetState.destination.route in topLevelScreens
+                                    ) {
+                                        fadeOut(spring(dampingRatio = Spring.DampingRatioNoBouncy))
                                     } else {
-                                        fadeOut(tween(200)) + slideOutHorizontally { -it / 2 }
+                                        fadeOut(spring(dampingRatio = Spring.DampingRatioLowBouncy)) +
+                                                slideOutHorizontally(
+                                                    targetOffsetX = { -it / 3 },
+                                                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                                                )
                                     }
                                 },
+
                                 popEnterTransition = {
-                                    if ((initialState.destination.route in topLevelScreens || initialState.destination.route?.startsWith(
-                                            "search/"
-                                        ) == true) && targetState.destination.route in topLevelScreens
+                                    // Volver atrás: entrada desde el lado izquierdo + fade
+                                    if ((initialState.destination.route in topLevelScreens ||
+                                                initialState.destination.route?.startsWith("search/") == true) &&
+                                        targetState.destination.route in topLevelScreens
                                     ) {
-                                        fadeIn(tween(250))
+                                        fadeIn(spring(dampingRatio = Spring.DampingRatioNoBouncy))
                                     } else {
-                                        fadeIn(tween(250)) + slideInHorizontally { -it / 2 }
+                                        fadeIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy)) +
+                                                slideInHorizontally(
+                                                    initialOffsetX = { -it / 3 },
+                                                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                                                )
                                     }
                                 },
+
                                 popExitTransition = {
-                                    if ((initialState.destination.route in topLevelScreens || initialState.destination.route?.startsWith(
-                                            "search/"
-                                        ) == true) && targetState.destination.route in topLevelScreens
+                                    // Salida hacia atrás: suave desplazamiento y fade-out
+                                    if ((initialState.destination.route in topLevelScreens ||
+                                                initialState.destination.route?.startsWith("search/") == true) &&
+                                        targetState.destination.route in topLevelScreens
                                     ) {
-                                        fadeOut(tween(200))
+                                        fadeOut(spring(dampingRatio = Spring.DampingRatioNoBouncy))
                                     } else {
-                                        fadeOut(tween(200)) + slideOutHorizontally { it / 2 }
+                                        fadeOut(spring(dampingRatio = Spring.DampingRatioLowBouncy)) +
+                                                slideOutHorizontally(
+                                                    targetOffsetX = { it / 3 },
+                                                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                                                )
                                     }
                                 },
+
                                 modifier = Modifier.nestedScroll(
                                     if (navigationItems.fastAny { it.route == navBackStackEntry?.destination?.route } ||
                                         navBackStackEntry?.destination?.route?.startsWith("search/") == true
@@ -1324,6 +1355,7 @@ class MainActivity : ComponentActivity() {
                                     latestVersionName
                                 )
                             }
+
                         }
 
                         BottomSheetMenu(
