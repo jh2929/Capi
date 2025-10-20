@@ -56,6 +56,8 @@ val MaxSongCacheSizeKey = intPreferencesKey("maxSongCacheSize")
 
 val PlayerTextAlignmentKey = stringPreferencesKey("playerTextAlignment")
 
+val RotateBackgroundKey = booleanPreferencesKey("rotate_background")
+
 val PauseListenHistoryKey = booleanPreferencesKey("pauseListenHistory")
 val PauseSearchHistoryKey = booleanPreferencesKey("pauseSearchHistory")
 val DisableScreenshotKey = booleanPreferencesKey("disableScreenshot")

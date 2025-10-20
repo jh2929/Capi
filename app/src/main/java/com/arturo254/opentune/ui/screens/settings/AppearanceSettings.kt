@@ -58,6 +58,7 @@ import com.arturo254.opentune.constants.PlayerButtonsStyle
 import com.arturo254.opentune.constants.PlayerButtonsStyleKey
 import com.arturo254.opentune.constants.PlayerTextAlignmentKey
 import com.arturo254.opentune.constants.PureBlackKey
+import com.arturo254.opentune.constants.RotateBackgroundKey
 import com.arturo254.opentune.constants.SliderStyle
 import com.arturo254.opentune.constants.SliderStyleKey
 import com.arturo254.opentune.constants.SlimNavBarKey
@@ -130,6 +131,14 @@ fun AppearanceSettings(
         GridItemsSizeKey,
         defaultValue = GridItemSize.BIG
     )
+
+
+    val (rotateBackground, onRotateBackgroundChange) = rememberPreference(
+        key = RotateBackgroundKey,
+        defaultValue = false
+    )
+
+
 
 
     val availableBackgroundStyles = PlayerBackgroundStyle.entries.filter {
@@ -405,6 +414,14 @@ fun AppearanceSettings(
             icon = { Icon(painterResource(R.drawable.swipe), null) },
             checked = swipeThumbnail,
             onCheckedChange = onSwipeThumbnailChange,
+        )
+
+        SwitchPreference(
+            title = { Text(stringResource(R.string.Rotatelyricsbackground)) },
+            description = null,
+            icon = { Icon(painterResource(R.drawable.album), null) },
+            checked = rotateBackground,
+            onCheckedChange = onRotateBackgroundChange
         )
 
         EnumListPreference(

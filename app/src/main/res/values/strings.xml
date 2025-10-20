@@ -566,4 +566,5 @@
     <string name="share_lyrics_image">Share Lyrics as Image</string>
     <string name="error_generating_image">Error generating image</string>
     <string name="cover_color">Color Cover</string>
+    <string name="Rotatelyricsbackground">Rotate the lyrics background</string>
 </resources>

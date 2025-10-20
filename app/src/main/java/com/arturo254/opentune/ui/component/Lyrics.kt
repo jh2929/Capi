@@ -9,7 +9,10 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -146,6 +149,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.saket.squiggles.SquigglySlider
 import kotlin.time.Duration.Companion.seconds
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.ui.graphics.TransformOrigin
+import com.arturo254.opentune.constants.RotateBackgroundKey
 
 @RequiresApi(Build.VERSION_CODES.M)
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -172,6 +179,23 @@ fun Lyrics(
     val scrollLyrics by rememberPreference(LyricsScrollKey, true)
 
     var showLyrics by rememberPreference(ShowLyricsKey, defaultValue = false)
+
+
+    val infiniteTransition = rememberInfiniteTransition(label = "backgroundRotation")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 20000, // 20 segundos por rotación completa
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotation"
+    )
+
+    val rotateBackground by rememberPreference(RotateBackgroundKey, defaultValue = false)
 
     val mediaMetadata by playerConnection.mediaMetadata.collectAsState()
     val currentSongId = mediaMetadata?.id
@@ -310,6 +334,8 @@ fun Lyrics(
             }
         }
     }
+
+
 
 
     // AGREGAR este LaunchedEffect justo después de definir 'lines'
@@ -514,10 +540,20 @@ fun Lyrics(
                     AsyncImage(
                         model = metadata.thumbnailUrl,
                         contentDescription = null,
-                        contentScale = ContentScale.Crop,
+                        contentScale = ContentScale.FillBounds,
                         modifier = Modifier
                             .fillMaxSize()
                             .blur(50.dp)
+                            .then(
+                                if (rotateBackground) {
+                                    Modifier.graphicsLayer {
+                                        rotationZ = rotation
+                                        transformOrigin = TransformOrigin.Center
+                                    }
+                                } else {
+                                    Modifier
+                                }
+                            )
                     )
 
                     Box(
@@ -928,12 +964,22 @@ fun Lyrics(
                             AsyncImage(
                                 model = metadata.thumbnailUrl,
                                 contentDescription = null,
-                                contentScale = ContentScale.Fit,
+                                contentScale = ContentScale.FillBounds,
                                 modifier = Modifier
                                     .fillMaxWidth(0.85f)
                                     .aspectRatio(1f)
                                     .scale(imageScale)
                                     .clip(RoundedCornerShape(cornerRadius))
+                                    .then(
+                                        if (rotateBackground) {
+                                            Modifier.graphicsLayer {
+                                                rotationZ = rotation
+                                                transformOrigin = TransformOrigin.Center
+                                            }
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
                             )
                         }
                     }
