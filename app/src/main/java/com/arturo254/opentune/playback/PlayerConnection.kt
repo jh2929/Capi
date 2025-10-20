@@ -35,7 +35,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
+import timber.log.Timber
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlayerConnection(
@@ -204,12 +207,25 @@ class PlayerConnection(
             _bufferedPosition.value = player.bufferedPosition
             _volume.value = player.volume
 
+            // Inicializar estado de like
+            CoroutineScope(Dispatchers.IO).launch {
+                updateLikeStatusForCurrentSong()
+            }
+
             updateCanSkipPreviousAndNext()
             Log.d(TAG, "States initialized")
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing states", e)
             reportException(e)
         }
+    }
+
+
+    fun refreshLikeStatus() {
+        updateScope.launch(Dispatchers.IO) {
+            updateLikeStatusForCurrentSong()
+        }
+
     }
 
     private fun handlePlayerEvents(player: Player, events: Player.Events) {
@@ -354,14 +370,27 @@ class PlayerConnection(
 
     fun toggleLike() {
         try {
-            Log.d(TAG, "Toggling like for current track")
+            Timber.tag(TAG).d("Toggling like for current track. Current state: ${_isLiked.value}")
+
+            // Llamar al servicio para cambiar el estado en la base de datos
             service.toggleLike()
+
             // Actualizar estado local
             _isLiked.value = !_isLiked.value
+
+            // Notificar cambios al widget
+            scheduleWidgetUpdate()
+
+            Log.d(TAG, "Like toggled to: ${_isLiked.value}")
         } catch (e: Exception) {
             Log.e(TAG, "Error toggling like", e)
             reportException(e)
         }
+    }
+
+
+    fun isCurrentSongLiked(): Boolean {
+        return _isLiked.value
     }
 
     fun seekToNext() {
@@ -495,10 +524,15 @@ class PlayerConnection(
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-        Log.d(TAG, "Media item transition: ${mediaItem?.mediaId} (reason: $reason)")
+        Timber.tag(TAG).d("Media item transition: ${mediaItem?.mediaId} (reason: $reason)")
         _mediaMetadata.value = mediaItem?.metadata
         _currentMediaItemIndex.value = player.currentMediaItemIndex
         _currentWindowIndex.value = player.getCurrentQueueIndex()
+
+        // Actualizar estado de like cuando cambia la canción
+        CoroutineScope(Dispatchers.IO).launch {
+            updateLikeStatusForCurrentSong()
+        }
 
         if (lastMediaItemIndex != player.currentMediaItemIndex) {
             lastMediaItemIndex = player.currentMediaItemIndex
@@ -507,6 +541,24 @@ class PlayerConnection(
         }
     }
 
+    private suspend fun updateLikeStatusForCurrentSong() {
+        try {
+            val currentSongId = player.currentMediaItem?.mediaId
+            if (currentSongId != null) {
+                // Consultar la base de datos para obtener el estado actual del like
+                // Similar a como lo hace Player.kt con currentSong?.song?.liked
+                val songWithInfo = database.song(currentSongId).first()
+                _isLiked.value = songWithInfo?.song?.liked ?: false
+                Timber.tag(TAG).d("Like status updated for song $currentSongId: ${_isLiked.value}")
+            } else {
+                _isLiked.value = false
+                Timber.tag(TAG).d("No current song, setting like status to false")
+            }
+        } catch (e: Exception) {
+            Timber.tag(TAG).e(e, "Error updating like status for current song")
+            _isLiked.value = false
+        }
+    }
     override fun onTimelineChanged(timeline: Timeline, reason: Int) {
         Log.d(TAG, "Timeline changed (reason: $reason)")
         _queueWindows.value = player.getQueueWindows()

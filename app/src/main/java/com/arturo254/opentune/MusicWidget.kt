@@ -7,6 +7,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.widget.RemoteViews
@@ -23,6 +24,7 @@ import java.util.concurrent.TimeUnit
 class MusicWidget : AppWidgetProvider() {
     private val handler = Handler(Looper.getMainLooper())
     private lateinit var runnable: Runnable
+    private var isUpdating = false
 
     override fun onUpdate(
         context: Context,
@@ -89,6 +91,9 @@ class MusicWidget : AppWidgetProvider() {
     }
 
     private fun startProgressUpdater(context: Context) {
+        if (isUpdating) return
+
+        isUpdating = true
         runnable = Runnable {
             updateAllWidgets(context)
             handler.postDelayed(runnable, 1000)
@@ -97,6 +102,7 @@ class MusicWidget : AppWidgetProvider() {
     }
 
     private fun stopProgressUpdater() {
+        isUpdating = false
         handler.removeCallbacks(runnable)
     }
 
@@ -127,48 +133,74 @@ class MusicWidget : AppWidgetProvider() {
             val playerConnection = PlayerConnection.instance
             val player = playerConnection?.player
 
-            player?.let { it ->
+            player?.let { player ->
+                // Información de la canción
+                val songTitle = player.mediaMetadata.title?.toString()
+                    ?: context.getString(R.string.song_title)
+                val artist = player.mediaMetadata.artist?.toString()
+                    ?: context.getString(R.string.artist_name)
 
-                val playPauseIcon = if (it.playWhenReady) R.drawable.pause else R.drawable.play
+                views.setTextViewText(R.id.widget_song_title, songTitle)
+                views.setTextViewText(R.id.widget_artist, artist)
+
+                // Controles
+                val playPauseIcon = if (player.playWhenReady) R.drawable.pause else R.drawable.play
                 views.setImageViewResource(R.id.widget_play_pause, playPauseIcon)
-                val shuffleIcon =
-                    if (it.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle
+
+                val shuffleIcon = if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle
                 views.setImageViewResource(R.id.widget_shuffle, shuffleIcon)
-                val likeIcon = R.drawable.favorite
+
+                val likeIcon = if (playerConnection.isCurrentSongLiked())
+                    R.drawable.favorite else R.drawable.favorite_border
                 views.setImageViewResource(R.id.widget_like, likeIcon)
-                if (it.repeatMode == Player.REPEAT_MODE_ONE) {
-                    views.setInt(
-                        R.id.widget_play_pause,
-                        "setColorFilter",
-                        context.getColor(R.color.light_blue_50)
-                    )
-                } else {
-                    views.setInt(
-                        R.id.widget_play_pause,
-                        "setColorFilter",
-                        context.getColor(android.R.color.transparent)
-                    )
-                }
-                val currentPos = formatTime(it.currentPosition)
-                val duration = formatTime(it.duration)
-                val progress = if (it.duration > 0) {
-                    (it.currentPosition * 100 / it.duration).toInt()
+
+                // Progress y tiempos
+                val currentPos = player.currentPosition
+                val duration = player.duration
+                val currentTimeText = formatTime(currentPos)
+                val durationText = formatTime(duration)
+
+                views.setTextViewText(R.id.widget_current_time, currentTimeText)
+                views.setTextViewText(R.id.widget_duration, durationText)
+
+                // Progress bar
+                val progress = if (duration > 0) {
+                    (currentPos * 100 / duration).toInt()
                 } else 0
-                val thumbnailUrl = it.mediaMetadata.artworkUri?.toString()
+                views.setProgressBar(R.id.widget_progress_bar, 100, progress, false)
+
+                // Estado de reproducción
+                val playbackStateText = when {
+                    player.repeatMode == Player.REPEAT_MODE_ONE -> context.getString(R.string.repeat_mode_one)
+                    player.repeatMode == Player.REPEAT_MODE_ALL -> context.getString(R.string.repeat_mode_all)
+                    else -> ""
+                }
+
+                if (playbackStateText.isNotEmpty()) {
+                    views.setTextViewText(R.id.widget_playback_state, playbackStateText)
+                    views.setViewVisibility(R.id.widget_playback_state, android.view.View.VISIBLE)
+                } else {
+                    views.setViewVisibility(R.id.widget_playback_state, android.view.View.GONE)
+                }
+
+                // Album art con manejo de errores mejorado
+                val thumbnailUrl = player.mediaMetadata.artworkUri?.toString()
                 if (!thumbnailUrl.isNullOrEmpty()) {
                     CoroutineScope(Dispatchers.IO).launch {
                         try {
                             val request = ImageRequest.Builder(context)
                                 .data(thumbnailUrl)
+                                .size(160, 160) // Optimizado para el widget
                                 .build()
                             val drawable = ImageLoader(context).execute(request).drawable
                             drawable?.let {
                                 views.setImageViewBitmap(R.id.widget_album_art, it.toBitmap())
-                                appWidgetManager.updateAppWidget(appWidgetId, views)
+                                appWidgetManager.partiallyUpdateAppWidget(appWidgetId, views)
                             }
                         } catch (e: Exception) {
+                            // Fallback a imagen por defecto
                             views.setImageViewResource(R.id.widget_album_art, R.drawable.music_note)
-                            appWidgetManager.updateAppWidget(appWidgetId, views)
+                            appWidgetManager.partiallyUpdateAppWidget(appWidgetId, views)
                         }
                     }
                 } else {
@@ -176,41 +208,42 @@ class MusicWidget : AppWidgetProvider() {
                 }
             }
 
-            views.setOnClickPendingIntent(
-                R.id.widget_play_pause,
-                getBroadcastPendingIntent(context, ACTION_PLAY_PAUSE)
-            )
-            views.setOnClickPendingIntent(
-                R.id.widget_prev,
-                getBroadcastPendingIntent(context, ACTION_PREV)
-            )
-            views.setOnClickPendingIntent(
-                R.id.widget_next,
-                getBroadcastPendingIntent(context, ACTION_NEXT)
-            )
-            views.setOnClickPendingIntent(
-                R.id.widget_shuffle,
-                getBroadcastPendingIntent(context, ACTION_SHUFFLE)
-            )
-            views.setOnClickPendingIntent(
-                R.id.widget_like,
-                getBroadcastPendingIntent(context, ACTION_LIKE)
-            )
+            // Pending Intents
+            setPendingIntents(context, views)
 
+            // Actualizar widget
             appWidgetManager.updateAppWidget(appWidgetId, views)
+        }
+
+        private fun setPendingIntents(context: Context, views: RemoteViews) {
+            val playPausePendingIntent = getBroadcastPendingIntent(context, ACTION_PLAY_PAUSE)
+            val prevPendingIntent = getBroadcastPendingIntent(context, ACTION_PREV)
+            val nextPendingIntent = getBroadcastPendingIntent(context, ACTION_NEXT)
+            val shufflePendingIntent = getBroadcastPendingIntent(context, ACTION_SHUFFLE)
+            val likePendingIntent = getBroadcastPendingIntent(context, ACTION_LIKE)
+
+            views.setOnClickPendingIntent(R.id.widget_play_pause, playPausePendingIntent)
+            views.setOnClickPendingIntent(R.id.widget_prev, prevPendingIntent)
+            views.setOnClickPendingIntent(R.id.widget_next, nextPendingIntent)
+            views.setOnClickPendingIntent(R.id.widget_shuffle, shufflePendingIntent)
+            views.setOnClickPendingIntent(R.id.widget_like, likePendingIntent)
+
+            // Click en el album art también reproduce/pausa
+            views.setOnClickPendingIntent(R.id.widget_album_art, playPausePendingIntent)
         }
 
         private fun getBroadcastPendingIntent(context: Context, action: String): PendingIntent {
             val intent = Intent(context, MusicWidget::class.java).apply {
                 this.action = action
-                flags = Intent.FLAG_RECEIVER_FOREGROUND
             }
-            return PendingIntent.getBroadcast(
-                context,
-                action.hashCode(),
-                intent,
+
+            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }
+
+            return PendingIntent.getBroadcast(context, action.hashCode(), intent, flags)
         }
 
         @SuppressLint("DefaultLocale")
