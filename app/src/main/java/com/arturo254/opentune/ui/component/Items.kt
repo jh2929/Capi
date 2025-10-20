@@ -722,7 +722,7 @@ fun ArtistGridItem(
                 .fillMaxSize()
                 .clip(RoundedCornerShape(ThumbnailCornerRadius)),
 
-        )
+            )
     },
     thumbnailShape = CircleShape,
     fillMaxWidth = fillMaxWidth,

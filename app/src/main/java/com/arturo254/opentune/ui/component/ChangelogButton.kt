@@ -197,6 +197,7 @@ fun ChangelogScreen(viewModel: ChangelogViewModel = viewModel()) {
                     onRetry = { viewModel.loadChangelog("Arturo254", "OpenTune") }
                 )
             }
+
             ChangelogTab.COMMITS -> {
                 CommitsContent(
                     commits = uiState.commits,

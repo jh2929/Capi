@@ -1,6 +1,5 @@
 package com.arturo254.opentune.ui.component
 
-import android.net.Uri
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,13 +21,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.arturo254.opentune.R
-import androidx.core.net.toUri
 
 /**
- * Componente para mostrar el avatar del usuario en cualquier parte de la app
+ * Componente para mostrar el avatar del usuario en cualquier parte de la
+ * app
  */
 @Composable
 fun AvatarDisplay(
@@ -67,12 +67,13 @@ fun AvatarDisplay(
                         .error(R.drawable.person)
                         .placeholder(R.drawable.person)
                         .build(),
-                    contentDescription = contentDescription ?: stringResource(id = R.string.custom_avatar),
+                    contentDescription = contentDescription
+                        ?: stringResource(id = R.string.custom_avatar),
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
             }
-            
+
             is AvatarSelection.DiceBear -> {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
@@ -86,7 +87,7 @@ fun AvatarDisplay(
                     contentScale = ContentScale.Crop
                 )
             }
-            
+
             else -> {
                 DefaultAvatarIcon(contentDescription = contentDescription)
             }
@@ -94,9 +95,7 @@ fun AvatarDisplay(
     }
 }
 
-/**
- * Variante pequeña para usar en listas o elementos compactos
- */
+/** Variante pequeña para usar en listas o elementos compactos */
 @Composable
 fun SmallAvatarDisplay(
     modifier: Modifier = Modifier,
@@ -110,9 +109,7 @@ fun SmallAvatarDisplay(
     )
 }
 
-/**
- * Variante grande para perfiles o pantallas principales
- */
+/** Variante grande para perfiles o pantallas principales */
 @Composable
 fun LargeAvatarDisplay(
     modifier: Modifier = Modifier,
@@ -128,9 +125,7 @@ fun LargeAvatarDisplay(
     )
 }
 
-/**
- * Avatar con indicador de estado online/offline
- */
+/** Avatar con indicador de estado online/offline */
 @Composable
 fun AvatarWithStatus(
     isOnline: Boolean = true,
@@ -144,7 +139,7 @@ fun AvatarWithStatus(
             showBorder = true,
             contentDescription = contentDescription
         )
-        
+
         // Indicador de estado
         if (isOnline) {
             Box(
@@ -176,9 +171,7 @@ fun AvatarWithStatus(
     }
 }
 
-/**
- * Icono de avatar por defecto
- */
+/** Icono de avatar por defecto */
 @Composable
 private fun DefaultAvatarIcon(contentDescription: String? = null) {
     Icon(
@@ -190,54 +183,43 @@ private fun DefaultAvatarIcon(contentDescription: String? = null) {
 }
 
 /**
- * Utilidad para obtener el avatar actual de manera síncrona (para casos especiales)
+ * Utilidad para obtener el avatar actual de manera síncrona (para casos
+ * especiales)
  */
 class AvatarUtils {
     companion object {
-        /**
-         * Obtiene la URI del avatar personalizado si está seleccionado
-         */
+        /** Obtiene la URI del avatar personalizado si está seleccionado */
         fun getCustomAvatarUri(selection: AvatarSelection): String? {
             return when (selection) {
                 is AvatarSelection.Custom -> selection.uri
                 else -> null
             }
         }
-        
-        /**
-         * Obtiene la URL del avatar DiceBear si está seleccionado
-         */
+
+        /** Obtiene la URL del avatar DiceBear si está seleccionado */
         fun getDiceBearAvatarUrl(selection: AvatarSelection): String? {
             return when (selection) {
                 is AvatarSelection.DiceBear -> selection.url
                 else -> null
             }
         }
-        
-        /**
-         * Verifica si el avatar actual es personalizado
-         */
+
+        /** Verifica si el avatar actual es personalizado */
         fun isCustomAvatar(selection: AvatarSelection): Boolean {
             return selection is AvatarSelection.Custom
         }
-        
-        /**
-         * Verifica si el avatar actual es DiceBear
-         */
+
+        /** Verifica si el avatar actual es DiceBear */
         fun isDiceBearAvatar(selection: AvatarSelection): Boolean {
             return selection is AvatarSelection.DiceBear
         }
-        
-        /**
-         * Verifica si el avatar actual es por defecto
-         */
+
+        /** Verifica si el avatar actual es por defecto */
         fun isDefaultAvatar(selection: AvatarSelection): Boolean {
             return selection is AvatarSelection.Default
         }
-        
-        /**
-         * Obtiene la URL o URI del avatar actual
-         */
+
+        /** Obtiene la URL o URI del avatar actual */
         fun getAvatarSource(selection: AvatarSelection): String? {
             return when (selection) {
                 is AvatarSelection.Custom -> selection.uri

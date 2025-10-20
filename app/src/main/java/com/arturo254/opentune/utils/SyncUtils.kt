@@ -82,6 +82,7 @@ class SyncUtils @Inject constructor(
                                 database.update(it.album.localToggleLike())
                             }
                         }
+
                         else -> if (dbAlbum.album.bookmarkedAt == null)
                             database.update(dbAlbum.album.localToggleLike())
                     }
@@ -113,6 +114,7 @@ class SyncUtils @Inject constructor(
                                 )
                             )
                         }
+
                         else -> if (dbArtist.artist.bookmarkedAt == null)
                             update(dbArtist.artist.localToggleLike())
                     }
@@ -124,7 +126,7 @@ class SyncUtils @Inject constructor(
     suspend fun syncSavedPlaylists() {
         YouTube.library("FEmusic_liked_playlists").completedLibraryPage().onSuccess { page ->
             val playlistList = page.items.filterIsInstance<PlaylistItem>()
-                .filterNot { it.id == "LM" ||  it.id == "SE" }
+                .filterNot { it.id == "LM" || it.id == "SE" }
                 .reversed()
             val dbPlaylists = database.playlistsByNameAsc().first()
 
@@ -133,7 +135,8 @@ class SyncUtils @Inject constructor(
                 .forEach { database.update(it.playlist.localToggleLike()) }
 
             playlistList.onEach { playlist ->
-                var playlistEntity = dbPlaylists.find { playlist.id == it.playlist.browseId }?.playlist
+                var playlistEntity =
+                    dbPlaylists.find { playlist.id == it.playlist.browseId }?.playlist
                 if (playlistEntity == null) {
                     playlistEntity = PlaylistEntity(
                         name = playlist.title,

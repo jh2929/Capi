@@ -147,7 +147,8 @@ class MusicWidget : AppWidgetProvider() {
                 val playPauseIcon = if (player.playWhenReady) R.drawable.pause else R.drawable.play
                 views.setImageViewResource(R.id.widget_play_pause, playPauseIcon)
 
-                val shuffleIcon = if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle
+                val shuffleIcon =
+                    if (player.shuffleModeEnabled) R.drawable.shuffle_on else R.drawable.shuffle
                 views.setImageViewResource(R.id.widget_shuffle, shuffleIcon)
 
                 val likeIcon = if (playerConnection.isCurrentSongLiked())

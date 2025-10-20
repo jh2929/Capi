@@ -764,7 +764,10 @@ class MusicService :
         val audioSessionId = player.audioSessionId
 
         if (audioSessionId == C.AUDIO_SESSION_ID_UNSET || audioSessionId <= 0) {
-            Log.w(TAG, "setupLoudnessEnhancer: invalid audioSessionId ($audioSessionId), cannot create effect yet")
+            Log.w(
+                TAG,
+                "setupLoudnessEnhancer: invalid audioSessionId ($audioSessionId), cannot create effect yet"
+            )
             return
         }
 
@@ -811,13 +814,19 @@ class MusicService :
                             }
                         } else {
                             loudnessEnhancer?.enabled = false
-                            Log.w(TAG, "setupLoudnessEnhancer: loudnessDb is null, enhancer disabled")
+                            Log.w(
+                                TAG,
+                                "setupLoudnessEnhancer: loudnessDb is null, enhancer disabled"
+                            )
                         }
                     }
                 } else {
                     withContext(Dispatchers.Main) {
                         loudnessEnhancer?.enabled = false
-                        Log.d(TAG, "setupLoudnessEnhancer: normalization disabled or mediaId unavailable")
+                        Log.d(
+                            TAG,
+                            "setupLoudnessEnhancer: normalization disabled or mediaId unavailable"
+                        )
                     }
                 }
             } catch (e: Exception) {

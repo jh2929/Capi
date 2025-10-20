@@ -4,15 +4,15 @@ import android.content.ContentValues
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.graphics.Rect
 import android.graphics.RectF
-import android.graphics.Typeface
-import android.graphics.LinearGradient
 import android.graphics.Shader
+import android.graphics.Typeface
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -24,7 +24,6 @@ import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
-import androidx.core.graphics.withClip
 import androidx.core.graphics.withTranslation
 import coil.ImageLoader
 import coil.request.ImageRequest
@@ -33,7 +32,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import kotlin.math.min
 
 object ComposeToImage {
 
@@ -202,6 +200,7 @@ object ComposeToImage {
                 }
                 canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
             }
+
             "GRADIENT" -> {
                 val colors = gradientColors ?: intArrayOf(backgroundColor, backgroundColor)
                 val paint = Paint().apply {
@@ -216,6 +215,7 @@ object ComposeToImage {
                 }
                 canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
             }
+
             "PATTERN" -> {
                 // Primero el fondo sólido
                 val paint = Paint().apply {
@@ -373,7 +373,8 @@ object ComposeToImage {
 
         // Centrar verticalmente en el thumbnail
         val centerY = padding + thumbnailSize / 2f
-        val textBlockHeight = titleLayout.height + artistLayout.height + (imageSize * 0.0105f) // 4dp
+        val textBlockHeight =
+            titleLayout.height + artistLayout.height + (imageSize * 0.0105f) // 4dp
         val startY = centerY - textBlockHeight / 2f
 
         canvas.withTranslation(startX, startY) {
@@ -402,7 +403,8 @@ object ComposeToImage {
         }
 
         val maxWidth = (imageSize * 0.85f).toInt()
-        val headerHeight = if (showCoverArt) padding + thumbnailSize + (imageSize * 0.084f) else padding
+        val headerHeight =
+            if (showCoverArt) padding + thumbnailSize + (imageSize * 0.084f) else padding
         val footerHeight = imageSize * 0.148f // ~80dp para el logo
         val maxHeight = imageSize - headerHeight - footerHeight
 
@@ -439,7 +441,12 @@ object ComposeToImage {
         }
 
         // Sombra sutil
-        paint.setShadowLayer(imageSize * 0.0037f, imageSize * 0.00185f, imageSize * 0.00185f, backgroundColor)
+        paint.setShadowLayer(
+            imageSize * 0.0037f,
+            imageSize * 0.00185f,
+            imageSize * 0.00185f,
+            backgroundColor
+        )
 
         val posX = (imageSize - layout.width) / 2f
         val availableHeight = imageSize - headerHeight - footerHeight
@@ -466,7 +473,11 @@ object ComposeToImage {
         // Posición del logo
         val (logoX, logoY) = when (logoPosition) {
             "BOTTOM_LEFT" -> Pair(padding, imageSize - padding - logoSize)
-            "BOTTOM_RIGHT" -> Pair(imageSize - padding - logoSize - (imageSize * 0.185f), imageSize - padding - logoSize)
+            "BOTTOM_RIGHT" -> Pair(
+                imageSize - padding - logoSize - (imageSize * 0.185f),
+                imageSize - padding - logoSize
+            )
+
             "TOP_LEFT" -> Pair(padding, padding)
             "TOP_RIGHT" -> Pair(imageSize - padding - logoSize - (imageSize * 0.185f), padding)
             else -> Pair(padding, imageSize - padding - logoSize)

@@ -3,28 +3,21 @@ package com.arturo254.opentune.ui.component
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.res.Configuration
-import android.graphics.drawable.BitmapDrawable
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColor
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -55,12 +48,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BasicAlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -69,7 +59,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -94,11 +83,9 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -109,9 +96,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Velocity
@@ -124,12 +109,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.Player.STATE_ENDED
-import androidx.palette.graphics.Palette
-import coil.ImageLoader
 import coil.compose.AsyncImage
-import coil.compose.AsyncImagePainter
-import coil.compose.rememberAsyncImagePainter
-import coil.request.ImageRequest
 import com.arturo254.opentune.LocalDatabase
 import com.arturo254.opentune.LocalPlayerConnection
 import com.arturo254.opentune.R
@@ -147,7 +127,6 @@ import com.arturo254.opentune.db.entities.LyricsEntity.Companion.LYRICS_NOT_FOUN
 import com.arturo254.opentune.extensions.togglePlayPause
 import com.arturo254.opentune.extensions.toggleRepeatMode
 import com.arturo254.opentune.lyrics.LyricsEntry
-import com.arturo254.opentune.lyrics.LyricsEntry.Companion.HEAD_LYRICS_ENTRY
 import com.arturo254.opentune.lyrics.LyricsUtils.findCurrentLineIndex
 import com.arturo254.opentune.lyrics.LyricsUtils.parseLyrics
 import com.arturo254.opentune.ui.component.shimmer.ShimmerHost
@@ -156,7 +135,6 @@ import com.arturo254.opentune.ui.menu.LyricsMenu
 import com.arturo254.opentune.ui.screens.settings.DarkMode
 import com.arturo254.opentune.ui.screens.settings.LyricsPosition
 import com.arturo254.opentune.ui.utils.fadingEdge
-import com.arturo254.opentune.utils.ComposeToImage
 import com.arturo254.opentune.utils.makeTimeString
 import com.arturo254.opentune.utils.rememberEnumPreference
 import com.arturo254.opentune.utils.rememberPreference
@@ -232,7 +210,6 @@ fun Lyrics(
         mutableStateOf<LyricsEntity?>(lyricsCache[currentSongId])
     }
     var isLoadingLyrics by remember(currentSongId) { mutableStateOf(false) }
-
 
 
     val lyricsEntity by playerConnection.currentLyrics.collectAsState(initial = null)
@@ -335,7 +312,6 @@ fun Lyrics(
     }
 
 
-
     // AGREGAR este LaunchedEffect justo después de definir 'lines'
     LaunchedEffect(lines) {
         isSelectionModeActive = false
@@ -371,6 +347,7 @@ fun Lyrics(
                 isSelectionModeActive = false
                 selectedIndices.clear()
             }
+
             isFullscreen -> onNavigateBack?.invoke()
         }
     }
@@ -457,7 +434,6 @@ fun Lyrics(
     }
 
 
-
     // REEMPLAZAR tu LaunchedEffect(currentLineIndex...) con:
     LaunchedEffect(currentLineIndex, lastPreviewTime, initialScrollDone) {
         if (!isSynced) return@LaunchedEffect
@@ -490,11 +466,11 @@ fun Lyrics(
             }
         }
 
-        if((currentLineIndex == 0 && shouldScrollToFirstLine) || !initialScrollDone) {
+        if ((currentLineIndex == 0 && shouldScrollToFirstLine) || !initialScrollDone) {
             shouldScrollToFirstLine = false
             val initialCenterIndex = kotlin.math.max(0, currentLineIndex)
             performSmoothPageScroll(initialCenterIndex, 800)
-            if(!isAppMinimized) {
+            if (!isAppMinimized) {
                 initialScrollDone = true
             }
         } else if (currentLineIndex != -1) {
@@ -508,7 +484,7 @@ fun Lyrics(
                 }
             }
         }
-        if(currentLineIndex > 0) {
+        if (currentLineIndex > 0) {
             shouldScrollToFirstLine = true
         }
         previousLineIndex = currentLineIndex
@@ -650,7 +626,8 @@ fun Lyrics(
                                             shareDialogData = Triple(
                                                 selectedLyricsText,
                                                 mediaMetadata?.title ?: "",
-                                                mediaMetadata?.artists?.joinToString { it.name } ?: ""
+                                                mediaMetadata?.artists?.joinToString { it.name }
+                                                    ?: ""
                                             )
                                             showShareDialog = true
                                         }
@@ -741,7 +718,9 @@ fun Lyrics(
                                     },
                                     colors = SliderDefaults.colors(
                                         activeTrackColor = MaterialTheme.colorScheme.primary,
-                                        inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                        inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(
+                                            alpha = 0.3f
+                                        ),
                                         thumbColor = MaterialTheme.colorScheme.primary
                                     ),
                                     modifier = Modifier.fillMaxWidth()
@@ -762,7 +741,9 @@ fun Lyrics(
                                     },
                                     colors = SliderDefaults.colors(
                                         activeTrackColor = MaterialTheme.colorScheme.primary,
-                                        inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                        inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(
+                                            alpha = 0.3f
+                                        ),
                                         thumbColor = MaterialTheme.colorScheme.primary
                                     ),
                                     modifier = Modifier.fillMaxWidth(),
@@ -791,7 +772,9 @@ fun Lyrics(
                                             sliderState = sliderState,
                                             colors = SliderDefaults.colors(
                                                 activeTrackColor = MaterialTheme.colorScheme.primary,
-                                                inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                                inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(
+                                                    alpha = 0.3f
+                                                )
                                             )
                                         )
                                     },
@@ -997,7 +980,10 @@ fun Lyrics(
                         )
 
                         Text(
-                            text = stringResource(R.string.selection_mode_active, selectedIndices.size),
+                            text = stringResource(
+                                R.string.selection_mode_active,
+                                selectedIndices.size
+                            ),
                             color = MaterialTheme.colorScheme.inverseOnSurface,
                             style = MaterialTheme.typography.labelLarge
                         )
@@ -1098,7 +1084,7 @@ fun Lyrics(
                                 }
                             }
                         }
-                    }  else {
+                    } else {
                         itemsIndexed(
                             items = lines,
                             key = { index, item -> "$index-${item.time}" }
@@ -1128,14 +1114,18 @@ fun Lyrics(
                                             playerConnection.player.seekTo(item.time)
                                             scope.launch {
                                                 lazyListState.scrollToItem(index)
-                                                val itemInfo = lazyListState.layoutInfo.visibleItemsInfo
-                                                    .firstOrNull { it.index == index }
+                                                val itemInfo =
+                                                    lazyListState.layoutInfo.visibleItemsInfo
+                                                        .firstOrNull { it.index == index }
                                                 if (itemInfo != null) {
-                                                    val viewportHeight = lazyListState.layoutInfo.viewportEndOffset -
-                                                            lazyListState.layoutInfo.viewportStartOffset
-                                                    val center = lazyListState.layoutInfo.viewportStartOffset +
-                                                            (viewportHeight / 2)
-                                                    val itemCenter = itemInfo.offset + itemInfo.size / 2
+                                                    val viewportHeight =
+                                                        lazyListState.layoutInfo.viewportEndOffset -
+                                                                lazyListState.layoutInfo.viewportStartOffset
+                                                    val center =
+                                                        lazyListState.layoutInfo.viewportStartOffset +
+                                                                (viewportHeight / 2)
+                                                    val itemCenter =
+                                                        itemInfo.offset + itemInfo.size / 2
                                                     val offset = itemCenter - center
 
                                                     if (kotlin.math.abs(offset) > 10) {
@@ -1184,7 +1174,8 @@ fun Lyrics(
                                     }
                                 )
                                 .graphicsLayer {
-                                    val distance = kotlin.math.abs(index - displayedCurrentLineIndex)
+                                    val distance =
+                                        kotlin.math.abs(index - displayedCurrentLineIndex)
                                     val scale = when {
                                         !isSynced || index == displayedCurrentLineIndex -> 1f
                                         distance == 1 -> 0.95f
@@ -1483,7 +1474,8 @@ private fun ShareLyricsDialog(
                             val shareIntent = Intent().apply {
                                 action = Intent.ACTION_SEND
                                 type = "text/plain"
-                                val songLink = "https://music.youtube.com/watch?v=${mediaMetadata?.id}"
+                                val songLink =
+                                    "https://music.youtube.com/watch?v=${mediaMetadata?.id}"
                                 putExtra(
                                     Intent.EXTRA_TEXT,
                                     "\"$lyricsText\"\n\n$songTitle - $artists\n$songLink"
@@ -1557,7 +1549,6 @@ private fun ShareLyricsDialog(
         }
     }
 }
-
 
 
 // Constante de tiempo de vista previa

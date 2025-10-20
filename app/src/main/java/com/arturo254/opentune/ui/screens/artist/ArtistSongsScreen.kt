@@ -53,7 +53,6 @@ import com.arturo254.opentune.constants.ArtistSongSortDescendingKey
 import com.arturo254.opentune.constants.ArtistSongSortType
 import com.arturo254.opentune.constants.ArtistSongSortTypeKey
 import com.arturo254.opentune.constants.CONTENT_TYPE_HEADER
-import com.arturo254.opentune.db.entities.Song
 import com.arturo254.opentune.extensions.toMediaItem
 import com.arturo254.opentune.extensions.togglePlayPause
 import com.arturo254.opentune.playback.queues.ListQueue
@@ -118,7 +117,8 @@ fun ArtistSongsScreen(
     } else {
         wrappedSongs.filter { wrapper ->
             wrapper.item.song.title.contains(searchQueryStr, ignoreCase = true) ||
-                    wrapper.item.artists.joinToString("").contains(searchQueryStr, ignoreCase = true)
+                    wrapper.item.artists.joinToString("")
+                        .contains(searchQueryStr, ignoreCase = true)
         }
     }
 
@@ -256,6 +256,7 @@ fun ArtistSongsScreen(
                             style = MaterialTheme.typography.titleLarge
                         )
                     }
+
                     isSearching -> {
                         TextField(
                             value = searchQuery,
@@ -281,6 +282,7 @@ fun ArtistSongsScreen(
                                 .focusRequester(focusRequester)
                         )
                     }
+
                     else -> {
                         Text(artist?.artist?.name.orEmpty())
                     }
@@ -294,10 +296,12 @@ fun ArtistSongsScreen(
                                 isSearching = false
                                 searchQuery = TextFieldValue()
                             }
+
                             selection -> {
                                 selection = false
                                 wrappedSongs.forEach { it.isSelected = false }
                             }
+
                             else -> navController.navigateUp()
                         }
                     },
@@ -364,6 +368,7 @@ fun ArtistSongsScreen(
                             )
                         }
                     }
+
                     !isSearching -> {
                         // Botón de búsqueda
                         IconButton(

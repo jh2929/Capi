@@ -145,7 +145,8 @@ fun VerticalFastScroller(
                 if (layoutInfo.totalItemsCount == 0 || !isThumbDragged) return@LaunchedEffect
                 val scrollRatio = (thumbOffsetY - thumbTopPadding) / trackHeightPx
                 val scrollItem = layoutInfo.totalItemsCount * scrollRatio
-                val scrollItemRounded = scrollItem.roundToInt().coerceIn(0, layoutInfo.totalItemsCount - 1)
+                val scrollItemRounded =
+                    scrollItem.roundToInt().coerceIn(0, layoutInfo.totalItemsCount - 1)
 
                 // Mejora: Cálculo más preciso del offset dentro del item
                 val scrollItemSize = layoutInfo.visibleItemsInfo
@@ -175,7 +176,10 @@ fun VerticalFastScroller(
             }
 
             // When list scrolled - Optimizado para máxima fluidez
-            LaunchedEffect(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) {
+            LaunchedEffect(
+                listState.firstVisibleItemIndex,
+                listState.firstVisibleItemScrollOffset
+            ) {
                 if (listState.layoutInfo.totalItemsCount == 0 || isThumbDragged) return@LaunchedEffect
 
                 // Usar snapshotFlow para mejor rendimiento
@@ -193,11 +197,13 @@ fun VerticalFastScroller(
 
                     if (scrollRange > heightPx) {
                         val proportion = scrollOffset.toFloat() / (scrollRange.toFloat() - heightPx)
-                        val newThumbOffset = (trackHeightPx * proportion.coerceIn(0f, 1f) + thumbTopPadding)
+                        val newThumbOffset =
+                            (trackHeightPx * proportion.coerceIn(0f, 1f) + thumbTopPadding)
 
                         // Interpolación suave para reducir jank
                         val smoothFactor = 0.8f
-                        thumbOffsetY = thumbOffsetY * (1f - smoothFactor) + newThumbOffset * smoothFactor
+                        thumbOffsetY =
+                            thumbOffsetY * (1f - smoothFactor) + newThumbOffset * smoothFactor
                         scrolled.tryEmit(Unit)
                     }
                 }

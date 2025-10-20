@@ -83,7 +83,7 @@ fun LibraryPlaylistsScreen(
     initialTextFieldValue: String? = null,
     allowSyncing: Boolean = true,
 
-) {
+    ) {
     val menuState = LocalMenuState.current
     LocalHapticFeedback.current
 

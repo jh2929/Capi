@@ -14,7 +14,16 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -24,8 +33,33 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SheetValue
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -165,7 +199,8 @@ fun ShareLyricsDialog(
                             val shareIntent = Intent().apply {
                                 action = Intent.ACTION_SEND
                                 type = "text/plain"
-                                val songLink = "https://music.youtube.com/watch?v=${mediaMetadata?.id}"
+                                val songLink =
+                                    "https://music.youtube.com/watch?v=${mediaMetadata?.id}"
                                 putExtra(
                                     Intent.EXTRA_TEXT,
                                     "\"$lyricsText\"\n\n$songTitle - $artists\n$songLink"
@@ -331,12 +366,18 @@ fun ShareLyricsImageCustomizationSheet(
                         val bitmap = drawable.toBitmap()
                         val palette = Palette.from(bitmap).generate()
                         val colors = listOfNotNull(
-                            palette.getLightVibrantColor(Color.Black.toArgb()).takeIf { it != Color.Black.toArgb() },
-                            palette.getVibrantColor(Color.Black.toArgb()).takeIf { it != Color.Black.toArgb() },
-                            palette.getDarkVibrantColor(Color.Black.toArgb()).takeIf { it != Color.Black.toArgb() },
-                            palette.getLightMutedColor(Color.Black.toArgb()).takeIf { it != Color.Black.toArgb() },
-                            palette.getMutedColor(Color.Black.toArgb()).takeIf { it != Color.Black.toArgb() },
-                            palette.getDarkMutedColor(Color.Black.toArgb()).takeIf { it != Color.Black.toArgb() }
+                            palette.getLightVibrantColor(Color.Black.toArgb())
+                                .takeIf { it != Color.Black.toArgb() },
+                            palette.getVibrantColor(Color.Black.toArgb())
+                                .takeIf { it != Color.Black.toArgb() },
+                            palette.getDarkVibrantColor(Color.Black.toArgb())
+                                .takeIf { it != Color.Black.toArgb() },
+                            palette.getLightMutedColor(Color.Black.toArgb())
+                                .takeIf { it != Color.Black.toArgb() },
+                            palette.getMutedColor(Color.Black.toArgb())
+                                .takeIf { it != Color.Black.toArgb() },
+                            palette.getDarkMutedColor(Color.Black.toArgb())
+                                .takeIf { it != Color.Black.toArgb() }
                         ).map { Color(it) }.distinct()
 
                         if (colors.isNotEmpty()) {
@@ -440,7 +481,9 @@ fun ShareLyricsImageCustomizationSheet(
                         ) {
                             Icon(
                                 imageVector = if (isPresetSelectorExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = if (isPresetSelectorExpanded) stringResource(R.string.collapse) else stringResource(R.string.expand),
+                                contentDescription = if (isPresetSelectorExpanded) stringResource(R.string.collapse) else stringResource(
+                                    R.string.expand
+                                ),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -469,7 +512,9 @@ fun ShareLyricsImageCustomizationSheet(
                                         val customization = ImageCustomization(
                                             backgroundColor = color,
                                             textColor = if (color.isDark()) Color.White else Color.Black,
-                                            secondaryTextColor = if (color.isDark()) Color.White.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.7f),
+                                            secondaryTextColor = if (color.isDark()) Color.White.copy(
+                                                alpha = 0.7f
+                                            ) else Color.Black.copy(alpha = 0.7f),
                                             isDark = color.isDark()
                                         )
                                         BottomSheetColorCustomizationItem(
@@ -825,7 +870,8 @@ fun ShareLyricsImageCustomizationSheet(
                                     showCoverArt = selectedCustomization.showCoverArt,
                                     showLogo = selectedCustomization.showLogo,
                                     backgroundStyle = selectedCustomization.backgroundStyle.name,
-                                    gradientColors = selectedCustomization.gradientColors?.map { it.toArgb() }?.toIntArray(),
+                                    gradientColors = selectedCustomization.gradientColors?.map { it.toArgb() }
+                                        ?.toIntArray(),
                                     fontStyle = selectedCustomization.fontStyle.name,
                                     logoPosition = selectedCustomization.logoPosition.name,
                                     cornerRadius = selectedCustomization.cornerRadius,
@@ -913,7 +959,8 @@ fun BottomSheetColorCustomizationItem(
                 .clip(RoundedCornerShape(12.dp))
                 .background(
                     brush = if (customization.backgroundStyle == BackgroundStyle.GRADIENT
-                        && customization.gradientColors != null) {
+                        && customization.gradientColors != null
+                    ) {
                         Brush.linearGradient(customization.gradientColors)
                     } else {
                         Brush.linearGradient(
@@ -926,7 +973,9 @@ fun BottomSheetColorCustomizationItem(
                 )
                 .border(
                     width = if (isSelected) 2.dp else 1.dp,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.3f),
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray.copy(
+                        alpha = 0.3f
+                    ),
                     shape = RoundedCornerShape(12.dp)
                 ),
             contentAlignment = Alignment.Center

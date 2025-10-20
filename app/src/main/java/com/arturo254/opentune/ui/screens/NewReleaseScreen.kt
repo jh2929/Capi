@@ -99,7 +99,8 @@ fun NewReleaseScreen(
                     start = 16.dp,
                     end = 16.dp,
                     top = paddingValues.calculateTopPadding() + 8.dp,
-                    bottom = LocalPlayerAwareWindowInsets.current.asPaddingValues().calculateBottomPadding() + 16.dp
+                    bottom = LocalPlayerAwareWindowInsets.current.asPaddingValues()
+                        .calculateBottomPadding() + 16.dp
                 ),
                 modifier = Modifier.fillMaxSize()
             ) {
@@ -141,7 +142,8 @@ fun NewReleaseScreen(
                     start = 16.dp,
                     end = 16.dp,
                     top = paddingValues.calculateTopPadding() + 8.dp,
-                    bottom = LocalPlayerAwareWindowInsets.current.asPaddingValues().calculateBottomPadding() + 16.dp
+                    bottom = LocalPlayerAwareWindowInsets.current.asPaddingValues()
+                        .calculateBottomPadding() + 16.dp
                 ),
                 modifier = Modifier.fillMaxSize()
             ) {

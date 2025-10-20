@@ -91,9 +91,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.Locale
 
 
-/**
- * Modelo de datos para representar un idioma
- */
+/** Modelo de datos para representar un idioma */
 data class LanguageItem(
     val code: String,
     val displayName: String,
@@ -103,9 +101,7 @@ data class LanguageItem(
     val flag: String = "" // Emoji de bandera opcional
 )
 
-/**
- * Estado de completitud de las traducciones
- */
+/** Estado de completitud de las traducciones */
 enum class CompletionStatus(val label: String, val color: @Composable () -> Color) {
     COMPLETE("", { Color.Transparent }),
     INCOMPLETE("Traducción incompleta", { MaterialTheme.colorScheme.tertiary }),
@@ -113,9 +109,7 @@ enum class CompletionStatus(val label: String, val color: @Composable () -> Colo
     EXPERIMENTAL("Experimental", { MaterialTheme.colorScheme.secondary })
 }
 
-/**
- * Estados de la operación de cambio de idioma
- */
+/** Estados de la operación de cambio de idioma */
 sealed class LanguageChangeState {
     object Idle : LanguageChangeState()
     object Changing : LanguageChangeState()
@@ -123,9 +117,7 @@ sealed class LanguageChangeState {
     data class Error(val message: String) : LanguageChangeState()
 }
 
-/**
- * LocaleManager mejorado con mejor arquitectura, performance y UX
- */
+/** LocaleManager mejorado con mejor arquitectura, performance y UX */
 class LocaleManager private constructor(private val context: Context) {
 
     companion object {
@@ -153,10 +145,25 @@ class LocaleManager private constructor(private val context: Context) {
             "fr" to LanguageConfig("French", "Français", CompletionStatus.COMPLETE, "🇫🇷"),
             "de" to LanguageConfig("German", "Deutsch", CompletionStatus.COMPLETE, "🇩🇪"),
             "it" to LanguageConfig("Italian", "Italiano", CompletionStatus.COMPLETE, "🇮🇹"),
-            "pt-BR" to LanguageConfig("Portuguese (Brazil)", "Português (Brasil)", CompletionStatus.COMPLETE, "🇧🇷"),
+            "pt-BR" to LanguageConfig(
+                "Portuguese (Brazil)",
+                "Português (Brasil)",
+                CompletionStatus.COMPLETE,
+                "🇧🇷"
+            ),
             "ru" to LanguageConfig("Russian", "Русский", CompletionStatus.COMPLETE, "🇷🇺"),
-            "zh-CN" to LanguageConfig("Chinese (Simplified)", "简体中文", CompletionStatus.COMPLETE, "🇨🇳"),
-            "zh-TW" to LanguageConfig("Chinese (Traditional)", "繁體中文", CompletionStatus.COMPLETE, "🇹🇼"),
+            "zh-CN" to LanguageConfig(
+                "Chinese (Simplified)",
+                "简体中文",
+                CompletionStatus.COMPLETE,
+                "🇨🇳"
+            ),
+            "zh-TW" to LanguageConfig(
+                "Chinese (Traditional)",
+                "繁體中文",
+                CompletionStatus.COMPLETE,
+                "🇹🇼"
+            ),
             "ja" to LanguageConfig("Japanese", "日本語", CompletionStatus.COMPLETE, "🇯🇵"),
             "ko" to LanguageConfig("Korean", "한국어", CompletionStatus.COMPLETE, "🇰🇷"),
             "ar" to LanguageConfig("Arabic", "العربية", CompletionStatus.BETA, "🇸🇦"),
@@ -252,6 +259,7 @@ class LocaleManager private constructor(private val context: Context) {
                             else -> "zh-CN"
                         }
                     }
+
                     language == "pt" && country == "BR" -> "pt-BR"
                     else -> language
                 }
@@ -268,7 +276,8 @@ class LocaleManager private constructor(private val context: Context) {
     fun getAvailableLanguages(): List<LanguageItem> {
         return _cachedLanguages ?: run {
             val systemLanguageCode = getSystemLanguageCode()
-            val systemDisplayName = LANGUAGE_CONFIG[systemLanguageCode]?.displayName ?: systemLanguageCode
+            val systemDisplayName =
+                LANGUAGE_CONFIG[systemLanguageCode]?.displayName ?: systemLanguageCode
 
             val languages = LANGUAGE_CONFIG.map { (code, config) ->
                 LanguageItem(
@@ -334,7 +343,10 @@ class LocaleManager private constructor(private val context: Context) {
 
             _changeState.value = LanguageChangeState.Success
 
-            Log.d(TAG, "Idioma actualizado exitosamente a: $languageCode (efectivo: $effectiveLanguageCode)")
+            Log.d(
+                TAG,
+                "Idioma actualizado exitosamente a: $languageCode (efectivo: $effectiveLanguageCode)"
+            )
             true
         } catch (e: Exception) {
             Log.e(TAG, "Error actualizando idioma a $languageCode", e)
@@ -415,6 +427,7 @@ class LocaleManager private constructor(private val context: Context) {
                         Locale(parts[0])
                     }
                 }
+
                 else -> Locale(languageCode)
             }
         } catch (e: Exception) {
@@ -547,6 +560,7 @@ fun LanguageSelector(
                         showProgress = true
                     )
                 }
+
                 is LanguageChangeState.Success -> {
                     LanguageChangeIndicator(
                         text = "¡Listo! Reiniciando aplicación...",
@@ -554,6 +568,7 @@ fun LanguageSelector(
                         icon = Icons.Default.Check
                     )
                 }
+
                 is LanguageChangeState.Error -> {
                     LanguageChangeIndicator(
                         text = "Error: ${(changeState as LanguageChangeState.Error).message}",
@@ -561,6 +576,7 @@ fun LanguageSelector(
                         isError = true
                     )
                 }
+
                 else -> Unit
             }
 
@@ -642,6 +658,7 @@ private fun LanguageChangeIndicator(
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
+
                     icon != null -> {
                         Icon(
                             imageVector = icon,
@@ -1007,7 +1024,8 @@ fun CurrentLanguageInfo(
 
                     if (language.nativeName.isNotEmpty() &&
                         language.nativeName != language.displayName &&
-                        !language.isSystemDefault) {
+                        !language.isSystemDefault
+                    ) {
                         Text(
                             text = language.nativeName,
                             style = MaterialTheme.typography.bodyMedium,
