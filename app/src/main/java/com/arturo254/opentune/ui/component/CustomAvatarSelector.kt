@@ -9,60 +9,31 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -92,7 +63,9 @@ import kotlin.random.Random
 // Extension property para el DataStore
 val Context.avatarDataStore: DataStore<Preferences> by preferencesDataStore(name = "avatar_preferences")
 
-/** Gestor de preferencias para el avatar */
+/**
+ * Gestor de preferencias para el avatar
+ */
 class AvatarPreferenceManager(private val context: Context) {
     companion object {
         private val SELECTED_AVATAR_TYPE_KEY = stringPreferencesKey("selected_avatar_type")
@@ -108,13 +81,11 @@ class AvatarPreferenceManager(private val context: Context) {
                     preferences.remove(CUSTOM_AVATAR_URI_KEY)
                     preferences.remove(DICEBEAR_AVATAR_URL_KEY)
                 }
-
                 is AvatarSelection.DiceBear -> {
                     preferences[SELECTED_AVATAR_TYPE_KEY] = "dicebear"
                     preferences[DICEBEAR_AVATAR_URL_KEY] = selection.url
                     preferences.remove(CUSTOM_AVATAR_URI_KEY)
                 }
-
                 is AvatarSelection.Custom -> {
                     preferences[SELECTED_AVATAR_TYPE_KEY] = "custom"
                     preferences[CUSTOM_AVATAR_URI_KEY] = selection.uri
@@ -132,25 +103,27 @@ class AvatarPreferenceManager(private val context: Context) {
                     val url = preferences[DICEBEAR_AVATAR_URL_KEY]
                     if (url != null) AvatarSelection.DiceBear(url) else AvatarSelection.Default
                 }
-
                 "custom" -> {
                     val uri = preferences[CUSTOM_AVATAR_URI_KEY]
                     if (uri != null) AvatarSelection.Custom(uri) else AvatarSelection.Default
                 }
-
                 else -> AvatarSelection.Default
             }
         }
 }
 
-/** Tipos de selección de avatar */
+/**
+ * Tipos de selección de avatar
+ */
 sealed class AvatarSelection {
     object Default : AvatarSelection()
     data class DiceBear(val url: String) : AvatarSelection()
     data class Custom(val uri: String) : AvatarSelection()
 }
 
-/** Estilos disponibles de DiceBear */
+/**
+ * Estilos disponibles de DiceBear
+ */
 enum class DiceBearStyle(val value: String, val displayName: String) {
     ADVENTURER("adventurer", "Adventurer"),
     ADVENTURER_NEUTRAL("adventurer-neutral", "Adventurer Neutral"),
@@ -185,7 +158,9 @@ enum class DiceBearStyle(val value: String, val displayName: String) {
 }
 
 
-/** Generador de URLs de DiceBear */
+/**
+ * Generador de URLs de DiceBear
+ */
 object DiceBearGenerator {
     private const val BASE_URL = "https://api.dicebear.com/7.x"
 
@@ -237,7 +212,9 @@ object DiceBearGenerator {
 
 }
 
-/** Estado de la UI para el avatar */
+/**
+ * Estado de la UI para el avatar
+ */
 data class AvatarUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -245,7 +222,9 @@ data class AvatarUiState(
     val showDiceBearDialog: Boolean = false
 )
 
-/** Componente principal del selector de avatar */
+/**
+ * Componente principal del selector de avatar
+ */
 @Composable
 fun AvatarSelector(
     modifier: Modifier = Modifier
@@ -444,7 +423,9 @@ fun AvatarSelector(
     }
 }
 
-/** Dialog para seleccionar avatars de DiceBear */
+/**
+ * Dialog para seleccionar avatars de DiceBear
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DiceBearAvatarDialog(
@@ -609,7 +590,10 @@ private fun DiceBearAvatarDialog(
 }
 
 
-/** Item individual de avatar DiceBear */
+
+/**
+ * Item individual de avatar DiceBear
+ */
 @Composable
 private fun DiceBearAvatarItem(
     url: String,
@@ -663,7 +647,9 @@ private fun DiceBearAvatarItem(
     }
 }
 
-/** Muestra el avatar actualmente seleccionado */
+/**
+ * Muestra el avatar actualmente seleccionado
+ */
 @Composable
 private fun CurrentAvatarDisplay(
     selection: AvatarSelection,
@@ -727,7 +713,9 @@ private fun CurrentAvatarDisplay(
     }
 }
 
-/** Icono de avatar por defecto */
+/**
+ * Icono de avatar por defecto
+ */
 @Composable
 private fun DefaultAvatarIcon() {
     Icon(

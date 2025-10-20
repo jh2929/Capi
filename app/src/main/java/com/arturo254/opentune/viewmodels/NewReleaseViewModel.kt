@@ -77,6 +77,7 @@ constructor(
     }
 
 
+
     private suspend fun checkForNewReleases() {
         try {
             val lastCheckTime = context.dataStore.get(LastNewReleaseCheckKey, 0L)
@@ -84,11 +85,9 @@ constructor(
 
             // Si es la primera vez que se verifica, no mostrar notificación
             if (lastCheckTime == 0L) {
-                context.dataStore.updateData {
-                    it.toMutablePreferences().apply {
-                        set(LastNewReleaseCheckKey, currentTime)
-                    }
-                }
+                context.dataStore.updateData { it.toMutablePreferences().apply {
+                    set(LastNewReleaseCheckKey, currentTime)
+                }}
                 _hasNewReleases.value = false
                 return
             }
@@ -108,11 +107,9 @@ constructor(
     fun markNewReleasesAsSeen() {
         viewModelScope.launch {
             try {
-                context.dataStore.updateData {
-                    it.toMutablePreferences().apply {
-                        set(LastNewReleaseCheckKey, System.currentTimeMillis())
-                    }
-                }
+                context.dataStore.updateData { it.toMutablePreferences().apply {
+                    set(LastNewReleaseCheckKey, System.currentTimeMillis())
+                }}
                 _hasNewReleases.value = false
             } catch (e: Exception) {
                 reportException(e)

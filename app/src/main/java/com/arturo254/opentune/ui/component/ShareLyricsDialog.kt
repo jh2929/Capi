@@ -14,16 +14,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -33,33 +24,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,6 +53,7 @@ import com.arturo254.opentune.utils.ComposeToImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.min
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -184,7 +151,9 @@ fun ShareLyricsDialog(
                         textAlign = TextAlign.Center,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
                     )
                 }
 
@@ -199,8 +168,7 @@ fun ShareLyricsDialog(
                             val shareIntent = Intent().apply {
                                 action = Intent.ACTION_SEND
                                 type = "text/plain"
-                                val songLink =
-                                    "https://music.youtube.com/watch?v=${mediaMetadata?.id}"
+                                val songLink = "https://music.youtube.com/watch?v=${mediaMetadata?.id}"
                                 putExtra(
                                     Intent.EXTRA_TEXT,
                                     "\"$lyricsText\"\n\n$songTitle - $artists\n$songLink"
@@ -366,18 +334,12 @@ fun ShareLyricsImageCustomizationSheet(
                         val bitmap = drawable.toBitmap()
                         val palette = Palette.from(bitmap).generate()
                         val colors = listOfNotNull(
-                            palette.getLightVibrantColor(Color.Black.toArgb())
-                                .takeIf { it != Color.Black.toArgb() },
-                            palette.getVibrantColor(Color.Black.toArgb())
-                                .takeIf { it != Color.Black.toArgb() },
-                            palette.getDarkVibrantColor(Color.Black.toArgb())
-                                .takeIf { it != Color.Black.toArgb() },
-                            palette.getLightMutedColor(Color.Black.toArgb())
-                                .takeIf { it != Color.Black.toArgb() },
-                            palette.getMutedColor(Color.Black.toArgb())
-                                .takeIf { it != Color.Black.toArgb() },
-                            palette.getDarkMutedColor(Color.Black.toArgb())
-                                .takeIf { it != Color.Black.toArgb() }
+                            palette.getLightVibrantColor(Color.Black.toArgb()).takeIf { it != Color.Black.toArgb() },
+                            palette.getVibrantColor(Color.Black.toArgb()).takeIf { it != Color.Black.toArgb() },
+                            palette.getDarkVibrantColor(Color.Black.toArgb()).takeIf { it != Color.Black.toArgb() },
+                            palette.getLightMutedColor(Color.Black.toArgb()).takeIf { it != Color.Black.toArgb() },
+                            palette.getMutedColor(Color.Black.toArgb()).takeIf { it != Color.Black.toArgb() },
+                            palette.getDarkMutedColor(Color.Black.toArgb()).takeIf { it != Color.Black.toArgb() }
                         ).map { Color(it) }.distinct()
 
                         if (colors.isNotEmpty()) {
@@ -401,7 +363,9 @@ fun ShareLyricsImageCustomizationSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .fillMaxHeight(0.9f)
                 .verticalScroll(rememberScrollState())
+                .padding(bottom = 16.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -481,9 +445,7 @@ fun ShareLyricsImageCustomizationSheet(
                         ) {
                             Icon(
                                 imageVector = if (isPresetSelectorExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                contentDescription = if (isPresetSelectorExpanded) stringResource(R.string.collapse) else stringResource(
-                                    R.string.expand
-                                ),
+                                contentDescription = if (isPresetSelectorExpanded) stringResource(R.string.collapse) else stringResource(R.string.expand),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -512,9 +474,7 @@ fun ShareLyricsImageCustomizationSheet(
                                         val customization = ImageCustomization(
                                             backgroundColor = color,
                                             textColor = if (color.isDark()) Color.White else Color.Black,
-                                            secondaryTextColor = if (color.isDark()) Color.White.copy(
-                                                alpha = 0.7f
-                                            ) else Color.Black.copy(alpha = 0.7f),
+                                            secondaryTextColor = if (color.isDark()) Color.White.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.7f),
                                             isDark = color.isDark()
                                         )
                                         BottomSheetColorCustomizationItem(
@@ -599,17 +559,19 @@ fun ShareLyricsImageCustomizationSheet(
                             modifier = Modifier.padding(top = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
                                     text = "Estilo de Fondo",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     FilterChip(
                                         selected = selectedCustomization.backgroundStyle == BackgroundStyle.SOLID,
                                         onClick = {
@@ -617,7 +579,8 @@ fun ShareLyricsImageCustomizationSheet(
                                                 backgroundStyle = BackgroundStyle.SOLID
                                             )
                                         },
-                                        label = { Text("Sólido") }
+                                        label = { Text("Sólido", fontSize = 12.sp) },
+                                        modifier = Modifier.weight(1f)
                                     )
                                     FilterChip(
                                         selected = selectedCustomization.backgroundStyle == BackgroundStyle.GRADIENT,
@@ -626,7 +589,8 @@ fun ShareLyricsImageCustomizationSheet(
                                                 backgroundStyle = BackgroundStyle.GRADIENT
                                             )
                                         },
-                                        label = { Text("Gradiente") }
+                                        label = { Text("Gradiente", fontSize = 12.sp) },
+                                        modifier = Modifier.weight(1f)
                                     )
                                     FilterChip(
                                         selected = selectedCustomization.backgroundStyle == BackgroundStyle.PATTERN,
@@ -635,22 +599,25 @@ fun ShareLyricsImageCustomizationSheet(
                                                 backgroundStyle = BackgroundStyle.PATTERN
                                             )
                                         },
-                                        label = { Text("Patrón") }
+                                        label = { Text("Patrón", fontSize = 12.sp) },
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
                             }
 
-                            Row(
+                            Column(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
                                     text = "Estilo de Fuente",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     FilterChip(
                                         selected = selectedCustomization.fontStyle == FontStyle.REGULAR,
                                         onClick = {
@@ -658,7 +625,8 @@ fun ShareLyricsImageCustomizationSheet(
                                                 fontStyle = FontStyle.REGULAR
                                             )
                                         },
-                                        label = { Text("Normal") }
+                                        label = { Text("Normal", fontSize = 12.sp) },
+                                        modifier = Modifier.weight(1f)
                                     )
                                     FilterChip(
                                         selected = selectedCustomization.fontStyle == FontStyle.BOLD,
@@ -667,7 +635,8 @@ fun ShareLyricsImageCustomizationSheet(
                                                 fontStyle = FontStyle.BOLD
                                             )
                                         },
-                                        label = { Text("Negrita") }
+                                        label = { Text("Negrita", fontSize = 12.sp) },
+                                        modifier = Modifier.weight(1f)
                                     )
                                     FilterChip(
                                         selected = selectedCustomization.fontStyle == FontStyle.EXTRA_BOLD,
@@ -676,7 +645,8 @@ fun ShareLyricsImageCustomizationSheet(
                                                 fontStyle = FontStyle.EXTRA_BOLD
                                             )
                                         },
-                                        label = { Text("Extra") }
+                                        label = { Text("Extra", fontSize = 12.sp) },
+                                        modifier = Modifier.weight(1f)
                                     )
                                 }
                             }
@@ -722,12 +692,14 @@ fun ShareLyricsImageCustomizationSheet(
                             }
 
                             if (selectedCustomization.showLogo) {
-                                Column {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     Text(
                                         text = "Posición del Logo",
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(bottom = 8.dp)
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
@@ -740,7 +712,7 @@ fun ShareLyricsImageCustomizationSheet(
                                                     logoPosition = LogoPosition.BOTTOM_LEFT
                                                 )
                                             },
-                                            label = { Text("Abajo Izq.") },
+                                            label = { Text("Abajo Izq.", fontSize = 11.sp) },
                                             modifier = Modifier.weight(1f)
                                         )
                                         FilterChip(
@@ -750,14 +722,16 @@ fun ShareLyricsImageCustomizationSheet(
                                                     logoPosition = LogoPosition.BOTTOM_RIGHT
                                                 )
                                             },
-                                            label = { Text("Abajo Der.") },
+                                            label = { Text("Abajo Der.", fontSize = 11.sp) },
                                             modifier = Modifier.weight(1f)
                                         )
                                     }
                                 }
                             }
 
-                            Column {
+                            Column(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
                                 Text(
                                     text = "Radio de Esquinas: ${selectedCustomization.cornerRadius.toInt()}dp",
                                     style = MaterialTheme.typography.bodyMedium,
@@ -777,7 +751,9 @@ fun ShareLyricsImageCustomizationSheet(
                             }
 
                             if (selectedCustomization.backgroundStyle == BackgroundStyle.PATTERN) {
-                                Column {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
                                     Text(
                                         text = "Opacidad del Patrón: ${(selectedCustomization.patternOpacity * 100).toInt()}%",
                                         style = MaterialTheme.typography.bodyMedium,
@@ -812,19 +788,27 @@ fun ShareLyricsImageCustomizationSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 if (mediaMetadata != null) {
-                    LyricsImageCardPreview(
-                        lyricText = lyricsText,
-                        mediaMetadata = mediaMetadata,
-                        customization = selectedCustomization,
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    val previewSize = remember(maxWidth) {
+                        min(maxWidth.value - 48f, 380f).dp
+                    }
+                    Box(
+                        modifier = Modifier.size(previewSize),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LyricsImageCardPreview(
+                            lyricText = lyricsText,
+                            mediaMetadata = mediaMetadata,
+                            customization = selectedCustomization,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
 
@@ -870,8 +854,7 @@ fun ShareLyricsImageCustomizationSheet(
                                     showCoverArt = selectedCustomization.showCoverArt,
                                     showLogo = selectedCustomization.showLogo,
                                     backgroundStyle = selectedCustomization.backgroundStyle.name,
-                                    gradientColors = selectedCustomization.gradientColors?.map { it.toArgb() }
-                                        ?.toIntArray(),
+                                    gradientColors = selectedCustomization.gradientColors?.map { it.toArgb() }?.toIntArray(),
                                     fontStyle = selectedCustomization.fontStyle.name,
                                     logoPosition = selectedCustomization.logoPosition.name,
                                     cornerRadius = selectedCustomization.cornerRadius,
@@ -959,8 +942,7 @@ fun BottomSheetColorCustomizationItem(
                 .clip(RoundedCornerShape(12.dp))
                 .background(
                     brush = if (customization.backgroundStyle == BackgroundStyle.GRADIENT
-                        && customization.gradientColors != null
-                    ) {
+                        && customization.gradientColors != null) {
                         Brush.linearGradient(customization.gradientColors)
                     } else {
                         Brush.linearGradient(
@@ -973,9 +955,7 @@ fun BottomSheetColorCustomizationItem(
                 )
                 .border(
                     width = if (isSelected) 2.dp else 1.dp,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray.copy(
-                        alpha = 0.3f
-                    ),
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Gray.copy(alpha = 0.3f),
                     shape = RoundedCornerShape(12.dp)
                 ),
             contentAlignment = Alignment.Center
