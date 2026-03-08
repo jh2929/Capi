@@ -1050,8 +1050,6 @@ fun BottomSheetPlayer(
             }
 
             Spacer(Modifier.height(12.dp))
-
-            // Slider (mantén tu implementación actual)
             when (sliderStyle) {
                 SliderStyle.DEFAULT -> {
                     Slider(
