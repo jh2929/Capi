@@ -30,6 +30,7 @@ fun NavigationTitle(
     label: String? = null,
     thumbnail: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
+    onPlayAllClick: (() -> Unit)? = null,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
