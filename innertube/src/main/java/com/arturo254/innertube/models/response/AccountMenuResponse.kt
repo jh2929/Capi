@@ -3,6 +3,7 @@ package com.arturo254.innertube.models.response
 import com.arturo254.innertube.models.AccountInfo
 import com.arturo254.innertube.models.Runs
 import kotlinx.serialization.Serializable
+import java.text.Normalizer
 
 @Serializable
 data class AccountMenuResponse(
@@ -34,12 +35,17 @@ data class AccountMenuResponse(
                             val email: Runs?,
                             val channelHandle: Runs?,
                         ) {
-                            fun toAccountInfo() =
-                                AccountInfo(
-                                    name = accountName.runs!!.first().text,
+                            fun toAccountInfo(): AccountInfo {
+                                val sanitizedName = accountName.runs!!.first().text
+                                    .let { Normalizer.normalize(it, Normalizer.Form.NFD) }
+                                    .replace(Regex("[\\p{M}]"), "")
+
+                                return AccountInfo(
+                                    name = sanitizedName,
                                     email = email?.runs?.first()?.text,
                                     channelHandle = channelHandle?.runs?.first()?.text,
                                 )
+                            }
                         }
                     }
                 }
