@@ -101,6 +101,12 @@ fun Thumbnail(
     val mediaItems = listOfNotNull(previousMediaMetadata, currentMediaItem, nextMediaMetadata)
     val currentMediaIndex = mediaItems.indexOf(currentMediaItem)
 
+    LaunchedEffect(currentMediaIndex) {
+        if (currentMediaIndex != -1) {
+            thumbnailLazyGridState.scrollToItem(currentMediaIndex)
+        }
+    }
+
     val snapProvider = remember(thumbnailLazyGridState) {
         SnapLayoutInfoProvider(
             lazyGridState = thumbnailLazyGridState,
