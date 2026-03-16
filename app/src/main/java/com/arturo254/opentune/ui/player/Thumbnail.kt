@@ -130,9 +130,24 @@ fun Thumbnail(
         }
     }
 
-    LaunchedEffect(currentMediaItemIndex) {
-        if (currentMediaIndex != -1) {
-            thumbnailLazyGridState.animateScrollToItem(currentMediaIndex)
+    // FIX 1: Reaccionar tanto a currentMediaItemIndex como a mediaItems
+    // para evitar la race condition donde mediaItems aún no se actualizó
+    LaunchedEffect(currentMediaItemIndex, mediaItems) {
+        val index = mediaItems.indexOf(playerConnection.player.currentMediaItem)
+        if (index != -1) {
+            thumbnailLazyGridState.animateScrollToItem(index)
+        }
+    }
+
+    // FIX 2: Detectar cuando el usuario termina de swipear y notificar al player
+    LaunchedEffect(thumbnailLazyGridState.isScrollInProgress) {
+        if (!thumbnailLazyGridState.isScrollInProgress && mediaItems.isNotEmpty()) {
+            val firstVisible = thumbnailLazyGridState.firstVisibleItemIndex
+            val safeCurrentIndex = currentMediaIndex.takeIf { it != -1 } ?: return@LaunchedEffect
+            when {
+                firstVisible > safeCurrentIndex && canSkipNext -> playerConnection.seekToNext()
+                firstVisible < safeCurrentIndex && canSkipPrevious -> playerConnection.seekToPrevious()
+            }
         }
     }
 
@@ -150,7 +165,9 @@ fun Thumbnail(
             visible = error == null,
             enter = fadeIn(),
             exit = fadeOut(),
-            modifier = Modifier.fillMaxSize().statusBarsPadding()
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -200,7 +217,7 @@ fun Thumbnail(
 
                         items(
                             items = mediaItems,
-                            key = { it.mediaId } // ⭐ MUY IMPORTANTE
+                            key = { it.mediaId }
                         ) { item ->
 
                             Box(
@@ -230,12 +247,15 @@ fun Thumbnail(
                                             .clip(RoundedCornerShape(thumbnailCornerRadius.dp * 2))
                                             .background(MaterialTheme.colorScheme.surfaceVariant)
                                     ) {
+                                        // FIX 3: crossfade para transición visual suave
+                                        // y evitar que Coil muestre la imagen cacheada anterior
                                         AsyncImage(
                                             model = ImageRequest.Builder(context)
                                                 .data(item.mediaMetadata.artworkUri)
                                                 .memoryCachePolicy(CachePolicy.ENABLED)
                                                 .diskCachePolicy(CachePolicy.ENABLED)
                                                 .networkCachePolicy(CachePolicy.ENABLED)
+                                                .crossfade(300)
                                                 .build(),
                                             contentDescription = null,
                                             contentScale = ContentScale.Fit,
