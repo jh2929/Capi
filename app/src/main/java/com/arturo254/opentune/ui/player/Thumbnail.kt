@@ -23,11 +23,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastForEach
@@ -40,6 +38,7 @@ import com.arturo254.opentune.LocalPlayerConnection
 import com.arturo254.opentune.R
 import com.arturo254.opentune.constants.*
 import com.arturo254.opentune.ui.component.AppConfig
+import com.arturo254.opentune.ui.utils.SnapLayoutInfoProvider
 import com.arturo254.opentune.utils.rememberEnumPreference
 import com.arturo254.opentune.utils.rememberPreference
 import kotlinx.coroutines.delay
@@ -71,7 +70,7 @@ fun Thumbnail(
 
     val isAppleMusicStyle = playerBackground == PlayerBackgroundStyle.APPLE_MUSIC
 
-    var thumbnailCornerRadius by remember { mutableStateOf(16f) }
+    var thumbnailCornerRadius by remember { mutableFloatStateOf(16f) }
     LaunchedEffect(Unit) {
         thumbnailCornerRadius = AppConfig.getThumbnailCornerRadius(context)
     }
@@ -82,38 +81,67 @@ fun Thumbnail(
     }
 
     val thumbnailLazyGridState = rememberLazyGridState()
-
     val timeline = playerConnection.player.currentTimeline
-    val currentIndex = playerConnection.player.currentMediaItemIndex
     val shuffleModeEnabled = playerConnection.player.shuffleModeEnabled
 
-    val previousMediaMetadata = if (swipeThumbnail && !timeline.isEmpty) {
-        val index = timeline.getPreviousWindowIndex(currentIndex, Player.REPEAT_MODE_OFF, shuffleModeEnabled)
-        if (index != C.INDEX_UNSET) playerConnection.player.getMediaItemAt(index) else null
-    } else null
+    val currentMediaItemIndex by playerConnection
+        .currentMediaItemIndex
+        .collectAsState()
 
-    val nextMediaMetadata = if (swipeThumbnail && !timeline.isEmpty) {
-        val index = timeline.getNextWindowIndex(currentIndex, Player.REPEAT_MODE_OFF, shuffleModeEnabled)
-        if (index != C.INDEX_UNSET) playerConnection.player.getMediaItemAt(index) else null
-    } else null
+    val mediaItems by remember(
+        currentMediaItemIndex,
+        timeline,
+        shuffleModeEnabled,
+        swipeThumbnail
+    ) {
+        derivedStateOf {
 
-    val currentMediaItem = playerConnection.player.currentMediaItem
-    val mediaItems = listOfNotNull(previousMediaMetadata, currentMediaItem, nextMediaMetadata)
-    val currentMediaIndex = mediaItems.indexOf(currentMediaItem)
+            val currentItem = playerConnection.player.currentMediaItem
 
-    LaunchedEffect(currentMediaIndex) {
+            val previous = if (swipeThumbnail && !timeline.isEmpty) {
+                val index = timeline.getPreviousWindowIndex(
+                    currentMediaItemIndex,
+                    Player.REPEAT_MODE_OFF,
+                    shuffleModeEnabled
+                )
+                if (index != C.INDEX_UNSET)
+                    playerConnection.player.getMediaItemAt(index)
+                else null
+            } else null
+
+            val next = if (swipeThumbnail && !timeline.isEmpty) {
+                val index = timeline.getNextWindowIndex(
+                    currentMediaItemIndex,
+                    Player.REPEAT_MODE_OFF,
+                    shuffleModeEnabled
+                )
+                if (index != C.INDEX_UNSET)
+                    playerConnection.player.getMediaItemAt(index)
+                else null
+            } else null
+
+            listOfNotNull(previous, currentItem, next)
+        }
+    }
+
+    val currentMediaIndex by remember(mediaItems) {
+        derivedStateOf {
+            mediaItems.indexOf(playerConnection.player.currentMediaItem)
+        }
+    }
+
+    LaunchedEffect(currentMediaItemIndex) {
         if (currentMediaIndex != -1) {
-            thumbnailLazyGridState.scrollToItem(currentMediaIndex)
+            thumbnailLazyGridState.animateScrollToItem(currentMediaIndex)
         }
     }
 
     val snapProvider = remember(thumbnailLazyGridState) {
         SnapLayoutInfoProvider(
-            lazyGridState = thumbnailLazyGridState,
-            positionInLayout = { layoutSize, itemSize ->
-                layoutSize / 2f - itemSize / 2f
-            }
-        )
+            lazyGridState = thumbnailLazyGridState
+        ) { layoutSize, itemSize ->
+            layoutSize / 2f - itemSize / 2f
+        }
     }
 
     Box(modifier = modifier) {
@@ -128,6 +156,7 @@ fun Thumbnail(
                 modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+
                 if (!isAppleMusicStyle) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -141,7 +170,7 @@ fun Thumbnail(
 
                         val playingFrom = queueTitle ?: mediaMetadata?.album?.title
                         if (!playingFrom.isNullOrBlank()) {
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(Modifier.height(4.dp))
                             Text(
                                 text = playingFrom,
                                 style = MaterialTheme.typography.titleMedium,
@@ -152,8 +181,9 @@ fun Thumbnail(
                         }
                     }
                 } else {
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(Modifier.height(24.dp))
                 }
+
                 BoxWithConstraints(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -167,7 +197,12 @@ fun Thumbnail(
                         userScrollEnabled = swipeThumbnail && isPlayerExpanded,
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        items(mediaItems) { item ->
+
+                        items(
+                            items = mediaItems,
+                            key = { it.mediaId } // ⭐ MUY IMPORTANTE
+                        ) { item ->
+
                             Box(
                                 modifier = Modifier
                                     .width(maxWidth)
@@ -176,11 +211,10 @@ fun Thumbnail(
                                         detectTapGestures(
                                             onTap = { onOpenFullscreenLyrics() },
                                             onDoubleTap = { offset ->
-                                                if (offset.x < size.toPx() / 2) {
+                                                if (offset.x < size.toPx() / 2)
                                                     playerConnection.player.seekBack()
-                                                } else {
+                                                else
                                                     playerConnection.player.seekForward()
-                                                }
                                             }
                                         )
                                     },
@@ -188,8 +222,7 @@ fun Thumbnail(
                             ) {
 
                                 if (isAppleMusicStyle) {
-                                    // CARÁTULA OCULTA
-                                    Box(modifier = Modifier.size(size))
+                                    Box(Modifier.size(size))
                                 } else {
                                     Box(
                                         modifier = Modifier
@@ -198,8 +231,8 @@ fun Thumbnail(
                                             .background(MaterialTheme.colorScheme.surfaceVariant)
                                     ) {
                                         AsyncImage(
-                                            model = ImageRequest.Builder(LocalContext.current)
-                                                .data(item.mediaMetadata.artworkUri?.toString())
+                                            model = ImageRequest.Builder(context)
+                                                .data(item.mediaMetadata.artworkUri)
                                                 .memoryCachePolicy(CachePolicy.ENABLED)
                                                 .diskCachePolicy(CachePolicy.ENABLED)
                                                 .networkCachePolicy(CachePolicy.ENABLED)
@@ -246,44 +279,3 @@ fun Thumbnail(
         }
     }
 }
-@ExperimentalFoundationApi
-fun SnapLayoutInfoProvider(
-    lazyGridState: LazyGridState,
-    positionInLayout: (layoutSize: Float, itemSize: Float) -> Float,
-): SnapLayoutInfoProvider = object : SnapLayoutInfoProvider {
-
-    private val layoutInfo: LazyGridLayoutInfo
-        get() = lazyGridState.layoutInfo
-
-    override fun calculateApproachOffset(velocity: Float, decayOffset: Float) = 0f
-
-    override fun calculateSnapOffset(velocity: Float): Float {
-        val bounds = calculateBounds()
-        return if (abs(bounds.start) < abs(bounds.endInclusive)) bounds.start else bounds.endInclusive
-    }
-
-    private fun calculateBounds(): ClosedFloatingPointRange<Float> {
-        var lower = Float.NEGATIVE_INFINITY
-        var upper = Float.POSITIVE_INFINITY
-
-        layoutInfo.visibleItemsInfo.fastForEach { item ->
-            val offset = calculateDistanceToDesiredSnapPosition(layoutInfo, item, positionInLayout)
-            if (offset <= 0 && offset > lower) lower = offset
-            if (offset >= 0 && offset < upper) upper = offset
-        }
-        return lower..upper
-    }
-}
-
-fun calculateDistanceToDesiredSnapPosition(
-    layoutInfo: LazyGridLayoutInfo,
-    item: LazyGridItemInfo,
-    positionInLayout: (layoutSize: Float, itemSize: Float) -> Float,
-): Float {
-    val containerSize =
-        layoutInfo.singleAxisViewportSize - layoutInfo.beforeContentPadding - layoutInfo.afterContentPadding
-    return item.offset.x - positionInLayout(containerSize.toFloat(), item.size.width.toFloat())
-}
-
-private val LazyGridLayoutInfo.singleAxisViewportSize: Int
-    get() = if (orientation == Orientation.Vertical) viewportSize.height else viewportSize.width

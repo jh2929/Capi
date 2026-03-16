@@ -40,14 +40,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.WavyProgressIndicatorDefaults
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -63,9 +66,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -286,13 +291,38 @@ fun MiniPlayer(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier.size(48.dp)
                     ) {
+
                         if (duration > 0) {
-                            CircularProgressIndicator(
-                                progress = { (position.toFloat() / duration).coerceIn(0f, 1f) },
-                                modifier = Modifier.size(48.dp),
+
+                            val targetProgress =
+                                (position.toFloat() / duration).coerceIn(0f, 1f)
+
+                            val animatedProgress by animateFloatAsState(
+                                targetValue = targetProgress,
+                                animationSpec = ProgressIndicatorDefaults.ProgressAnimationSpec,
+                                label = "mini_player_progress"
+                            )
+
+                            val density = LocalDensity.current
+
+                            val indicatorStroke = with(density) {
+                                Stroke(width = 3.dp.toPx())
+                            }
+
+                            CircularWavyProgressIndicator(
+                                progress = { animatedProgress },
+
+                                modifier = Modifier.size(52.dp),
+
                                 color = MaterialTheme.colorScheme.primary,
-                                strokeWidth = 3.dp,
-                                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.20f),
+
+                                amplitude = {
+                                    if (!isPlaying) 0.08f else 0.25f
+                                },
+
+                                stroke = indicatorStroke,
+                                trackStroke = indicatorStroke
                             )
                         }
 
@@ -300,12 +330,6 @@ fun MiniPlayer(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
                                 .size(40.dp)
-                                .clip(currentThumbnailShape)
-                                .border(
-                                    width = 1.dp,
-                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                    shape = currentThumbnailShape
-                                )
                                 .clickable {
                                     if (playbackState == Player.STATE_ENDED) {
                                         playerConnection.player.seekTo(0, 0)

@@ -1,51 +1,21 @@
 package com.arturo254.opentune.ui.component
 
 import android.content.Context
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SheetValue
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,37 +29,36 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import coil.compose.AsyncImage
 import com.arturo254.opentune.LocalPlayerConnection
 import com.arturo254.opentune.R
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-// Extensión de contexto para DataStore
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "app_settings")
 
 object AppConfig {
-    private val THUMBNAIL_CORNER_RADIUS_KEY = floatPreferencesKey("thumbnail_corner_radius")
+
+    private val THUMBNAIL_CORNER_RADIUS_KEY =
+        floatPreferencesKey("thumbnail_corner_radius")
 
     suspend fun saveThumbnailCornerRadius(context: Context, radius: Float) {
-        context.dataStore.edit { preferences ->
-            preferences[THUMBNAIL_CORNER_RADIUS_KEY] = radius
+        context.dataStore.edit {
+            it[THUMBNAIL_CORNER_RADIUS_KEY] = radius
         }
     }
 
-    suspend fun getThumbnailCornerRadius(context: Context, defaultValue: Float = 16f): Float {
+    suspend fun getThumbnailCornerRadius(
+        context: Context,
+        defaultValue: Float = 16f
+    ): Float {
         return context.dataStore.data
-            .map { preferences ->
-                preferences[THUMBNAIL_CORNER_RADIUS_KEY] ?: defaultValue
-            }.first()
+            .map { it[THUMBNAIL_CORNER_RADIUS_KEY] ?: defaultValue }
+            .first()
     }
 }
 
@@ -99,7 +68,9 @@ fun ThumbnailCornerRadiusSelectorButton(
     modifier: Modifier = Modifier,
     onRadiusSelected: (Float) -> Unit
 ) {
+
     val context = LocalContext.current
+
     var showBottomSheet by remember { mutableStateOf(false) }
     var currentRadius by remember { mutableStateOf(24f) }
 
@@ -108,35 +79,31 @@ fun ThumbnailCornerRadiusSelectorButton(
     }
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .padding(horizontal = 20.dp, vertical = 16.dp)
-            .clickable(
-                enabled = true,
-                onClick = { showBottomSheet = true }
-            ),
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { showBottomSheet = true }
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+
         Box(
             modifier = Modifier
                 .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                ),
+                .clip(RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                painter = painterResource(id = R.drawable.line_curve),
+                painter = painterResource(R.drawable.line_curve),
                 contentDescription = null,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(22.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer
             )
         }
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
+
+        Spacer(Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(
                     id = R.string.customize_thumbnail_corner_radius,
@@ -144,14 +111,14 @@ fun ThumbnailCornerRadiusSelectorButton(
                 ),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium
             )
         }
-        Spacer(modifier = Modifier.width(8.dp))
+
         Icon(
             imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 
@@ -159,9 +126,9 @@ fun ThumbnailCornerRadiusSelectorButton(
         ThumbnailCornerRadiusBottomSheet(
             initialRadius = currentRadius,
             onDismiss = { showBottomSheet = false },
-            onRadiusSelected = { newRadius ->
-                currentRadius = newRadius
-                onRadiusSelected(newRadius)
+            onRadiusSelected = {
+                currentRadius = it
+                onRadiusSelected(it)
                 showBottomSheet = false
             }
         )
@@ -175,360 +142,247 @@ fun ThumbnailCornerRadiusBottomSheet(
     onDismiss: () -> Unit,
     onRadiusSelected: (Float) -> Unit
 ) {
+
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     val playerConnection = LocalPlayerConnection.current
-    val mediaMetadata by playerConnection?.mediaMetadata?.collectAsState() ?: remember { mutableStateOf(null) }
+    val mediaMetadata by playerConnection?.mediaMetadata?.collectAsState()
+        ?: remember { mutableStateOf(null) }
 
-    var thumbnailCornerRadius by remember { mutableStateOf(initialRadius) }
+    var radius by remember { mutableStateOf(initialRadius) }
     val presetValues = listOf(0f, 8f, 16f, 24f, 32f, 40f)
-    var customValue by remember { mutableStateOf("") }
-    var isCustomSelected by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
 
-    val sheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = false
+    var customValue by remember { mutableStateOf(initialRadius.roundToInt().toString()) }
+    var customSelected by remember { mutableStateOf(radius !in presetValues) }
+
+    val animatedRadius by animateFloatAsState(
+        targetValue = radius,
+        animationSpec = spring(
+            dampingRatio = 0.8f,
+            stiffness = 300f
+        ),
+        label = "radius_anim"
     )
 
-    LaunchedEffect(Unit) {
-        isCustomSelected = !presetValues.contains(initialRadius)
-        if (isCustomSelected) {
-            customValue = initialRadius.roundToInt().toString()
-        }
-    }
+    val sheetState = rememberModalBottomSheetState()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        tonalElevation = 0.dp,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 24.dp)
-                .padding(bottom = 24.dp),
+                .padding(bottom = 28.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Drag handle
-            Box(
-                modifier = Modifier
-                    .width(32.dp)
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-            )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // Título
             Text(
-                text = stringResource(id = R.string.customize_thumbnail_corner_radius, thumbnailCornerRadius.roundToInt()),
+                text = stringResource(
+                    id = R.string.customize_thumbnail_corner_radius,
+                    radius.roundToInt()
+                ),
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.Start
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
 
             Box(
                 modifier = Modifier
                     .size(180.dp)
-                    .clip(RoundedCornerShape(thumbnailCornerRadius.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clip(RoundedCornerShape(animatedRadius.dp))
                     .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(thumbnailCornerRadius.dp)
-                    ),
-                contentAlignment = Alignment.Center
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant,
+                        RoundedCornerShape(animatedRadius.dp)
+                    )
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(thumbnailCornerRadius.dp))
-                ) {
-                    if (mediaMetadata != null) {
-                        AsyncImage(
-                            model = mediaMetadata?.thumbnailUrl,
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(id = R.drawable.previewalbum),
-                            contentDescription = null,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+
+                if (mediaMetadata != null) {
+
+                    AsyncImage(
+                        model = mediaMetadata?.thumbnailUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+
+                } else {
+
+                    Image(
+                        painter = painterResource(R.drawable.previewalbum),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
                 }
 
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .clip(
-                            RoundedCornerShape(
-                                bottomStart = thumbnailCornerRadius.dp,
-                                bottomEnd = thumbnailCornerRadius.dp
-                            )
+                        .background(
+                            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f)
                         )
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f))
                         .padding(vertical = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "${thumbnailCornerRadius.roundToInt()}dp",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold
+                        "${radius.roundToInt()}dp",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(Modifier.height(28.dp))
 
-            // Preset chips
             ChipsGrid(
                 values = presetValues,
-                selectedValue = if (isCustomSelected) null else thumbnailCornerRadius,
-                onValueSelected = { value ->
-                    thumbnailCornerRadius = value
-                    isCustomSelected = false
+                selectedValue = if (customSelected) null else radius,
+                onValueSelected = {
+                    radius = it
+                    customSelected = false
+                    customValue = it.roundToInt().toString()
                 }
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Custom value
+            OutlinedTextField(
+                value = customValue,
+                onValueChange = {
+
+                    if (it.all(Char::isDigit) || it.isEmpty()) {
+
+                        customValue = it
+
+                        it.toIntOrNull()?.let { number ->
+
+                            val limited = number.coerceIn(0, 45)
+                            radius = limited.toFloat()
+                            customSelected = true
+                        }
+                    }
+                },
+                enabled = customSelected,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.custom_value)) },
+                trailingIcon = { Text("dp") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            Slider(
+                value = radius,
+                onValueChange = {
+
+                    radius = it
+                    customSelected = radius !in presetValues
+                    customValue = radius.roundToInt().toString()
+                },
+                valueRange = 0f..45f
+            )
+
+            Text(
+                text = stringResource(
+                    id = R.string.corner_radius_label,
+                    radius.roundToInt().toString()
+                ),
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(Modifier.height(28.dp))
+
+            HorizontalDivider()
+
+            Spacer(Modifier.height(20.dp))
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                FilterChip(
-                    selected = isCustomSelected,
-                    onClick = {
-                        isCustomSelected = true
-                        if (customValue.isEmpty()) {
-                            customValue = thumbnailCornerRadius.roundToInt().toString()
-                        }
-                    },
-                    label = {
-                        Text(
-                            text = stringResource(id = R.string.custom),
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                )
 
-                OutlinedTextField(
-                    value = customValue,
-                    onValueChange = { newValue ->
-                        if (newValue.isEmpty() || newValue.all { it.isDigit() }) {
-                            customValue = newValue
-                            newValue.toIntOrNull()?.let { intValue ->
-                                val limitedValue = minOf(intValue, 45).toFloat()
-                                thumbnailCornerRadius = limitedValue
-                                isCustomSelected = true
-                            }
-                        }
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                    enabled = isCustomSelected,
-                    label = {
-                        Text(
-                            text = stringResource(id = R.string.custom_value),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number
-                    ),
-                    trailingIcon = {
-                        Text(
-                            text = "dp",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-                    shape = RoundedCornerShape(12.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            // Slider section
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = stringResource(id = R.string.adjust_radius),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "0",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Slider(
-                        value = thumbnailCornerRadius,
-                        onValueChange = { newValue ->
-                            thumbnailCornerRadius = newValue
-                            customValue = newValue.roundToInt().toString()
-                            isCustomSelected = !presetValues.contains(newValue)
-                        },
-                        valueRange = 0f..45f,
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 12.dp),
-                        colors = SliderDefaults.colors(
-                            thumbColor = MaterialTheme.colorScheme.primary,
-                            activeTrackColor = MaterialTheme.colorScheme.primary,
-                            inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    )
-
-                    Text(
-                        text = "45",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Text(
-                    text = stringResource(
-                        id = R.string.corner_radius_label,
-                        thumbnailCornerRadius.roundToInt().toString()
-                    ),
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            HorizontalDivider(
-                modifier = Modifier.fillMaxWidth(),
-                thickness = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Action buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
                 TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.heightIn(min = 48.dp)
+                    modifier = Modifier.weight(1f),
+                    onClick = onDismiss
                 ) {
-                    Text(
-                        text = stringResource(id = R.string.cancel),
-                        style = MaterialTheme.typography.labelLarge
-                    )
+                    Text(stringResource(R.string.cancel))
                 }
 
                 Button(
+                    modifier = Modifier.weight(1f),
                     onClick = {
-                        coroutineScope.launch {
-                            AppConfig.saveThumbnailCornerRadius(context, thumbnailCornerRadius)
-                            onRadiusSelected(thumbnailCornerRadius)
+
+                        scope.launch {
+
+                            AppConfig.saveThumbnailCornerRadius(
+                                context,
+                                radius
+                            )
+
+                            onRadiusSelected(radius)
                         }
-                    },
-                    modifier = Modifier.heightIn(min = 48.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.check),
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text = stringResource(id = R.string.apply),
-                            style = MaterialTheme.typography.labelLarge
-                        )
                     }
+                ) {
+
+                    Icon(
+                        painter = painterResource(R.drawable.check),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+
+                    Spacer(Modifier.width(8.dp))
+
+                    Text(stringResource(R.string.apply))
                 }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ChipsGrid(
     values: List<Float>,
     selectedValue: Float?,
     onValueSelected: (Float) -> Unit
 ) {
-    val chunkedValues = values.chunked(3)
+
+    val rows = values.chunked(3)
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        chunkedValues.forEach { rowValues ->
+
+        rows.forEach { row ->
+
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                rowValues.forEachIndexed { index, value ->
+
+                row.forEach { value ->
+
                     FilterChip(
                         selected = selectedValue == value,
                         onClick = { onValueSelected(value) },
                         label = {
-                            Text(
-                                text = "${value.roundToInt()}",
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                            Text("${value.roundToInt()}")
+                        }
                     )
-
-                    if (index < rowValues.size - 1) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
                 }
             }
         }

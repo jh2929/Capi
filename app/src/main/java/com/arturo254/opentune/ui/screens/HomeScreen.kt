@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -29,8 +30,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator
@@ -74,6 +77,8 @@ import com.arturo254.opentune.constants.GridThumbnailHeight
 import com.arturo254.opentune.constants.InnerTubeCookieKey
 import com.arturo254.opentune.constants.ListItemHeight
 import com.arturo254.opentune.constants.ListThumbnailSize
+import com.arturo254.opentune.constants.PlayerBackgroundStyle
+import com.arturo254.opentune.constants.PlayerBackgroundStyleKey
 import com.arturo254.opentune.constants.ThumbnailCornerRadius
 import com.arturo254.opentune.db.entities.Album
 import com.arturo254.opentune.db.entities.Artist
@@ -107,6 +112,7 @@ import com.arturo254.opentune.ui.menu.YouTubeArtistMenu
 import com.arturo254.opentune.ui.menu.YouTubePlaylistMenu
 import com.arturo254.opentune.ui.menu.YouTubeSongMenu
 import com.arturo254.opentune.ui.utils.SnapLayoutInfoProvider
+import com.arturo254.opentune.utils.rememberEnumPreference
 import com.arturo254.opentune.utils.rememberPreference
 import com.arturo254.opentune.viewmodels.HomeViewModel
 import kotlinx.coroutines.Dispatchers
@@ -117,7 +123,9 @@ import kotlin.math.min
 import kotlin.random.Random
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
-@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class
+)
 @Composable
 fun HomeScreen(
     navController: NavController,
@@ -319,19 +327,39 @@ fun HomeScreen(
         forgottenFavoritesLazyGridState.scrollToItem(0)
     }
 
-    // MEJORA 1: Usar PullToRefreshBox en lugar de modifier
     PullToRefreshBox(
         state = pullRefreshState,
         isRefreshing = isRefreshing,
         onRefresh = viewModel::refresh,
         indicator = {
-            Indicator(
-                isRefreshing = isRefreshing,
-                state = pullRefreshState,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues()),
-            )
+
+            val progress = pullRefreshState.distanceFraction
+
+            if (isRefreshing || progress > 0f) {
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(LocalPlayerAwareWindowInsets.current.asPaddingValues()),
+                    contentAlignment = Alignment.Center
+                ) {
+
+                    val playerBackground by rememberEnumPreference(
+                        key = PlayerBackgroundStyleKey,
+                        defaultValue = PlayerBackgroundStyle.DEFAULT
+                    )
+
+                    val expressiveAccent = when (playerBackground) {
+                        PlayerBackgroundStyle.DEFAULT -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.tertiary
+                    }
+                    androidx.compose.material3.ContainedLoadingIndicator(
+                        modifier = Modifier.size(56.dp),
+                        containerColor = expressiveAccent.copy(alpha = 0.15f),
+                        indicatorColor = expressiveAccent
+                    )
+                }
+            }
         }
     ) {
         BoxWithConstraints(

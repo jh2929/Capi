@@ -77,7 +77,6 @@ import com.arturo254.opentune.ui.component.SettingsGeneralCategory
 import com.arturo254.opentune.ui.component.SettingsPage
 import com.arturo254.opentune.ui.component.SwitchPreference
 import com.arturo254.opentune.ui.component.ThumbnailCornerRadiusSelectorButton
-import com.arturo254.opentune.ui.component.UnifiedShapeSelectorButton
 import com.arturo254.opentune.utils.rememberEnumPreference
 import com.arturo254.opentune.utils.rememberPreference
 import me.saket.squiggles.SquigglySlider
