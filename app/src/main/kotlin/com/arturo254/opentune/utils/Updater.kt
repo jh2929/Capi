@@ -13,12 +13,15 @@ import com.arturo254.opentune.constants.GitHubReleasesEtagKey
 import com.arturo254.opentune.constants.GitHubReleasesFingerprintKey
 import com.arturo254.opentune.constants.GitHubReleasesJsonKey
 import com.arturo254.opentune.constants.GitHubReleasesLastCheckedAtKey
+import com.arturo254.opentune.constants.UpdateChannel
+import com.arturo254.opentune.constants.UpdateChannelKey
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.request.headers
 import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
+import kotlinx.coroutines.runBlocking
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -36,6 +39,13 @@ data class ReleaseInfo(
     val body: String?,
     val publishedAt: String,
     val htmlUrl: String
+)
+
+data class NightlyInfo(
+    val versionName: String,
+    val apkUrl: String,
+    val changelog: String?,
+    val publishedAt: String
 )
 
 /**
@@ -58,6 +68,7 @@ data class UpdateInfo(
 )
 
 private const val APK_ASSET_NAME = "app-universal-release.apk"
+private const val NIGHTLY_JSON_URL = "https://pub-2218e6bbd5b948e1b5d882cf4d92086d.r2.dev/update.json"
 
 private data class ReleasesNetworkResult(
     val status: HttpStatusCode,
@@ -70,6 +81,8 @@ object Updater {
     private const val ReleaseCacheCheckIntervalMs: Long = 6 * 60 * 60 * 1000L
     var lastCheckTime = -1L
         private set
+
+    private var cachedNightlyInfo: NightlyInfo? = null
 
     private data class SemVer(
         val major: Int,
@@ -253,7 +266,43 @@ object Updater {
         }
     }
 
+    // ─── Canal helpers ─────────────────────────────────────────────────────────
+
+    private suspend fun getCurrentUpdateChannel(): UpdateChannel {
+        val channelName = App.instance.dataStore.getAsync(UpdateChannelKey) ?: UpdateChannel.STABLE.name
+        return runCatching { UpdateChannel.valueOf(channelName) }.getOrDefault(UpdateChannel.STABLE)
+    }
+
+    private suspend fun fetchNightlyJson(): Result<NightlyInfo> = runCatching {
+        val response = client.get(NIGHTLY_JSON_URL) {
+            headers {
+                append("Accept", "application/json")
+                append("User-Agent", "OpenTune")
+            }
+        }.bodyAsText()
+        val json = JSONObject(response)
+
+        // El JSON está en /nightly/update.json pero el APK debe servirse sin /nightly/
+        val rawApkUrl = json.optString("apkUrl", "")
+        val fixedApkUrl = rawApkUrl.replace(
+            "https://pub-2218e6bbd5b948e1b5d882cf4d92086d.r2.dev/",
+            "https://pub-2218e6bbd5b948e1b5d882cf4d92086d.r2.dev/"
+        )
+
+        NightlyInfo(
+            versionName = json.optString("versionName", "unknown"),
+            apkUrl = fixedApkUrl.ifEmpty {
+                "https://pub-2218e6bbd5b948e1b5d882cf4d92086d.r2.dev/app-universal-release.apk"
+            },
+            changelog = json.optString("changelog", "").takeIf { it.isNotEmpty() },
+            publishedAt = json.optString("publishedAt", "")
+        )
+    }
+
+    // ─── Funciones públicas (compatibilidad obligatoria) ───────────────────────
+
     suspend fun getCachedReleases(): List<ReleaseInfo> {
+        if (getCurrentUpdateChannel() == UpdateChannel.NIGHTLY) return emptyList()
         val cachedJson = App.instance.dataStore.getAsync(GitHubReleasesJsonKey)
         return cachedJson
             ?.takeIf { it.isNotBlank() }
@@ -261,57 +310,103 @@ object Updater {
             ?: emptyList()
     }
 
-    suspend fun getLatestVersionName(): Result<String> =
-        getLatestReleaseInfo().map { latest ->
-            preferredReleaseVersionNameOrNull(latest) ?: latest.name.ifBlank { latest.tagName }
+    suspend fun getLatestVersionName(): Result<String> = runCatching {
+        when (getCurrentUpdateChannel()) {
+            UpdateChannel.STABLE -> {
+                val latest = getLatestReleaseInfo().getOrThrow()
+                preferredReleaseVersionNameOrNull(latest) ?: latest.name.ifBlank { latest.tagName }
+            }
+            UpdateChannel.NIGHTLY -> {
+                fetchNightlyJson().getOrThrow().versionName
+            }
         }
+    }
 
-    suspend fun getLatestReleaseNotes(): Result<String?> =
-        getLatestReleaseInfo().map { it.body }
-
-    suspend fun getLatestReleaseInfo(): Result<ReleaseInfo> =
-        runCatching {
-            val releases = getAllReleases().getOrThrow()
-            val latest = findLatestRelease(releases)
-                ?: throw IllegalStateException("No releases found")
-            lastCheckTime = System.currentTimeMillis()
-            latest
+    suspend fun getLatestReleaseNotes(): Result<String?> = runCatching {
+        when (getCurrentUpdateChannel()) {
+            UpdateChannel.STABLE -> getLatestReleaseInfo().getOrThrow().body
+            UpdateChannel.NIGHTLY -> fetchNightlyJson().getOrThrow().changelog
         }
+    }
 
-    // ── Comprobación de actualización ─────────────────────────────────────────
+    suspend fun getLatestReleaseInfo(): Result<ReleaseInfo> = runCatching {
+        when (getCurrentUpdateChannel()) {
+            UpdateChannel.STABLE -> {
+                val releases = getAllReleases().getOrThrow()
+                val latest = findLatestRelease(releases)
+                    ?: throw IllegalStateException("No releases found")
+                lastCheckTime = System.currentTimeMillis()
+                latest
+            }
+            UpdateChannel.NIGHTLY -> {
+                val nightly = fetchNightlyJson().getOrThrow()
+                cachedNightlyInfo = nightly
+                ReleaseInfo(
+                    tagName = nightly.versionName,
+                    name = nightly.versionName,
+                    body = nightly.changelog,
+                    publishedAt = nightly.publishedAt,
+                    htmlUrl = nightly.apkUrl
+                )
+            }
+        }
+    }
+
+    // ─── Comprobación de actualización ─────────────────────────────────────────
 
     /**
      * Comprueba si hay una versión más reciente que [currentVersionName].
      *
-     * - Reutiliza la caché existente (ETag / DataStore) a través de [getLatestReleaseInfo].
-     * - Busca el asset `app-universal-release.apk` en la API de assets del release. Si no
-     *   aparece listado, construye la URL canónica de descarga como fallback.
+     * - Detecta el canal activo automáticamente.
+     * - STABLE: Reutiliza la caché existente (ETag / DataStore).
+     * - NIGHTLY: Consulta el JSON remoto de Cloudflare R2.
      * - Devuelve `null` dentro del [Result] cuando ya se tiene la versión más
      *   reciente instalada.
      */
     suspend fun checkForUpdate(currentVersionName: String): Result<UpdateInfo?> =
         runCatching {
-            val latest = getLatestReleaseInfo().getOrThrow()
+            when (getCurrentUpdateChannel()) {
+                UpdateChannel.STABLE -> checkForUpdateStable(currentVersionName)
+                UpdateChannel.NIGHTLY -> checkForUpdateNightly(currentVersionName)
+            }
+        }
 
-            val latestVersionName =
-                preferredReleaseVersionNameOrNull(latest)
-                    ?: latest.name.ifBlank { latest.tagName }
+    private suspend fun checkForUpdateStable(currentVersionName: String): UpdateInfo? {
+        val latest = getLatestReleaseInfo().getOrThrow()
+        val latestVersionName =
+            preferredReleaseVersionNameOrNull(latest)
+                ?: latest.name.ifBlank { latest.tagName }
 
-            // Sin actualización disponible
-            if (isSameVersion(latestVersionName, currentVersionName)) return@runCatching null
+        if (isSameVersion(latestVersionName, currentVersionName)) return null
 
-            // Intentar obtener la URL exacta del asset app-universal-release.apk desde la API
-            val downloadUrl = resolveApkDownloadUrl(latest.tagName)
+        val downloadUrl = resolveApkDownloadUrl(latest.tagName)
 
+        return UpdateInfo(
+            tagName        = latest.tagName,
+            versionName    = latestVersionName,
+            downloadUrl    = downloadUrl,
+            releasePageUrl = latest.htmlUrl,
+            releaseNotes   = latest.body,
+            publishedAt    = latest.publishedAt,
+        )
+    }
+
+    private suspend fun checkForUpdateNightly(currentVersionName: String): UpdateInfo? {
+        val nightly = fetchNightlyJson().getOrThrow()
+        return if (isSameVersion(nightly.versionName, currentVersionName)) {
+            null
+        } else {
+            cachedNightlyInfo = nightly
             UpdateInfo(
-                tagName        = latest.tagName,
-                versionName    = latestVersionName,
-                downloadUrl    = downloadUrl,
-                releasePageUrl = latest.htmlUrl,
-                releaseNotes   = latest.body,
-                publishedAt    = latest.publishedAt,
+                tagName        = nightly.versionName,
+                versionName    = nightly.versionName,
+                downloadUrl    = nightly.apkUrl,
+                releasePageUrl = nightly.apkUrl,
+                releaseNotes   = nightly.changelog,
+                publishedAt    = nightly.publishedAt,
             )
         }
+    }
 
     /**
      * Consulta los assets del release [tagName] y devuelve la URL de descarga
@@ -340,7 +435,6 @@ object Updater {
                     return@runCatching asset.optString("browser_download_url", fallback)
                 }
             }
-            // Asset no encontrado en el release → URL canónica
             fallback
         }.getOrDefault(fallback)
     }
@@ -376,9 +470,18 @@ object Updater {
         }
 
     fun getLatestDownloadUrl(): String {
-        val baseUrl = "https://github.com/Arturo254/OpenTune/releases/latest/download/"
-        val architecture = BuildConfig.ARCHITECTURE
-        return baseUrl + "app-universal-release.apk"
+        val channel = runBlocking {
+            kotlin.runCatching { getCurrentUpdateChannel() }.getOrDefault(UpdateChannel.STABLE)
+        }
+        return when (channel) {
+            UpdateChannel.STABLE -> {
+                "https://github.com/Arturo254/OpenTune/releases/latest/download/$APK_ASSET_NAME"
+            }
+            UpdateChannel.NIGHTLY -> {
+                cachedNightlyInfo?.apkUrl
+                    ?: "https://pub-2218e6bbd5b948e1b5d882cf4d92086d.r2.dev/app-universal-release.apk"
+            }
+        }
     }
 
     suspend fun getAllReleases(
@@ -386,6 +489,10 @@ object Updater {
         forceRefresh: Boolean = false,
     ): Result<List<ReleaseInfo>> =
         runCatching {
+            if (getCurrentUpdateChannel() == UpdateChannel.NIGHTLY) {
+                return@runCatching emptyList()
+            }
+
             val now = System.currentTimeMillis()
             val cachedJson = App.instance.dataStore.getAsync(GitHubReleasesJsonKey)
             val cachedEtag = App.instance.dataStore.getAsync(GitHubReleasesEtagKey)

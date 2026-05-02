@@ -278,7 +278,7 @@ class MainActivity : ComponentActivity() {
 
     private var playerConnection by mutableStateOf<PlayerConnection?>(null)
     private var isMusicServiceBound = false
-    
+
     private val serviceConnection =
         object : ServiceConnection {
             override fun onServiceConnected(
@@ -425,7 +425,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        
+
         lifecycleScope.launch(Dispatchers.IO) {
             dataStore.data
                 .map { it[DisableScreenshotKey] ?: false }
@@ -470,83 +470,83 @@ class MainActivity : ComponentActivity() {
                 UpdateNotificationManager.checkForUpdates(this@MainActivity)
             }
 
-                    // Use remembered instances so the same state object is used everywhere
-                    // (previously retrieving the composition local directly created different
-                    // instances in different composition scopes which caused the update
-                    // bottom sheet to not appear and overlay interactions to be blocked).
-                    val bottomSheetPageState = remember { BottomSheetPageState() }
+            // Use remembered instances so the same state object is used everywhere
+            // (previously retrieving the composition local directly created different
+            // instances in different composition scopes which caused the update
+            // bottom sheet to not appear and overlay interactions to be blocked).
+            val bottomSheetPageState = remember { BottomSheetPageState() }
             val (liquidGlassNavBar) = rememberPreference(LiquidGlassNavBarKey, defaultValue = false)
-                    val menuState = remember { MenuState() }
-                    val uriHandler = LocalUriHandler.current
-                    val releaseNotesState = remember { mutableStateOf<String?>(null) }
-                    val updateSheetContent: @Composable ColumnScope.() -> Unit = { // receiver: ColumnScope
-                        Text(
-                            text = stringResource(R.string.new_update_available),
-                            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-                            modifier = Modifier.padding(top = 16.dp)
+            val menuState = remember { MenuState() }
+            val uriHandler = LocalUriHandler.current
+            val releaseNotesState = remember { mutableStateOf<String?>(null) }
+            val updateSheetContent: @Composable ColumnScope.() -> Unit = { // receiver: ColumnScope
+                Text(
+                    text = stringResource(R.string.new_update_available),
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = {},
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(
+                        horizontal = 5.dp,
+                        vertical = 5.dp
+                    )
+                ) {
+                    Text(text = latestVersionName, style = MaterialTheme.typography.labelLarge)
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+                ) {
+                    val notes = releaseNotesState.value
+                    if (notes != null && notes.isNotBlank()) {
+                        Markdown(
+                            content = notes,
+                            modifier = Modifier
+                                .fillMaxWidth().padding(end = 8.dp)
                         )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.release_notes_unavailable),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                }
 
-                        Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
 
-                        OutlinedButton(
-                            onClick = {},
-                            shape = CircleShape,
-                            contentPadding = PaddingValues(
-                                horizontal = 5.dp,
-                                vertical = 5.dp
-                            )
-                        ) {
-                            Text(text = latestVersionName, style = MaterialTheme.typography.labelLarge)
-                        }
+                Button(
+                    onClick = {
+                        try {
+                            uriHandler.openUri(Updater.getLatestDownloadUrl())
+                        } catch (_: Exception) {}
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(text = stringResource(R.string.update_text))
+                }
+            }
 
-                        Spacer(Modifier.height(12.dp))
-
-                        Box(modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f, fill = false)
-                            .verticalScroll(rememberScrollState())
-                        ) {
-                            val notes = releaseNotesState.value
-                            if (notes != null && notes.isNotBlank()) {
-                                Markdown(
-                                    content = notes,
-                                    modifier = Modifier
-                                        .fillMaxWidth().padding(end = 8.dp)
-                                )
-                            } else {
-                                Text(
-                                    text = stringResource(R.string.release_notes_unavailable),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Button(
-                            onClick = {
-                                try {
-                                    uriHandler.openUri(Updater.getLatestDownloadUrl())
-                                } catch (_: Exception) {}
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(text = stringResource(R.string.update_text))
-                        }
+            // fetch release notes and show sheet when a new version is detected
+            LaunchedEffect(latestVersionName) {
+                if (!Updater.isSameVersion(latestVersionName, BuildConfig.VERSION_NAME)) {
+                    Updater.getLatestReleaseNotes().onSuccess {
+                        releaseNotesState.value = it
+                    }.onFailure {
+                        releaseNotesState.value = null
                     }
 
-                    // fetch release notes and show sheet when a new version is detected
-                    LaunchedEffect(latestVersionName) {
-                        if (!Updater.isSameVersion(latestVersionName, BuildConfig.VERSION_NAME)) {
-                            Updater.getLatestReleaseNotes().onSuccess {
-                                releaseNotesState.value = it
-                            }.onFailure {
-                                releaseNotesState.value = null
-                            }
-
-                            bottomSheetPageState.show(updateSheetContent)
-                        }
-                    }
+                    bottomSheetPageState.show(updateSheetContent)
+                }
+            }
 
             val enableDynamicTheme by rememberPreference(DynamicThemeKey, defaultValue = true)
             val customThemeColorValue by rememberPreference(CustomThemeColorKey, defaultValue = "default")
@@ -643,20 +643,20 @@ class MainActivity : ComponentActivity() {
                 seedPalette = if (!enableDynamicTheme) customThemeSeedPalette else null,
                 useSystemFont = useSystemFont,
             ) {
-                    BoxWithConstraints(
-                        modifier =
+                BoxWithConstraints(
+                    modifier =
                         Modifier
                             .fillMaxSize()
                             .background(
                                 if(pureBlack) Color.Black else MaterialTheme.colorScheme.surface
                             )
-                    ) {
+                ) {
                     val focusManager = LocalFocusManager.current
                     val density = LocalDensity.current
                     val windowsInsets = WindowInsets.systemBars
                     val bottomInset = with(density) { windowsInsets.getBottom(density).toDp() }
                     val bottomInsetDp = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
-                        
+
                     val useRail = currentWindowAdaptiveInfo().windowSizeClass
                         .isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
 
@@ -754,7 +754,7 @@ class MainActivity : ComponentActivity() {
 
                     val shouldShowHomeShuffleButton =
                         currentRoute == Screens.Home.route &&
-                            (allLocalItems.isNotEmpty() || allYtItems.isNotEmpty())
+                                (allLocalItems.isNotEmpty() || allYtItems.isNotEmpty())
 
                     fun getBottomNavPadding(): Dp {
                         return if (shouldShowNavigationBar && !useRail) {
@@ -778,10 +778,10 @@ class MainActivity : ComponentActivity() {
                             dismissedBound = 0.dp,
                             collapsedBound =
                                 bottomInset +
-                                    (if (shouldShowNavigationBar && !useRail) floatingBarsBottomPadding else 0.dp) +
-                                    getBottomNavPadding() +
-                                    (if (useNewMiniPlayerDesign) MiniPlayerBottomSpacing else 0.dp) +
-                                    MiniPlayerHeight,
+                                        (if (shouldShowNavigationBar && !useRail) floatingBarsBottomPadding else 0.dp) +
+                                        getBottomNavPadding() +
+                                        (if (useNewMiniPlayerDesign) MiniPlayerBottomSpacing else 0.dp) +
+                                        MiniPlayerHeight,
                             expandedBound = maxHeight,
                         )
 
@@ -803,7 +803,7 @@ class MainActivity : ComponentActivity() {
                         if (!isYearInMusicScreen && miniPlayerAnchorPersistenceEnabled) {
                             setSavedMiniPlayerAnchor(miniPlayerAnchor)
                         }
-                        }
+                    }
 
                     var yearInMusicSavedPlayerAnchor by rememberSaveable { mutableStateOf(-1) }
 
@@ -898,10 +898,10 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(navBackStackEntry) {
                         val currentRoute = navBackStackEntry?.destination?.route
                         val wasOnNonTopLevelScreen = previousRoute != null &&
-                            previousRoute !in topLevelScreens &&
-                            previousRoute?.startsWith("search/") != true
+                                previousRoute !in topLevelScreens &&
+                                previousRoute?.startsWith("search/") != true
                         val isReturningToHomeOrLibrary = currentRoute == Screens.Home.route ||
-                            currentRoute == Screens.Library.route
+                                currentRoute == Screens.Library.route
 
                         if (wasOnNonTopLevelScreen && isReturningToHomeOrLibrary) {
                             searchBarScrollBehavior.state.resetHeightOffset()
@@ -1028,7 +1028,7 @@ class MainActivity : ComponentActivity() {
 
                     LaunchedEffect(Unit) {
                         delay(3000)
-                        
+
                         withContext(Dispatchers.IO) {
                             val current = dataStore[LaunchCountKey] ?: 0
                             val newCount = current + 1
@@ -1113,16 +1113,16 @@ class MainActivity : ComponentActivity() {
                                             },
                                             onClick = {
                                                 val wasPlayerActive = playerBottomSheetState.isExpanded
-                                                
+
                                                 if(wasPlayerActive) {
                                                     playerBottomSheetState.collapse(spring())
                                                 }
-                                                
+
                                                 if (screen.route == Screens.Search.route) {
                                                     onActiveChange(true)
                                                 } else if (isSelected) {
                                                     if(wasPlayerActive) return@NavigationRailItem
-                                                    
+
                                                     navController.currentBackStackEntry?.savedStateHandle?.set("scrollToTop", true)
                                                     coroutineScope.launch {
                                                         searchBarScrollBehavior.state.resetHeightOffset()
@@ -1141,14 +1141,14 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }
                             }
-                            
+
                             Scaffold(
                                 topBar = {
                                     if (shouldShowTopBar) {
                                         val shouldUseFloatingTopBar = remember(navBackStackEntry) {
                                             navBackStackEntry?.destination?.route == Screens.Home.route ||
-                                                navBackStackEntry?.destination?.route == Screens.MoodAndGenres.route ||
-                                                navBackStackEntry?.destination?.route == Screens.Library.route
+                                                    navBackStackEntry?.destination?.route == Screens.MoodAndGenres.route ||
+                                                    navBackStackEntry?.destination?.route == Screens.Library.route
                                         }
                                         val shouldShowBlurBackground = remember(navBackStackEntry) {
                                             shouldUseFloatingTopBar
@@ -1439,141 +1439,141 @@ class MainActivity : ComponentActivity() {
 
                                         if(useRail) return@Box
 
-                        val navSlideDistance =
-                            bottomInset + floatingBarsBottomPadding + navVisibleHeight
+                                        val navSlideDistance =
+                                            bottomInset + floatingBarsBottomPadding + navVisibleHeight
 
-                        Box(
-                            modifier =
-                                Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .height(navSlideDistance)
-                                    .offset {
-                                        if (bottomNavigationBarHeight == 0.dp) {
-                                            IntOffset(
-                                                x = 0,
-                                                y = navSlideDistance.roundToPx(),
-                                            )
-                                        } else {
-                                            val slideOffset =
-                                                navSlideDistance *
-                                                    playerBottomSheetState.progress.coerceIn(
-                                                        0f,
-                                                        1f,
+                                        Box(
+                                            modifier =
+                                                Modifier
+                                                    .align(Alignment.BottomCenter)
+                                                    .height(navSlideDistance)
+                                                    .offset {
+                                                        if (bottomNavigationBarHeight == 0.dp) {
+                                                            IntOffset(
+                                                                x = 0,
+                                                                y = navSlideDistance.roundToPx(),
+                                                            )
+                                                        } else {
+                                                            val slideOffset =
+                                                                navSlideDistance *
+                                                                        playerBottomSheetState.progress.coerceIn(
+                                                                            0f,
+                                                                            1f,
+                                                                        )
+                                                            val hideOffset =
+                                                                navSlideDistance *
+                                                                        (1 - bottomNavigationBarHeight.coerceAtMost(navVisibleHeight) / navVisibleHeight)
+                                                            IntOffset(
+                                                                x = 0,
+                                                                y = (slideOffset + hideOffset).roundToPx(),
+                                                            )
+                                                        }
+                                                    },
+                                        ) {
+                                            FloatingNavigationToolbar(
+                                                items = navigationItems,
+                                                pureBlack = pureBlack,
+                                                liquidGlass = liquidGlassNavBar,
+                                                modifier = Modifier
+                                                    .align(Alignment.BottomCenter)
+                                                    .padding(
+                                                        start = FloatingToolbarHorizontalPadding,
+                                                        end = FloatingToolbarHorizontalPadding,
+                                                        bottom = bottomInset + floatingBarsBottomPadding,
                                                     )
-                                            val hideOffset =
-                                                navSlideDistance *
-                                                    (1 - bottomNavigationBarHeight.coerceAtMost(navVisibleHeight) / navVisibleHeight)
-                                            IntOffset(
-                                                x = 0,
-                                                y = (slideOffset + hideOffset).roundToPx(),
+                                                    .height(navVisibleHeight),
+                                                onShuffleClick = if (shouldShowHomeShuffleButton) {
+                                                    {
+                                                        val useLocalSource = when {
+                                                            allLocalItems.isNotEmpty() && allYtItems.isNotEmpty() -> Random.nextFloat() < 0.5f
+                                                            allLocalItems.isNotEmpty() -> true
+                                                            else -> false
+                                                        }
+
+                                                        coroutineScope.launch(Dispatchers.Main) {
+                                                            if (useLocalSource) {
+                                                                when (val luckyItem = allLocalItems.random()) {
+                                                                    is Song -> {
+                                                                        playerConnection?.playQueue(
+                                                                            YouTubeQueue.radio(luckyItem.toMediaMetadata())
+                                                                        )
+                                                                    }
+
+                                                                    is Album -> {
+                                                                        val albumWithSongs = withContext(Dispatchers.IO) {
+                                                                            database.albumWithSongs(luckyItem.id).first()
+                                                                        }
+
+                                                                        albumWithSongs?.let {
+                                                                            playerConnection?.playQueue(LocalAlbumRadio(it))
+                                                                        }
+                                                                    }
+
+                                                                    is Artist -> Unit
+                                                                    is Playlist -> Unit
+                                                                }
+                                                            } else {
+                                                                when (val luckyItem = allYtItems.random()) {
+                                                                    is SongItem -> {
+                                                                        playerConnection?.playQueue(
+                                                                            YouTubeQueue.radio(luckyItem.toMediaMetadata())
+                                                                        )
+                                                                    }
+
+                                                                    is AlbumItem -> {
+                                                                        playerConnection?.playQueue(
+                                                                            YouTubeAlbumRadio(luckyItem.playlistId)
+                                                                        )
+                                                                    }
+
+                                                                    is ArtistItem -> {
+                                                                        luckyItem.radioEndpoint?.let {
+                                                                            playerConnection?.playQueue(YouTubeQueue(it))
+                                                                        }
+                                                                    }
+
+                                                                    is PlaylistItem -> {
+                                                                        luckyItem.playEndpoint?.let {
+                                                                            playerConnection?.playQueue(YouTubeQueue(it))
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                } else null,
+                                                shuffleIconRes = if (shouldShowHomeShuffleButton) R.drawable.shuffle else null,
+                                                shuffleContentDescription = if (shouldShowHomeShuffleButton) stringResource(R.string.shuffle) else "",
+                                                onMusicRecognitionClick = if (shouldShowHomeShuffleButton) {
+                                                    { navController.navigate(MusicRecognitionRoute) }
+                                                } else null,
+                                                musicRecognitionContentDescription = if (shouldShowHomeShuffleButton) stringResource(R.string.music_recognition) else "",
+                                                isSelected = { screen ->
+                                                    navBackStackEntry?.destination?.hierarchy?.any { it.route == screen.route } ==
+                                                            true
+                                                },
+                                                onItemClick = { screen, isSelected ->
+                                                    if (screen.route == Screens.Search.route) {
+                                                        onActiveChange(true)
+                                                    } else if (isSelected) {
+                                                        navController.currentBackStackEntry?.savedStateHandle?.set(
+                                                            "scrollToTop",
+                                                            true
+                                                        )
+                                                        coroutineScope.launch {
+                                                            searchBarScrollBehavior.state.resetHeightOffset()
+                                                        }
+                                                    } else {
+                                                        navController.navigate(screen.route) {
+                                                            popUpTo(navController.graph.startDestinationId) {
+                                                                saveState = true
+                                                            }
+                                                            launchSingleTop = true
+                                                            restoreState = true
+                                                        }
+                                                    }
+                                                },
                                             )
-                                        }
-                                    },
-                        ) {
-                            FloatingNavigationToolbar(
-                                items = navigationItems,
-                                pureBlack = pureBlack,
-                                liquidGlass = liquidGlassNavBar,
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(
-                                        start = FloatingToolbarHorizontalPadding,
-                                        end = FloatingToolbarHorizontalPadding,
-                                        bottom = bottomInset + floatingBarsBottomPadding,
-                                    )
-                                    .height(navVisibleHeight),
-                                onShuffleClick = if (shouldShowHomeShuffleButton) {
-                                    {
-                                        val useLocalSource = when {
-                                            allLocalItems.isNotEmpty() && allYtItems.isNotEmpty() -> Random.nextFloat() < 0.5f
-                                            allLocalItems.isNotEmpty() -> true
-                                            else -> false
-                                        }
-
-                                        coroutineScope.launch(Dispatchers.Main) {
-                                            if (useLocalSource) {
-                                                when (val luckyItem = allLocalItems.random()) {
-                                                    is Song -> {
-                                                        playerConnection?.playQueue(
-                                                            YouTubeQueue.radio(luckyItem.toMediaMetadata())
-                                                        )
-                                                    }
-
-                                                    is Album -> {
-                                                        val albumWithSongs = withContext(Dispatchers.IO) {
-                                                            database.albumWithSongs(luckyItem.id).first()
-                                                        }
-
-                                                        albumWithSongs?.let {
-                                                            playerConnection?.playQueue(LocalAlbumRadio(it))
-                                                        }
-                                                    }
-
-                                                    is Artist -> Unit
-                                                    is Playlist -> Unit
-                                                }
-                                            } else {
-                                                when (val luckyItem = allYtItems.random()) {
-                                                    is SongItem -> {
-                                                        playerConnection?.playQueue(
-                                                            YouTubeQueue.radio(luckyItem.toMediaMetadata())
-                                                        )
-                                                    }
-
-                                                    is AlbumItem -> {
-                                                        playerConnection?.playQueue(
-                                                            YouTubeAlbumRadio(luckyItem.playlistId)
-                                                        )
-                                                    }
-
-                                                    is ArtistItem -> {
-                                                        luckyItem.radioEndpoint?.let {
-                                                            playerConnection?.playQueue(YouTubeQueue(it))
-                                                        }
-                                                    }
-
-                                                    is PlaylistItem -> {
-                                                        luckyItem.playEndpoint?.let {
-                                                            playerConnection?.playQueue(YouTubeQueue(it))
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                } else null,
-                                shuffleIconRes = if (shouldShowHomeShuffleButton) R.drawable.shuffle else null,
-                                shuffleContentDescription = if (shouldShowHomeShuffleButton) stringResource(R.string.shuffle) else "",
-                                onMusicRecognitionClick = if (shouldShowHomeShuffleButton) {
-                                    { navController.navigate(MusicRecognitionRoute) }
-                                } else null,
-                                musicRecognitionContentDescription = if (shouldShowHomeShuffleButton) stringResource(R.string.music_recognition) else "",
-                                isSelected = { screen ->
-                                    navBackStackEntry?.destination?.hierarchy?.any { it.route == screen.route } ==
-                                            true
-                                },
-                                onItemClick = { screen, isSelected ->
-                                    if (screen.route == Screens.Search.route) {
-                                        onActiveChange(true)
-                                    } else if (isSelected) {
-                                        navController.currentBackStackEntry?.savedStateHandle?.set(
-                                            "scrollToTop",
-                                            true
-                                        )
-                                        coroutineScope.launch {
-                                            searchBarScrollBehavior.state.resetHeightOffset()
-                                        }
-                                    } else {
-                                        navController.navigate(screen.route) {
-                                            popUpTo(navController.graph.startDestinationId) {
-                                                saveState = true
-                                            }
-                                            launchSingleTop = true
-                                            restoreState = true
-                                        }
-                                    }
-                                },
-                            )
                                         }
                                     }
                                 },
@@ -1766,7 +1766,7 @@ class MainActivity : ComponentActivity() {
                     uri.host == "youtu.be" -> uri.pathSegments.firstOrNull()
                     else -> null
                 }
-                
+
                 val playlistId = uri.getQueryParameter("list")
 
                 videoId?.let { vid ->

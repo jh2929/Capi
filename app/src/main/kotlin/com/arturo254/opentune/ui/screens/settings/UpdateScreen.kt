@@ -116,8 +116,10 @@ fun UpdateScreen(
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val coroutineScope = rememberCoroutineScope()
-    val nightlyInstallUrl =
-        "https://github.com/Arturo254/OpenTune/releases/download/latest/app-universal-release.apk"
+
+    var nightlyInstallUrl by remember {
+        mutableStateOf("https://github.com/Arturo254/OpenTune/releases/download/latest/app-universal-release.apk")
+    }
 
     val (enableUpdateNotification, onEnableUpdateNotificationChange) = rememberPreference(
         EnableUpdateNotificationKey, defaultValue = false
@@ -218,6 +220,18 @@ fun UpdateScreen(
             Updater.getLatestVersionName().onSuccess { latestVersion = it }
             Updater.getCommitHistory(30).onSuccess { commits = it }.onFailure { commits = emptyList() }
             isLoadingCommits = false
+        }
+    }
+
+    LaunchedEffect(updateChannel) {
+        if (updateChannel == UpdateChannel.NIGHTLY) {
+            coroutineScope.launch {
+                Updater.getLatestReleaseInfo().onSuccess { info ->
+                    nightlyInstallUrl = info.htmlUrl
+                }
+            }
+        } else {
+            nightlyInstallUrl = "https://github.com/Arturo254/OpenTune/releases/download/latest/app-universal-release.apk"
         }
     }
 
@@ -545,11 +559,10 @@ private fun UpdateAvailableDialog(
                         Text(info.versionName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     }
                 }
-                if (info.releaseNotes?.isNotBlank() == true) {
+                if (!info.releaseNotes.isNullOrBlank()) {
                     HorizontalDivider()
                     Text("Novedades", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-                    val notes: String = info.releaseNotes?.take(300)
-                        .let { info.releaseNotes?.length?.let { it1 -> if (it1 > 300) "$it…" else it } as String }
+                    val notes = info.releaseNotes.let { if (it.length > 300) it.take(300) + "…" else it }
                     Text(
                         text = notes,
                         style = MaterialTheme.typography.bodySmall,
