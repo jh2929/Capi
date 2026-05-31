@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "opentune-desktop",
+  "productName": "Opentune",
   "version": "0.1.0",
   "identifier": "com.emixdy.opentune-desktop",
   "build": {
@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "opentune-desktop",
-        "width": 800,
-        "height": 600
+        "title": "Opentune",
+        "width": 1000,
+        "height": 700
       }
     ],
     "security": {
