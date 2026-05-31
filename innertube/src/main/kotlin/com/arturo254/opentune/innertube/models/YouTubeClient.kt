@@ -30,6 +30,9 @@ data class YouTubeClient(
     val useSignatureTimestamp: Boolean = false,
     val isEmbedded: Boolean = false,
 ) {
+    val isMusic: Boolean
+        get() = clientName == "WEB_REMIX" || clientName.endsWith("_MUSIC") || clientName.endsWith("MUSIC")
+
     fun toContext(locale: YouTubeLocale, visitorData: String?, dataSyncId: String?) = Context(
         client = Context.Client(
             clientName = clientName,

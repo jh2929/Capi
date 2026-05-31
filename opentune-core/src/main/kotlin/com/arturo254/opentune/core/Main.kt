@@ -60,7 +60,7 @@ fun main(args: Array<String>) {
     runBlocking {
         System.err.println("[DEBUG] [${System.currentTimeMillis()}] Starting main coroutine blocking...")
         try {
-            // YouTube.visitorData = YouTube.visitorData().getOrNull()
+            YouTube.visitorData = YouTube.visitorData().getOrNull()
             when (action) {
                 "--search" -> {
                     if (args.size < 2) {
@@ -94,7 +94,9 @@ fun main(args: Array<String>) {
                     val sig = NewPipeUtils.getSignatureTimestamp(videoId).getOrNull()
                     
                     val clients = listOf(
+                        YouTubeClient.ANDROID_MUSIC,
                         YouTubeClient.ANDROID_VR_NO_AUTH,
+                        YouTubeClient.IOS_MUSIC,
                         YouTubeClient.IOS,
                         YouTubeClient.TVHTML5,
                         YouTubeClient.WEB_REMIX
@@ -121,6 +123,8 @@ fun main(args: Array<String>) {
                                 }
                             }
                         } catch (e: Exception) {
+                            val msg = e.message?.take(200) ?: "Unknown error"
+                            System.err.println("[DEBUG] Client ${client.clientName} failed: $msg")
                             lastException = e
                         }
                     }
@@ -150,7 +154,8 @@ fun main(args: Array<String>) {
                 }
             }
         } catch (e: Exception) {
-            printError(e.message ?: "Unknown error occurred")
+            val msg = e.message?.take(200) ?: "Unknown error occurred"
+            printError(msg)
             exitProcess(1)
         }
     }
