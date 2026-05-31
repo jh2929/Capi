@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { 
   Play, Pause, SkipForward, SkipBack, Search, Music, Volume2, 
-  ListMusic, Heart, Check, Loader2, Sparkles, ChevronLeft, ChevronRight, Menu, Plus, Trash2, Clock, Home, Library
+  ListMusic, Heart, Check, Loader2, Sparkles, ChevronLeft, ChevronRight, Menu, Plus, Trash2, Clock, Home, Library, Download
 } from "lucide-react";
 import "./App.css";
 
@@ -128,6 +129,17 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
   
+  // Local Downloads mapping and metadata
+  const [downloads, setDownloads] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem("opentune_downloads");
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [downloadedMetadata, setDownloadedMetadata] = useState<Track[]>(() => {
+    const saved = localStorage.getItem("opentune_downloaded_metadata");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({});
+
   // UI control states
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState<Track | null>(null);
@@ -143,7 +155,20 @@ function App() {
   const [buffering, setBuffering] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Sync favorites, playlists, history and volume to LocalStorage
+  // Listen to download progress events from Rust
+  useEffect(() => {
+    const unlisten = listen<{ track_id: string; progress: number }>("download-progress", (event) => {
+      setDownloadProgress(prev => ({
+        ...prev,
+        [event.payload.track_id]: Math.round(event.payload.progress)
+      }));
+    });
+    return () => {
+      unlisten.then(f => f());
+    };
+  }, []);
+
+  // Sync favorites, playlists, history, downloads and volume to LocalStorage
   useEffect(() => {
     localStorage.setItem("opentune_favorites", JSON.stringify(favorites));
   }, [favorites]);
@@ -155,6 +180,14 @@ function App() {
   useEffect(() => {
     localStorage.setItem("opentune_history", JSON.stringify(history));
   }, [history]);
+
+  useEffect(() => {
+    localStorage.setItem("opentune_downloads", JSON.stringify(downloads));
+  }, [downloads]);
+
+  useEffect(() => {
+    localStorage.setItem("opentune_downloaded_metadata", JSON.stringify(downloadedMetadata));
+  }, [downloadedMetadata]);
 
   useEffect(() => {
     localStorage.setItem("opentune_sidebar_collapsed", String(sidebarCollapsed));
@@ -182,15 +215,23 @@ function App() {
         return [track, ...filtered].slice(0, 50); // limit history to 50 items
       });
       
-      const resultJson: string = await invoke("obtener_stream", { id: track.id });
-      let stream: string = resultJson;
-      try {
-        const parsed = JSON.parse(resultJson);
-        if (parsed.streamUrl) stream = parsed.streamUrl;
-        else if (parsed.url) stream = parsed.url;
-      } catch {
-        if (stream.startsWith('"') && stream.endsWith('"')) {
-          stream = stream.substring(1, stream.length - 1);
+      let stream: string;
+
+      if (downloads[track.id]) {
+        // Play local file using Tauri asset protocol conversion
+        stream = convertFileSrc(downloads[track.id]);
+      } else {
+        // Fetch remote stream
+        const resultJson: string = await invoke("obtener_stream", { id: track.id });
+        stream = resultJson;
+        try {
+          const parsed = JSON.parse(resultJson);
+          if (parsed.streamUrl) stream = parsed.streamUrl;
+          else if (parsed.url) stream = parsed.url;
+        } catch {
+          if (stream.startsWith('"') && stream.endsWith('"')) {
+            stream = stream.substring(1, stream.length - 1);
+          }
         }
       }
 
@@ -211,6 +252,51 @@ function App() {
       alert("Error al obtener el stream de audio");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const downloadTrack = async (track: Track) => {
+    if (downloads[track.id]) return;
+    try {
+      setDownloadProgress(prev => ({ ...prev, [track.id]: 0 }));
+
+      // 1. Fetch remote stream URL
+      const resultJson: string = await invoke("obtener_stream", { id: track.id });
+      let stream: string = resultJson;
+      try {
+        const parsed = JSON.parse(resultJson);
+        if (parsed.streamUrl) stream = parsed.streamUrl;
+        else if (parsed.url) stream = parsed.url;
+      } catch {
+        if (stream.startsWith('"') && stream.endsWith('"')) {
+          stream = stream.substring(1, stream.length - 1);
+        }
+      }
+
+      // 2. Invoke Rust downloader command
+      const localPath: string = await invoke("descargar_cancion", {
+        trackId: track.id,
+        title: track.title,
+        artist: track.artist,
+        url: stream
+      });
+
+      // 3. Update downloads store
+      setDownloads(prev => ({ ...prev, [track.id]: localPath }));
+      setDownloadedMetadata(prev => {
+        if (prev.some(t => t.id === track.id)) return prev;
+        return [...prev, track];
+      });
+
+    } catch (error) {
+      console.error("Download failed:", error);
+      alert("La descarga falló. Por favor intente de nuevo.");
+    } finally {
+      setDownloadProgress(prev => {
+        const copy = { ...prev };
+        delete copy[track.id];
+        return copy;
+      });
     }
   };
 
@@ -467,7 +553,7 @@ function App() {
                       {TRENDING_MUSIC.map((track) => (
                         <div
                           key={track.id}
-                          className={`group p-4 rounded-2xl transition duration-300 bg-surface-dark/50 hover:bg-surface-dark border border-transparent hover:border-white/10`}
+                          className="group p-4 rounded-2xl transition duration-300 bg-surface-dark/50 hover:bg-surface-dark border border-transparent hover:border-white/10"
                         >
                           <div className="relative aspect-video rounded-xl overflow-hidden mb-3 bg-black/40">
                             <img
@@ -483,6 +569,13 @@ function App() {
                                 <Play className="w-5 h-5 fill-current ml-1" />
                               </button>
                             </div>
+                            {/* Download Progress overlay if downloading */}
+                            {downloadProgress[track.id] !== undefined && (
+                              <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-2">
+                                <Loader2 className="w-6 h-6 text-brand-primary animate-spin" />
+                                <span className="text-xs font-semibold">{downloadProgress[track.id]}%</span>
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-start justify-between">
                             <div className="min-w-0 flex-1">
@@ -495,6 +588,17 @@ function App() {
                                 className="p-1 text-text-secondary hover:text-brand-primary transition"
                               >
                                 <Heart className={`w-4 h-4 ${isFavorite(track) ? "fill-brand-primary text-brand-primary" : ""}`} />
+                              </button>
+                              <button 
+                                onClick={() => downloadTrack(track)}
+                                disabled={downloads[track.id] !== undefined}
+                                className={`p-1 transition ${
+                                  downloads[track.id] 
+                                    ? "text-green-400 cursor-default" 
+                                    : "text-text-secondary hover:text-brand-primary"
+                                }`}
+                              >
+                                <Download className="w-4 h-4" />
                               </button>
                               <button 
                                 onClick={() => setShowAddToPlaylistModal(track)}
@@ -532,6 +636,13 @@ function App() {
                                 <Play className="w-5 h-5 fill-current ml-1" />
                               </button>
                             </div>
+                            {/* Download Progress overlay if downloading */}
+                            {downloadProgress[track.id] !== undefined && (
+                              <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-2">
+                                <Loader2 className="w-6 h-6 text-brand-primary animate-spin" />
+                                <span className="text-xs font-semibold">{downloadProgress[track.id]}%</span>
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-start justify-between">
                             <div className="min-w-0 flex-1">
@@ -544,6 +655,17 @@ function App() {
                                 className="p-1 text-text-secondary hover:text-brand-primary transition"
                               >
                                 <Heart className={`w-4 h-4 ${isFavorite(track) ? "fill-brand-primary text-brand-primary" : ""}`} />
+                              </button>
+                              <button 
+                                onClick={() => downloadTrack(track)}
+                                disabled={downloads[track.id] !== undefined}
+                                className={`p-1 transition ${
+                                  downloads[track.id] 
+                                    ? "text-green-400 cursor-default" 
+                                    : "text-text-secondary hover:text-brand-primary"
+                                }`}
+                              >
+                                <Download className="w-4 h-4" />
                               </button>
                               <button 
                                 onClick={() => setShowAddToPlaylistModal(track)}
@@ -587,6 +709,13 @@ function App() {
                                 <Play className="w-5 h-5 fill-current ml-1" />
                               </button>
                             </div>
+                            {/* Download Progress overlay if downloading */}
+                            {downloadProgress[track.id] !== undefined && (
+                              <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-2">
+                                <Loader2 className="w-6 h-6 text-brand-primary animate-spin" />
+                                <span className="text-xs font-semibold">{downloadProgress[track.id]}%</span>
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-start justify-between">
                             <div className="min-w-0 flex-1">
@@ -599,6 +728,17 @@ function App() {
                                 className="p-1 text-text-secondary hover:text-brand-primary transition"
                               >
                                 <Heart className={`w-4 h-4 ${isFavorite(track) ? "fill-brand-primary text-brand-primary" : ""}`} />
+                              </button>
+                              <button 
+                                onClick={() => downloadTrack(track)}
+                                disabled={downloads[track.id] !== undefined}
+                                className={`p-1 transition ${
+                                  downloads[track.id] 
+                                    ? "text-green-400 cursor-default" 
+                                    : "text-text-secondary hover:text-brand-primary"
+                                }`}
+                              >
+                                <Download className="w-4 h-4" />
                               </button>
                               <button 
                                 onClick={() => setShowAddToPlaylistModal(track)}
@@ -622,54 +762,95 @@ function App() {
 
               {/* Biblioteca View */}
               {activeTab === "biblioteca" && (
-                <div className="space-y-8">
+                <div className="space-y-8 animate-fade-in">
                   <div>
                     <h2 className="text-2xl font-bold tracking-tight mb-2">Mi Biblioteca</h2>
-                    <p className="text-sm text-text-secondary mb-6">Tu espacio personal de música.</p>
+                    <p className="text-sm text-text-secondary mb-6">Tu música local e historial de reproducción.</p>
                   </div>
 
-                  {/* Recently Played History */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <Clock className="w-5 h-5 text-brand-primary" />
-                      <h3 className="text-lg font-semibold">Historial de Reproducción</h3>
-                    </div>
-                    {history.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {history.map((track, i) => (
-                          <div
-                            key={`${track.id}-${i}`}
-                            className="group p-4 rounded-2xl transition duration-300 bg-surface-dark/50 hover:bg-surface-dark border border-transparent hover:border-white/10"
-                          >
-                            <div className="relative aspect-video rounded-xl overflow-hidden mb-3 bg-black/40">
-                              <img
-                                src={track.thumbnail}
-                                alt={track.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                              />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition duration-300">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* Left: Descargas Locales */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <Download className="w-5 h-5 text-brand-primary" />
+                        <h3 className="text-lg font-semibold">Descargas Locales</h3>
+                      </div>
+                      {downloadedMetadata.length > 0 ? (
+                        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                          {downloadedMetadata.map((track) => (
+                            <div 
+                              key={track.id}
+                              className="flex items-center justify-between p-3 rounded-xl bg-surface-dark/40 hover:bg-surface-dark transition"
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <img 
+                                  src={track.thumbnail} 
+                                  alt={track.title} 
+                                  className="w-10 h-10 rounded-lg object-cover bg-black/40"
+                                />
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-sm truncate">{track.title}</p>
+                                  <p className="text-xs text-text-secondary truncate">{track.artist}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-green-400 font-semibold px-2 py-0.5 rounded-full bg-green-400/10">Descargado</span>
                                 <button 
                                   onClick={() => playTrack(track)}
-                                  className="w-12 h-12 rounded-full bg-brand-primary flex items-center justify-center text-bg-dark shadow-lg hover:scale-105 transition"
+                                  className="p-2 bg-brand-primary rounded-full text-bg-dark hover:scale-105 transition"
                                 >
-                                  <Play className="w-5 h-5 fill-current ml-1" />
+                                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
                                 </button>
                               </div>
                             </div>
-                            <div className="flex items-start justify-between">
-                              <div className="min-w-0 flex-1">
-                                <h3 className="font-semibold text-sm truncate">{track.title}</h3>
-                                <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-8 rounded-2xl bg-white/5 border border-white/5 text-center">
+                          <p className="text-sm text-text-secondary">No tienes descargas locales.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right: History */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <Clock className="w-5 h-5 text-brand-primary" />
+                        <h3 className="text-lg font-semibold">Historial de Reproducción</h3>
+                      </div>
+                      {history.length > 0 ? (
+                        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                          {history.map((track, i) => (
+                            <div 
+                              key={`${track.id}-${i}`}
+                              className="flex items-center justify-between p-3 rounded-xl bg-surface-dark/40 hover:bg-surface-dark transition"
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <img 
+                                  src={track.thumbnail} 
+                                  alt={track.title} 
+                                  className="w-10 h-10 rounded-lg object-cover bg-black/40"
+                                />
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-sm truncate">{track.title}</p>
+                                  <p className="text-xs text-text-secondary truncate">{track.artist}</p>
+                                </div>
                               </div>
+                              <button 
+                                onClick={() => playTrack(track)}
+                                className="p-2 bg-brand-primary rounded-full text-bg-dark hover:scale-105 transition"
+                              >
+                                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                              </button>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-8 rounded-2xl bg-white/5 border border-white/5 text-center">
-                        <p className="text-sm text-text-secondary">Aún no has reproducido ninguna canción.</p>
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-8 rounded-2xl bg-white/5 border border-white/5 text-center">
+                          <p className="text-sm text-text-secondary">No has escuchado ninguna canción recientemente.</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -724,7 +905,7 @@ function App() {
                                 className="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-white/5 transition flex items-center gap-2 text-sm"
                               >
                                 <Trash2 className="w-4 h-4" />
-                                Eliminr Lista
+                                Eliminar Lista
                               </button>
                             </div>
 
@@ -836,6 +1017,13 @@ function App() {
                                 <Play className="w-5 h-5 fill-current ml-1" />
                               </button>
                             </div>
+                            {/* Download Progress overlay if downloading */}
+                            {downloadProgress[track.id] !== undefined && (
+                              <div className="absolute inset-0 bg-black/75 flex flex-col items-center justify-center gap-2">
+                                <Loader2 className="w-6 h-6 text-brand-primary animate-spin" />
+                                <span className="text-xs font-semibold">{downloadProgress[track.id]}%</span>
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-start justify-between">
                             <div className="min-w-0 flex-1">
@@ -848,6 +1036,17 @@ function App() {
                                 className="p-1 text-brand-primary transition"
                               >
                                 <Heart className="w-4 h-4 fill-brand-primary" />
+                              </button>
+                              <button 
+                                onClick={() => downloadTrack(track)}
+                                disabled={downloads[track.id] !== undefined}
+                                className={`p-1 transition ${
+                                  downloads[track.id] 
+                                    ? "text-green-400 cursor-default" 
+                                    : "text-text-secondary hover:text-brand-primary"
+                                }`}
+                              >
+                                <Download className="w-4 h-4" />
                               </button>
                             </div>
                           </div>
@@ -888,6 +1087,17 @@ function App() {
                   className="text-text-secondary hover:text-brand-primary p-2 rounded-lg hover:bg-white/5 transition"
                 >
                   <Heart className={`w-5 h-5 ${isFavorite(currentTrack) ? "fill-brand-primary text-brand-primary" : ""}`} />
+                </button>
+                <button 
+                  onClick={() => downloadTrack(currentTrack)}
+                  disabled={downloads[currentTrack.id] !== undefined}
+                  className={`p-2 rounded-lg hover:bg-white/5 transition ${
+                    downloads[currentTrack.id] 
+                      ? "text-green-400 cursor-default" 
+                      : "text-text-secondary hover:text-brand-primary"
+                  }`}
+                >
+                  <Download className="w-5 h-5" />
                 </button>
               </>
             ) : (
