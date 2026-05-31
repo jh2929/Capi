@@ -91,9 +91,9 @@ class InnerTube {
             socketTimeoutMillis = 15000
         }
 
-        if (proxy != null) {
-            engine {
-                proxy = this@InnerTube.proxy
+        engine {
+            config {
+                proxy(this@InnerTube.proxy ?: java.net.Proxy.NO_PROXY)
             }
         }
 
