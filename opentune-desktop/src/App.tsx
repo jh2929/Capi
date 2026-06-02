@@ -490,8 +490,7 @@ function App() {
       let stream: string;
       if (downloads[track.id]) {
         const path = downloads[track.id];
-        const filename = path.substring(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
-        stream = `http://127.0.0.1:${localPort}/play?file=${encodeURIComponent(filename)}`;
+        stream = `http://127.0.0.1:${localPort}/play?path=${encodeURIComponent(path)}`;
       } else if (streamCacheRef.current[track.id]) {
         stream = streamCacheRef.current[track.id];
       } else {

@@ -28,14 +28,19 @@ fn start_local_server(opentune_dir: PathBuf) -> u16 {
                         let parts: Vec<&str> = first_line.split_whitespace().collect();
                         if parts.len() >= 2 && parts[0] == "GET" {
                             let path_and_query = parts[1];
-                            if let Some(pos) = path_and_query.find("file=") {
-                                let encoded_file = &path_and_query[pos + 5..];
-                                let decoded_str = match urlencoding::decode(encoded_file) {
+                            if let Some(pos) = path_and_query.find("path=") {
+                                let encoded_path = &path_and_query[pos + 5..];
+                                let decoded_str = match urlencoding::decode(encoded_path) {
                                     Ok(d) => d.into_owned(),
-                                    Err(_) => encoded_file.to_string(),
+                                    Err(_) => encoded_path.to_string(),
                                 };
-                                let file_path = opentune_dir.join(&decoded_str);
-                                if file_path.starts_with(&opentune_dir) && file_path.exists() {
+                                let file_path = std::path::Path::new(&decoded_str);
+                                let is_allowed = file_path.exists() && file_path.is_file() && (
+                                    file_path.starts_with(&opentune_dir) ||
+                                    file_path.to_string_lossy().contains("/Música/Opentune/") ||
+                                    file_path.to_string_lossy().contains("/Music/Opentune/")
+                                );
+                                if is_allowed {
                                     if let Ok(mut file) = File::open(&file_path) {
                                         let metadata = file.metadata().unwrap();
                                         let file_size = metadata.len();
