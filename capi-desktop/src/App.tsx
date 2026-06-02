@@ -950,9 +950,9 @@ function App() {
               /* When collapsed: logo is the expand button */
               <button
                 onClick={handleToggleSidebar}
-                className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-primary to-brand-tertiary flex items-center justify-center shadow-lg shadow-brand-primary/20 hover:scale-105 transition"
+                className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shadow-lg shadow-brand-primary/20 hover:scale-105 transition bg-bg-dark"
               >
-                <Sparkles className="w-5 h-5 text-bg-dark" />
+                <img src={Logo} alt="Logo" className="w-full h-full object-cover" />
               </button>
             ) : (
               <>
