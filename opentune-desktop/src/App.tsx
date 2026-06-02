@@ -191,6 +191,16 @@ function App() {
   });
   const [buffering, setBuffering] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [localPort, setLocalPort] = useState<number | null>(null);
+
+  // Fetch local server port on mount
+  useEffect(() => {
+    invoke<number>("obtener_local_port").then(port => {
+      setLocalPort(port);
+    }).catch(err => {
+      console.error("Error al obtener el puerto del servidor local:", err);
+    });
+  }, []);
 
   // Search suggestions & history
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
@@ -479,7 +489,9 @@ function App() {
       
       let stream: string;
       if (downloads[track.id]) {
-        stream = convertFileSrc(downloads[track.id]);
+        const path = downloads[track.id];
+        const filename = path.substring(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
+        stream = `http://127.0.0.1:${localPort}/play?file=${encodeURIComponent(filename)}`;
       } else if (streamCacheRef.current[track.id]) {
         stream = streamCacheRef.current[track.id];
       } else {
@@ -487,9 +499,15 @@ function App() {
         stream = resultJson;
         try {
           const parsed = JSON.parse(resultJson);
+          if (parsed.error) {
+            throw new Error(parsed.error);
+          }
           if (parsed.streamUrl) stream = parsed.streamUrl;
           else if (parsed.url) stream = parsed.url;
-        } catch {
+        } catch (err: any) {
+          if (err.message && !err.message.includes("Unexpected token")) {
+            throw err;
+          }
           if (stream.startsWith('"') && stream.endsWith('"')) {
             stream = stream.substring(1, stream.length - 1);
           }
@@ -508,7 +526,7 @@ function App() {
         }).catch(err => {
           console.error("Playback error:", err, "for stream:", stream);
           // If local src fails, show error popup for testing clarity
-          if (stream.startsWith("asset:") || stream.startsWith("http://asset")) {
+          if (stream.startsWith("http://127.0.0.1")) {
             alert("No se pudo reproducir el archivo local: " + err.message);
           }
           setBuffering(false);
@@ -538,9 +556,15 @@ function App() {
       stream = resultJson;
       try {
         const parsed = JSON.parse(resultJson);
+        if (parsed.error) {
+          throw new Error(parsed.error);
+        }
         if (parsed.streamUrl) stream = parsed.streamUrl;
         else if (parsed.url) stream = parsed.url;
-      } catch {
+      } catch (err: any) {
+        if (err.message && !err.message.includes("Unexpected token")) {
+          throw err;
+        }
         if (stream.startsWith('"') && stream.endsWith('"')) {
           stream = stream.substring(1, stream.length - 1);
         }

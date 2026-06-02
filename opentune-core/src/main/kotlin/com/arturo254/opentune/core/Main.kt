@@ -220,6 +220,7 @@ fun main(args: Array<String>) {
 
     val action = args[0]
     runBlocking {
+        YouTube.webClientPoTokenEnabled = true
         System.err.println("[DEBUG] [${System.currentTimeMillis()}] Starting main coroutine blocking...")
         try {
             if (action == "--daemon") {
@@ -277,7 +278,13 @@ fun main(args: Array<String>) {
                                      YouTubeClient.ANDROID_MUSIC,
                                      YouTubeClient.IOS_MUSIC,
                                      YouTubeClient.TVHTML5,
-                                     YouTubeClient.WEB_REMIX
+                                     YouTubeClient.WEB_REMIX,
+                                     YouTubeClient.ANDROID_VR_NO_AUTH,
+                                     YouTubeClient.ANDROID_VR_1_61_48,
+                                     YouTubeClient.ANDROID_VR_1_43_32,
+                                     YouTubeClient.IOS,
+                                     YouTubeClient.WEB,
+                                     YouTubeClient.MWEB
                                  )
                                 val streamUrl = kotlinx.coroutines.supervisorScope {
                                      val deferreds = clients.map { client ->
@@ -292,10 +299,16 @@ fun main(args: Array<String>) {
                                                 val audioFormats = playerResp.streamingData?.adaptiveFormats?.filter { it.isAudio } ?: emptyList()
                                                 if (audioFormats.isNotEmpty()) {
                                                     val format = audioFormats.maxByOrNull { it.bitrate }!!
-                                                    val url = NewPipeUtils.getStreamUrl(format, videoId, client).getOrNull()
+                                                    val urlResult = NewPipeUtils.getStreamUrl(format, videoId, client)
+                                                    val url = urlResult.getOrNull()
                                                     if (url != null) {
                                                         return@async url
+                                                    } else {
+                                                        val err = urlResult.exceptionOrNull()
+                                                        System.err.println("[DEBUG] Client ${client.clientName}: NewPipeUtils.getStreamUrl failed: ${err?.message} | Cause: ${err?.cause?.message}")
                                                     }
+                                                } else {
+                                                    System.err.println("[DEBUG] Client ${client.clientName} playability: ${playerResp.playabilityStatus.status}, reason: ${playerResp.playabilityStatus.reason}")
                                                 }
                                             } catch (e: Exception) {
                                                 val msg = e.message?.take(200) ?: "Unknown error"
@@ -447,14 +460,18 @@ fun main(args: Array<String>) {
                         val videoId = args[1]
                         val sig = NewPipeUtils.getSignatureTimestamp(videoId).getOrNull()
                         
-                        val clients = listOf(
-                            YouTubeClient.ANDROID_MUSIC,
-                            YouTubeClient.ANDROID_VR_NO_AUTH,
-                            YouTubeClient.IOS_MUSIC,
-                            YouTubeClient.IOS,
-                            YouTubeClient.TVHTML5,
-                            YouTubeClient.WEB_REMIX
-                        )
+                         val clients = listOf(
+                             YouTubeClient.ANDROID_MUSIC,
+                             YouTubeClient.IOS_MUSIC,
+                             YouTubeClient.TVHTML5,
+                             YouTubeClient.WEB_REMIX,
+                             YouTubeClient.ANDROID_VR_NO_AUTH,
+                             YouTubeClient.ANDROID_VR_1_61_48,
+                             YouTubeClient.ANDROID_VR_1_43_32,
+                             YouTubeClient.IOS,
+                             YouTubeClient.WEB,
+                             YouTubeClient.MWEB
+                         )
                         
                         val streamUrl = coroutineScope {
                             val deferreds = clients.map { client ->
