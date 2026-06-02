@@ -28,7 +28,71 @@ fn start_local_server(opentune_dir: PathBuf) -> u16 {
                         let parts: Vec<&str> = first_line.split_whitespace().collect();
                         if parts.len() >= 2 && parts[0] == "GET" {
                             let path_and_query = parts[1];
-                            if let Some(pos) = path_and_query.find("path=") {
+                            if let Some(pos) = path_and_query.find("url=") {
+                                let encoded_url = &path_and_query[pos + 4..];
+                                let decoded_url = match urlencoding::decode(encoded_url) {
+                                    Ok(d) => d.into_owned(),
+                                    Err(_) => encoded_url.to_string(),
+                                };
+                                
+                                let mut range_header = None;
+                                for line in request.lines() {
+                                    if line.to_lowercase().starts_with("range:") {
+                                        range_header = Some(line.to_string());
+                                    }
+                                }
+                                
+                                let res = tauri::async_runtime::block_on(async {
+                                    let mut req = reqwest::Client::new().get(&decoded_url);
+                                    if let Some(ref r) = range_header {
+                                        if let Some(val) = r.split(':').nth(1) {
+                                            req = req.header("Range", val.trim());
+                                        }
+                                    }
+                                    req.send().await
+                                });
+                                
+                                if let Ok(response) = res {
+                                    let status = response.status();
+                                    let headers = response.headers();
+                                    
+                                    let content_type = headers.get("content-type")
+                                        .and_then(|h| h.to_str().ok())
+                                        .unwrap_or("audio/webm");
+                                    let content_length = headers.get("content-length")
+                                        .and_then(|h| h.to_str().ok())
+                                        .unwrap_or("0");
+                                        
+                                    let status_line = format!("HTTP/1.1 {} {}\r\n", status.as_u16(), status.canonical_reason().unwrap_or("OK"));
+                                    let mut response_headers = format!(
+                                        "{}Content-Type: {}\r\nContent-Length: {}\r\nAccept-Ranges: bytes\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\n",
+                                        status_line, content_type, content_length
+                                    );
+                                    
+                                    if let Some(range_val) = headers.get("content-range") {
+                                        if let Ok(rv) = range_val.to_str() {
+                                            response_headers.push_str(&format!("Content-Range: {}\r\n", rv));
+                                        }
+                                    }
+                                    response_headers.push_str("\r\n");
+                                    
+                                    if stream.write_all(response_headers.as_bytes()).is_ok() {
+                                        let mut body_stream = response.bytes_stream();
+                                        tauri::async_runtime::block_on(async {
+                                            while let Some(chunk_result) = body_stream.next().await {
+                                                if let Ok(chunk) = chunk_result {
+                                                    if stream.write_all(&chunk).is_err() {
+                                                        break;
+                                                    }
+                                                } else {
+                                                    break;
+                                                }
+                                            }
+                                        });
+                                    }
+                                    return;
+                                }
+                            } else if let Some(pos) = path_and_query.find("path=") {
                                 let encoded_path = &path_and_query[pos + 5..];
                                 let decoded_str = match urlencoding::decode(encoded_path) {
                                     Ok(d) => d.into_owned(),

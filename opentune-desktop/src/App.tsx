@@ -511,6 +511,9 @@ function App() {
             stream = stream.substring(1, stream.length - 1);
           }
         }
+        
+        // Wrap the YouTube stream URL in our local HTTP server to bypass GStreamer SSL/TLS negotiation bugs
+        stream = `http://127.0.0.1:${localPort}/play?url=${encodeURIComponent(stream)}`;
         streamCacheRef.current[track.id] = stream;
       }
 
