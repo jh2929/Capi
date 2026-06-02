@@ -151,6 +151,8 @@ fun mapYTItem(item: com.arturo254.opentune.innertube.models.YTItem): YTItemDTO {
     }
 }
 
+private var cachedSignatureTimestamp: Int? = null
+
 fun main(args: Array<String>) {
     // Prevent GraalVM from stripping serializers during static analysis by actively referencing them
     val activeSerializers = listOf(
@@ -242,6 +244,19 @@ fun main(args: Array<String>) {
                     System.err.println("[DAEMON] WARNING: visitorData is null, PO Tokens not generated")
                 }
 
+                // Pre-fetch signature timestamp in background to eliminate latency on first play
+                launch(Dispatchers.IO) {
+                    try {
+                        val sig = NewPipeUtils.getSignatureTimestamp("lYBUbBu4W08").getOrNull()
+                        if (sig != null) {
+                            cachedSignatureTimestamp = sig
+                            System.err.println("[DAEMON] Signature timestamp pre-fetched: $sig")
+                        }
+                    } catch (e: Exception) {
+                        System.err.println("[DAEMON] WARNING: Failed to pre-fetch signature timestamp: ${e.message}")
+                    }
+                }
+
                 // Signal ready
                 println(Json.encodeToString(mapOf("status" to "ready")))
                 System.out.flush()
@@ -273,7 +288,9 @@ fun main(args: Array<String>) {
                             }
                             "get-stream" -> {
                                 val videoId = cmdObj["id"]?.jsonPrimitive?.contentOrNull ?: throw Exception("Missing id")
-                                val sig = NewPipeUtils.getSignatureTimestamp(videoId).getOrNull()
+                                 val sig = cachedSignatureTimestamp ?: NewPipeUtils.getSignatureTimestamp(videoId).getOrNull()?.also {
+                                     cachedSignatureTimestamp = it
+                                 }
                                  val clients = listOf(
                                      YouTubeClient.ANDROID_MUSIC,
                                      YouTubeClient.IOS_MUSIC,
@@ -458,7 +475,9 @@ fun main(args: Array<String>) {
                             exitProcess(1)
                         }
                         val videoId = args[1]
-                        val sig = NewPipeUtils.getSignatureTimestamp(videoId).getOrNull()
+                        val sig = cachedSignatureTimestamp ?: NewPipeUtils.getSignatureTimestamp(videoId).getOrNull()?.also {
+                            cachedSignatureTimestamp = it
+                        }
                         
                          val clients = listOf(
                              YouTubeClient.ANDROID_MUSIC,
