@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import Logo from "./assets/Logo.png";
 import { 
@@ -10,6 +10,14 @@ import {
   User, Radio, Mic2, LayoutGrid, List, Plus
 } from "lucide-react";
 import "./App.css";
+
+interface NavState {
+  tab: "home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings";
+  artistId?: string;
+  artistData?: any;
+  currentAlbum?: any;
+  currentAlbumTracks?: Track[];
+}
 
 interface Track {
   id: string;
@@ -109,7 +117,7 @@ const getSectionIcon = (title: string) => {
 };
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings">("home");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     return localStorage.getItem("opentune_sidebar_collapsed") === "true";
   });
@@ -122,7 +130,78 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [isShuffle, setIsShuffle] = useState(false);
-  const [searchViewMode, setSearchViewMode] = useState<"grid" | "list">("grid");
+  
+  const [searchViewMode, setSearchViewMode] = useState<"grid" | "list">(() => {
+    const saved = localStorage.getItem("opentune_default_search_view");
+    return (saved === "grid" || saved === "list") ? saved : "list";
+  });
+
+  const [showSidebarProfile, setShowSidebarProfile] = useState<boolean>(() => {
+    const saved = localStorage.getItem("opentune_show_sidebar_profile");
+    return saved !== "false";
+  });
+
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState<number>(-1);
+
+  const [currentAlbum, setCurrentAlbum] = useState<{ id: string; title: string; thumbnail: string; type: string; artist?: string } | null>(null);
+  const [currentAlbumTracks, setCurrentAlbumTracks] = useState<Track[]>([]);
+
+  const [navHistory, setNavHistory] = useState<NavState[]>([
+    { tab: "home" }
+  ]);
+  const [navIndex, setNavIndex] = useState<number>(0);
+
+  const applyNavState = (state: NavState) => {
+    setActiveTab(state.tab);
+    if (state.artistData) {
+      setArtistData(state.artistData);
+    }
+    if (state.currentAlbum) {
+      setCurrentAlbum(state.currentAlbum);
+      setCurrentAlbumTracks(state.currentAlbumTracks || []);
+    }
+  };
+
+  const navigateTo = useCallback((tab: NavState["tab"], extra: Partial<NavState> = {}) => {
+    const newState: NavState = {
+      tab,
+      artistId: extra.artistId,
+      artistData: extra.artistData,
+      currentAlbum: extra.currentAlbum,
+      currentAlbumTracks: extra.currentAlbumTracks,
+    };
+    setNavHistory(prev => {
+      const updated = prev.slice(0, navIndex + 1);
+      const currentState = updated[navIndex];
+      if (currentState && 
+          currentState.tab === newState.tab && 
+          currentState.artistId === newState.artistId &&
+          currentState.currentAlbum?.id === newState.currentAlbum?.id) {
+        return prev;
+      }
+      const nextHist = [...updated, newState];
+      setNavIndex(nextHist.length - 1);
+      return nextHist;
+    });
+    applyNavState(newState);
+  }, [navIndex]);
+
+  const goBack = () => {
+    if (navIndex > 0) {
+      const nextIndex = navIndex - 1;
+      setNavIndex(nextIndex);
+      applyNavState(navHistory[nextIndex]);
+    }
+  };
+
+  const goForward = () => {
+    if (navIndex < navHistory.length - 1) {
+      const nextIndex = navIndex + 1;
+      setNavIndex(nextIndex);
+      applyNavState(navHistory[nextIndex]);
+    }
+  };
+
   const [artistCardData, setArtistCardData] = useState<{ id: string; name: string; thumbnail: string; banner: string } | null>(null);
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
   const streamCacheRef = useRef<Record<string, string>>({});
@@ -393,17 +472,45 @@ function App() {
   };
 
   const loadArtistProfile = async (artistId: string) => {
-    setActiveTab("artist");
     setLoadingArtist(true);
     setArtistData(null);
     try {
       const response = await invoke<string>("obtener_artista", { id: artistId });
       const parsed = JSON.parse(response);
       setArtistData(parsed);
+      navigateTo("artist", { artistId, artistData: parsed });
     } catch (e) {
       console.error("Failed to fetch artist profile:", e);
     } finally {
       setLoadingArtist(false);
+    }
+  };
+
+  const loadAlbumProfile = async (id: string, title: string, thumbnail: string, type: string, artistName?: string) => {
+    setCurrentAlbum({ id, title, thumbnail, type, artist: artistName });
+    setCurrentAlbumTracks([]);
+    navigateTo("album_view", {
+      currentAlbum: { id, title, thumbnail, type, artist: artistName },
+      currentAlbumTracks: []
+    });
+    try {
+      const playlistJson = await invoke<string>("obtener_playlist", { id });
+      const songs: Track[] = JSON.parse(playlistJson);
+      setCurrentAlbumTracks(songs);
+      
+      setNavHistory(prev => {
+        const copy = [...prev];
+        if (copy[navIndex]) {
+          copy[navIndex] = {
+            ...copy[navIndex],
+            currentAlbumTracks: songs
+          };
+        }
+        return copy;
+      });
+    } catch (err) {
+      console.error("Failed to load album tracks:", err);
+      alert("Error al cargar las canciones del álbum.");
     }
   };
 
@@ -657,19 +764,17 @@ function App() {
     }
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-    setActiveTab("buscar");
+  const performSearchWithQuery = async (searchQuery: string) => {
+    if (!searchQuery.trim()) return;
+    navigateTo("buscar");
     setLoading(true);
     setShowSearchDropdown(false);
-    // Save to search history
     setSearchHistory(prev => {
-      const filtered = prev.filter(h => h !== query.trim());
-      return [query.trim(), ...filtered].slice(0, 15);
+      const filtered = prev.filter(h => h !== searchQuery.trim());
+      return [searchQuery.trim(), ...filtered].slice(0, 15);
     });
     try {
-      const responseJson = await invoke<string>("buscar_cancion", { query });
+      const responseJson = await invoke<string>("buscar_cancion", { query: searchQuery });
       const data = JSON.parse(responseJson);
       
       let parsedTracks: Track[] = (Array.isArray(data) ? data : data.tracks || data.results || []).map((t: any) => ({
@@ -680,7 +785,6 @@ function App() {
         artistId: t.artistId || undefined
       }));
 
-      // Sort: first 10 from same artist as first result, then rest
       if (parsedTracks.length > 1) {
         const mainArtist = parsedTracks[0].artist.toLowerCase();
         const sameArtist = parsedTracks.filter(t => t.artist.toLowerCase() === mainArtist);
@@ -696,7 +800,11 @@ function App() {
     }
   };
 
-  // Fetch search suggestions with debounce
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    performSearchWithQuery(query);
+  };
+
   const fetchSuggestions = useCallback((q: string) => {
     if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
     if (!q.trim()) { setSearchSuggestions([]); return; }
@@ -716,6 +824,41 @@ function App() {
   useEffect(() => {
     fetchSuggestions(query);
   }, [query, fetchSuggestions]);
+
+  const getVisibleSuggestions = useCallback(() => {
+    if (query.trim() === "") {
+      return searchHistory;
+    } else if (searchSuggestions.length > 0) {
+      return searchSuggestions;
+    } else {
+      return searchHistory.filter(h => h.toLowerCase().includes(query.toLowerCase())).slice(0, 5);
+    }
+  }, [query, searchSuggestions, searchHistory]);
+
+  const visibleSuggestions = getVisibleSuggestions();
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSearchDropdown || visibleSuggestions.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveSuggestionIndex(prev => (prev + 1) % visibleSuggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveSuggestionIndex(prev => (prev - 1 + visibleSuggestions.length) % visibleSuggestions.length);
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      setActiveSuggestionIndex(prev => (prev + 1) % visibleSuggestions.length);
+    } else if (e.key === "Enter") {
+      if (activeSuggestionIndex >= 0 && activeSuggestionIndex < visibleSuggestions.length) {
+        e.preventDefault();
+        const selected = visibleSuggestions[activeSuggestionIndex];
+        setQuery(selected);
+        setShowSearchDropdown(false);
+        performSearchWithQuery(selected);
+      }
+    }
+  };
 
   const togglePlay = () => {
     if (!audioRef.current || !streamUrl) return;
@@ -985,7 +1128,7 @@ function App() {
             ].map(({ tab, icon, label }) => (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => navigateTo(tab)}
                 className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2" : "gap-3 px-4"} py-3 rounded-xl transition duration-200 ${
                   activeTab === tab ? "bg-white/5 text-brand-primary font-medium" : "text-text-secondary hover:bg-white/5 hover:text-text-primary"
                 }`}
@@ -997,18 +1140,65 @@ function App() {
             ))}
           </nav>
         </div>
+        {/* Bottom profile and settings section inside the sidebar, aligned with the player footer */}
+        {showSidebarProfile && (
+          <div className={`p-4 border-t border-white/5 flex items-center justify-between gap-3 ${sidebarCollapsed ? "flex-col py-6" : ""}`}>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 min-w-10 rounded-full overflow-hidden border border-white/10 bg-surface-dark flex items-center justify-center flex-shrink-0">
+                <img 
+                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100" 
+                  alt="Perfil" 
+                  className="w-full h-full object-cover" 
+                />
+              </div>
+              {!sidebarCollapsed && (
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold truncate">Usuario Capi</p>
+                  <p className="text-[10px] text-text-secondary truncate">Plan Premium</p>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => navigateTo("settings")}
+              className={`p-2 text-text-secondary hover:text-white rounded-xl hover:bg-white/5 transition flex-shrink-0 ${sidebarCollapsed ? "mt-2" : ""}`}
+              title="Configuración"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 bg-gradient-to-b from-surface-dark/40 to-bg-dark z-10 relative">
-        <header className="h-20 flex items-center px-8 justify-between border-b border-white/5">
+        <header className="h-20 flex items-center px-8 justify-between border-b border-white/5 gap-4">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={goBack}
+              disabled={navIndex === 0}
+              className="p-2 bg-surface-dark border border-white/10 hover:border-white/20 disabled:opacity-40 disabled:hover:border-white/10 rounded-full transition text-text-secondary hover:text-white"
+              title="Atrás"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <button
+              onClick={goForward}
+              disabled={navIndex === navHistory.length - 1}
+              className="p-2 bg-surface-dark border border-white/10 hover:border-white/20 disabled:opacity-40 disabled:hover:border-white/10 rounded-full transition text-text-secondary hover:text-white"
+              title="Adelante"
+            >
+              <ChevronLeft className="w-5 h-5 rotate-180" />
+            </button>
+          </div>
+
           <form onSubmit={handleSearch} className="flex-1 max-w-xl relative">
             <div className="relative">
               <input
                 ref={searchInputRef}
                 type="text"
                 value={query}
-                onChange={(e) => { setQuery(e.target.value); setShowSearchDropdown(true); }}
+                onChange={(e) => { setQuery(e.target.value); setShowSearchDropdown(true); setActiveSuggestionIndex(-1); }}
+                onKeyDown={handleKeyDown}
                 onFocus={() => { setSearchFocused(true); setShowSearchDropdown(true); }}
                 onBlur={() => { setTimeout(() => { setSearchFocused(false); setShowSearchDropdown(false); }, 200); }}
                 placeholder="Buscar música, artistas o álbumes..."
@@ -1026,65 +1216,57 @@ function App() {
               )}
             </div>
             {/* Search dropdown: suggestions + history */}
-            {showSearchDropdown && searchFocused && (
+            {showSearchDropdown && searchFocused && visibleSuggestions.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-surface-dark border border-white/10 rounded-2xl shadow-2xl z-50 suggestions-dropdown overflow-hidden max-h-80 overflow-y-auto">
-                {query.trim() === "" && searchHistory.length > 0 && (
-                  <>
-                    <div className="px-4 py-2 text-xs text-text-secondary font-semibold uppercase tracking-wider">Historial</div>
-                    {searchHistory.map((h, i) => (
-                      <div key={i} className="flex items-center justify-between px-4 py-2 hover:bg-white/5 cursor-pointer transition">
-                        <span
-                          className="text-sm text-text-primary flex-1"
-                          onClick={() => { setQuery(h); setShowSearchDropdown(false); searchInputRef.current?.focus(); }}
-                        >{h}</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setSearchHistory(prev => prev.filter((_, idx) => idx !== i)); }}
-                          className="p-1 text-text-secondary hover:text-red-400 transition"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {query.trim() !== "" && searchSuggestions.length > 0 && (
-                  <>
-                    <div className="px-4 py-2 text-xs text-text-secondary font-semibold uppercase tracking-wider">Sugerencias</div>
-                    {searchSuggestions.map((s, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 cursor-pointer transition"
-                        onClick={() => { setQuery(s); setShowSearchDropdown(false); 
-                          // Auto-submit search
-                          setTimeout(() => {
-                            const form = searchInputRef.current?.closest("form");
-                            if (form) form.requestSubmit();
-                          }, 50);
+                <div className="px-4 py-2 text-xs text-text-secondary font-semibold uppercase tracking-wider">
+                  {query.trim() === "" ? "Historial" : "Sugerencias"}
+                </div>
+                {visibleSuggestions.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex items-center justify-between px-4 py-2.5 cursor-pointer transition ${
+                      activeSuggestionIndex === idx ? "bg-white/10" : "hover:bg-white/5"
+                    }`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                    }}
+                    onClick={() => {
+                      setQuery(item);
+                      setShowSearchDropdown(false);
+                      performSearchWithQuery(item);
+                    }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <Search className="w-3.5 h-3.5 text-text-secondary" />
+                      <span className="text-sm text-text-primary truncate">{item}</span>
+                    </div>
+                    {query.trim() === "" && (
+                      <button
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSearchHistory(prev => prev.filter(h => h !== item));
                         }}
+                        className="p-1 text-text-secondary hover:text-red-400 transition"
                       >
-                        <Search className="w-3.5 h-3.5 text-text-secondary" />
-                        <span className="text-sm text-text-primary">{s}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {query.trim() !== "" && searchSuggestions.length === 0 && searchHistory.length > 0 && (
-                  <>
-                    <div className="px-4 py-2 text-xs text-text-secondary font-semibold uppercase tracking-wider">Historial</div>
-                    {searchHistory.filter(h => h.toLowerCase().includes(query.toLowerCase())).slice(0, 5).map((h, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 cursor-pointer transition"
-                        onClick={() => { setQuery(h); setShowSearchDropdown(false); }}
-                      >
-                        <span className="text-sm text-text-primary">{h}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </form>
+
+          <div className="flex items-center gap-4 flex-shrink-0">
+            <button
+              onClick={() => navigateTo("settings")}
+              className="p-2.5 text-text-secondary hover:text-white rounded-xl hover:bg-white/5 transition"
+              title="Configuración"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
         </header>
 
         <section className="flex-1 overflow-y-auto p-8 pb-32">
@@ -1147,10 +1329,20 @@ function App() {
                                 <img src={getHighQualityThumbnail(track.thumbnail)} alt={track.title} onError={handleImageError} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
                                   <button 
-                                    onClick={() => playTrack(track, section.items.map(convertYTItemToTrack))}
+                                    onClick={() => {
+                                      if (currentTrack?.id === track.id) {
+                                        togglePlay();
+                                      } else {
+                                        playTrack(track, section.items.map(convertYTItemToTrack));
+                                      }
+                                    }}
                                     className="w-10 h-10 rounded-full bg-brand-primary flex items-center justify-center text-bg-dark shadow hover:scale-105 transition"
                                   >
-                                    <Play className="w-4 h-4 fill-current ml-0.5" />
+                                    {currentTrack?.id === track.id && isPlaying ? (
+                                      <Pause className="w-4 h-4 fill-current animate-fade-in" />
+                                    ) : (
+                                      <Play className="w-4 h-4 fill-current ml-0.5 animate-fade-in" />
+                                    )}
                                   </button>
                                 </div>
                               </div>
@@ -1267,10 +1459,20 @@ function App() {
                             <img src={getHighQualityThumbnail(track.thumbnail)} alt={track.title} onError={handleImageError} className="w-full h-full object-cover group-hover:scale-105 transition" />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
                               <button 
-                                onClick={() => playTrack(track, tracks)}
+                                onClick={() => {
+                                  if (currentTrack?.id === track.id) {
+                                    togglePlay();
+                                  } else {
+                                    playTrack(track, tracks);
+                                  }
+                                }}
                                 className="w-12 h-12 rounded-full bg-brand-primary flex items-center justify-center text-bg-dark shadow-lg hover:scale-105 transition"
                               >
-                                <Play className="w-5 h-5 fill-current ml-1" />
+                                {currentTrack?.id === track.id && isPlaying ? (
+                                  <Pause className="w-5 h-5 fill-current" />
+                                ) : (
+                                  <Play className="w-5 h-5 fill-current ml-0.5" />
+                                )}
                               </button>
                             </div>
                             {downloadProgress[track.id] !== undefined && (
@@ -1314,8 +1516,22 @@ function App() {
                         </div>
                         <span className="text-xs text-text-secondary hidden sm:block w-16 text-right mr-2">{formatTime(track.duration)}</span>
                         <div className="flex items-center gap-2">
-                          <button onClick={(e) => { e.stopPropagation(); playTrack(track, tracks); }} className="p-2 bg-brand-primary text-bg-dark rounded-full opacity-0 group-hover:opacity-100 transition shadow hover:scale-105">
-                            <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                          <button 
+                            onClick={(e) => { 
+                              e.stopPropagation(); 
+                              if (currentTrack?.id === track.id) {
+                                togglePlay();
+                              } else {
+                                playTrack(track, tracks); 
+                              }
+                            }} 
+                            className="p-2 bg-brand-primary text-bg-dark rounded-full opacity-0 group-hover:opacity-100 transition shadow hover:scale-105"
+                          >
+                            {currentTrack?.id === track.id && isPlaying ? (
+                              <Pause className="w-3.5 h-3.5 fill-current" />
+                            ) : (
+                              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                            )}
                           </button>
                           <button 
                             onClick={(e) => { e.stopPropagation(); openContextMenu(e, track.id); }} 
@@ -1417,13 +1633,13 @@ function App() {
                                 <div 
                                   key={i}
                                   onClick={() => {
-                                    setQuery(item.title);
-                                    setActiveTab("buscar");
-                                    // Trigger query
-                                    setTimeout(() => {
-                                      const searchBtn = document.querySelector("form");
-                                      if (searchBtn) searchBtn.requestSubmit();
-                                    }, 100);
+                                    loadAlbumProfile(
+                                      item.id || item.browseId,
+                                      item.title,
+                                      item.thumbnail,
+                                      item.type || "album",
+                                      artistData?.name
+                                    );
                                   }}
                                   className="p-3 bg-surface-dark/30 hover:bg-surface-dark/70 rounded-xl transition border border-white/5 flex flex-col justify-between group cursor-pointer"
                                 >
@@ -1778,25 +1994,46 @@ function App() {
               </div>
 
               {favorites.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {favorites.map((track) => (
+                <div className="flex flex-col gap-2 w-full animate-fade-in">
+                  {favorites.map((track, idx) => (
                     <div 
                       key={track.id}
                       onContextMenu={(e) => openContextMenu(e, track.id)}
-                      className="p-4 bg-surface-dark/40 hover:bg-surface-dark rounded-xl flex items-center justify-between"
+                      onClick={() => playTrack(track, favorites)}
+                      className={`p-3.5 bg-surface-dark/30 hover:bg-surface-dark/70 rounded-xl flex items-center justify-between border border-white/5 w-full transition duration-150 cursor-pointer ${
+                        currentTrack?.id === track.id ? "bg-brand-primary/10 border-brand-primary/20" : ""
+                      }`}
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <img src={track.thumbnail} className="w-10 h-10 rounded-lg object-cover" />
-                        <div className="min-w-0">
-                          <p className="font-semibold text-sm truncate">{track.title}</p>
-                          <p className="text-xs text-text-secondary truncate">{track.artist}</p>
+                        <span className="text-xs text-text-secondary w-5 text-right font-medium">{idx + 1}</span>
+                        <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" />
+                        <div className="min-w-0 flex-1 ml-1">
+                          <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-white"}`}>{track.title}</p>
+                          <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button onClick={() => playTrack(track, favorites)} className="p-2 bg-brand-primary text-bg-dark rounded-full">
-                          <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                      <div className="flex items-center gap-3">
+                        <button 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (currentTrack?.id === track.id) {
+                              togglePlay();
+                            } else {
+                              playTrack(track, favorites); 
+                            }
+                          }} 
+                          className="p-2 bg-brand-primary text-bg-dark rounded-full shadow hover:scale-105 transition"
+                        >
+                          {currentTrack?.id === track.id && isPlaying ? (
+                            <Pause className="w-3.5 h-3.5 fill-current" />
+                          ) : (
+                            <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                          )}
                         </button>
-                        <button onClick={() => toggleFavorite(track)} className="p-2 text-brand-primary">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); toggleFavorite(track); }} 
+                          className="p-2 text-brand-primary rounded-lg hover:bg-white/5 transition"
+                        >
                           <Heart className="w-4 h-4 fill-current" />
                         </button>
                       </div>
@@ -1808,6 +2045,164 @@ function App() {
                   <p className="text-sm text-text-secondary">No tienes favoritos añadidos.</p>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* DEDICATED ALBUM/PLAYLIST VIEW */}
+          {activeTab === "album_view" && currentAlbum && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex flex-col md:flex-row items-center md:items-end gap-6 border-b border-white/5 pb-6">
+                <img 
+                  src={getHighQualityThumbnail(currentAlbum.thumbnail)} 
+                  alt={currentAlbum.title} 
+                  onError={handleImageError}
+                  className="w-48 h-48 rounded-2xl object-cover shadow-2xl border border-white/10" 
+                />
+                <div className="flex-1 text-center md:text-left">
+                  <p className="text-xs text-brand-primary uppercase font-bold tracking-wider mb-2">
+                    {currentAlbum.type === "album" ? "Álbum" : "Lista de Reproducción"}
+                  </p>
+                  <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-2">{currentAlbum.title}</h2>
+                  {currentAlbum.artist && (
+                    <p className="text-sm text-text-secondary">De <span className="text-white font-semibold">{currentAlbum.artist}</span></p>
+                  )}
+                  <p className="text-xs text-text-secondary mt-1">{currentAlbumTracks.length} canciones</p>
+                  
+                  <div className="flex flex-wrap gap-3 justify-center md:justify-start mt-6">
+                    {currentAlbumTracks.length > 0 && (
+                      <>
+                        <button 
+                          onClick={() => playTrack(currentAlbumTracks[0], currentAlbumTracks)}
+                          className="px-6 py-2.5 bg-brand-primary text-bg-dark rounded-xl font-bold text-sm hover:scale-105 transition flex items-center gap-2"
+                        >
+                          <Play className="w-4 h-4 fill-current" /> Reproducir
+                        </button>
+                        <button 
+                          onClick={() => playShuffleQueue(currentAlbumTracks)}
+                          className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold text-sm hover:scale-105 transition flex items-center gap-2"
+                        >
+                          <Shuffle className="w-4 h-4" /> Aleatorio
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {currentAlbumTracks.length > 0 ? (
+                <div className="flex flex-col gap-2 w-full animate-fade-in">
+                  {currentAlbumTracks.map((track, idx) => (
+                    <div
+                      key={track.id}
+                      onContextMenu={(e) => openContextMenu(e, track.id)}
+                      className={`flex items-center gap-4 p-3 rounded-xl transition duration-200 bg-surface-dark/30 hover:bg-surface-dark/70 border border-white/5 cursor-pointer group ${
+                        currentTrack?.id === track.id ? "bg-brand-primary/10 border-brand-primary/20" : "border-transparent"
+                      }`}
+                      onClick={() => playTrack(track, currentAlbumTracks)}
+                    >
+                      <span className="text-xs text-text-secondary w-5 text-right font-medium">{idx + 1}</span>
+                      <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-white"}`}>{track.title}</p>
+                        <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
+                      </div>
+                      <span className="text-xs text-text-secondary hidden sm:block w-16 text-right mr-2">{formatTime(track.duration)}</span>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            if (currentTrack?.id === track.id) {
+                              togglePlay();
+                            } else {
+                              playTrack(track, currentAlbumTracks);
+                            }
+                          }} 
+                          className="p-2 bg-brand-primary text-bg-dark rounded-full opacity-0 group-hover:opacity-100 transition shadow hover:scale-105"
+                        >
+                          {currentTrack?.id === track.id && isPlaying ? (
+                            <Pause className="w-3.5 h-3.5 fill-current" />
+                          ) : (
+                            <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                          )}
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); openContextMenu(e, track.id); }} 
+                          className="p-2 text-text-secondary hover:text-brand-primary transition rounded-lg"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="h-48 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* CONFIGURATION / SETTINGS VIEW */}
+          {activeTab === "settings" && (
+            <div className="space-y-6 max-w-2xl animate-fade-in text-left">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight mb-2">Configuración</h2>
+                <p className="text-sm text-text-secondary">Personaliza el comportamiento y visualización de la aplicación.</p>
+              </div>
+
+              <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-6 space-y-6">
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div>
+                    <h3 className="font-semibold text-sm text-white">Modo de búsqueda por defecto</h3>
+                    <p className="text-xs text-text-secondary mt-1">Elige cómo se muestran los resultados al realizar una búsqueda.</p>
+                  </div>
+                  <div className="flex bg-white/5 p-1 rounded-xl">
+                    <button
+                      onClick={() => {
+                        setSearchViewMode("list");
+                        localStorage.setItem("opentune_default_search_view", "list");
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                        searchViewMode === "list" ? "bg-brand-primary text-bg-dark" : "text-text-secondary hover:text-text-primary"
+                      }`}
+                    >
+                      Lista
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSearchViewMode("grid");
+                        localStorage.setItem("opentune_default_search_view", "grid");
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                        searchViewMode === "grid" ? "bg-brand-primary text-bg-dark" : "text-text-secondary hover:text-text-primary"
+                      }`}
+                    >
+                      Cuadrícula
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-sm text-white">Mostrar perfil en barra lateral</h3>
+                    <p className="text-xs text-text-secondary mt-1">Activa o desactiva la vista del perfil y botón de ajustes al final del menú lateral.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={showSidebarProfile} 
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        setShowSidebarProfile(val);
+                        localStorage.setItem("opentune_show_sidebar_profile", String(val));
+                      }}
+                      className="sr-only peer" 
+                    />
+                    <div className="w-11 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                  </label>
+                </div>
+              </div>
             </div>
           )}
         </section>
@@ -1907,29 +2302,32 @@ function App() {
             </div>
 
             {/* Left Panel: Cover Art & Controls */}
-            <div className="w-full md:w-1/2 flex flex-col items-center justify-center z-10 max-w-md">
+            <div className="w-full md:w-1/2 flex flex-col items-center justify-center z-10 max-w-md gap-6">
+              {/* Cover Art */}
               <div 
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
-                className="relative aspect-square w-full rounded-3xl overflow-hidden shadow-2xl bg-black/40 border border-white/10 cursor-grab active:cursor-grabbing mb-6 group"
+                className="relative aspect-square w-full max-w-[350px] rounded-3xl overflow-hidden shadow-2xl bg-black/40 border border-white/10 cursor-grab active:cursor-grabbing group"
               >
                 <img src={getHighQualityThumbnail(currentTrack.thumbnail)} alt={currentTrack.title} onError={handleImageError} className="w-full h-full object-cover" />
               </div>
-              <div className="text-center w-full px-4">
+              
+              {/* Title & Artist stacked vertically */}
+              <div className="text-center w-full px-4 flex flex-col gap-1">
                 <h2 className="text-2xl font-bold tracking-tight text-white line-clamp-1">{currentTrack.title}</h2>
-                <p className="text-brand-primary font-semibold text-sm mt-1 truncate">{currentTrack.artist}</p>
+                <p className="text-brand-primary font-semibold text-sm truncate">{currentTrack.artist}</p>
               </div>
 
               {/* Controls */}
-              <div className="flex items-center gap-6 mt-8">
+              <div className="flex items-center justify-center gap-6 w-full">
                 <button onClick={() => setIsShuffle(!isShuffle)} className={`p-2 transition ${isShuffle ? "text-brand-primary" : "text-text-secondary hover:text-white"}`}>
                   <Shuffle className="w-5 h-5" />
                 </button>
                 <button onClick={playPrev} className="p-2 text-text-secondary hover:text-white transition">
                   <SkipBack className="w-6 h-6" />
                 </button>
-                <button onClick={togglePlay} className="w-14 h-14 bg-brand-primary text-bg-dark rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition">
+                <button onClick={togglePlay} className="w-14 h-14 bg-brand-primary text-bg-dark rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition shadow-lg shadow-brand-primary/20">
                   {isPlaying ? <Pause className="w-6 h-6 fill-current" /> : <Play className="w-6 h-6 fill-current ml-0.5" />}
                 </button>
                 <button onClick={playNext} className="p-2 text-text-secondary hover:text-white transition">
@@ -1938,18 +2336,14 @@ function App() {
                 <button onClick={() => toggleFavorite(currentTrack)} className="p-2 text-text-secondary hover:text-brand-primary transition">
                   <Heart className={`w-5 h-5 ${isFavorite(currentTrack) ? "fill-brand-primary text-brand-primary" : ""}`} />
                 </button>
-                {/* 3-dots in expanded player */}
-                <button onClick={(e) => { e.stopPropagation(); setContextMenuTrack(currentTrack); }} className="p-2 text-text-secondary hover:text-brand-primary transition">
-                  <MoreVertical className="w-5 h-5" />
-                </button>
               </div>
 
               {/* Time Slider */}
-              <div className="w-full mt-6 flex items-center gap-3 px-4">
-                <span className="text-xs text-text-secondary">{formatTime(currentTime)}</span>
+              <div className="w-full flex items-center gap-3 px-4">
+                <span className="text-xs text-text-secondary w-10 text-right">{formatTime(currentTime)}</span>
                 <input type="range" min="0" max={duration || 100} value={currentTime} onChange={handleSeek}
                   className="flex-1 accent-brand-primary h-1 bg-white/10 rounded-full cursor-pointer" />
-                <span className="text-xs text-text-secondary">{formatTime(duration)}</span>
+                <span className="text-xs text-text-secondary w-10 text-left">{formatTime(duration)}</span>
               </div>
             </div>
 
