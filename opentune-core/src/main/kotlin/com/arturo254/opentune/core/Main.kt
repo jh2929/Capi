@@ -273,14 +273,12 @@ fun main(args: Array<String>) {
                             "get-stream" -> {
                                 val videoId = cmdObj["id"]?.jsonPrimitive?.contentOrNull ?: throw Exception("Missing id")
                                 val sig = NewPipeUtils.getSignatureTimestamp(videoId).getOrNull()
-                                val clients = listOf(
-                                    YouTubeClient.ANDROID_MUSIC,
-                                    YouTubeClient.ANDROID_VR_NO_AUTH,
-                                    YouTubeClient.IOS_MUSIC,
-                                    YouTubeClient.IOS,
-                                    YouTubeClient.TVHTML5,
-                                    YouTubeClient.WEB_REMIX
-                                )
+                                 val clients = listOf(
+                                     YouTubeClient.ANDROID_MUSIC,
+                                     YouTubeClient.IOS_MUSIC,
+                                     YouTubeClient.TVHTML5,
+                                     YouTubeClient.WEB_REMIX
+                                 )
                                 val streamUrl = kotlinx.coroutines.supervisorScope {
                                      val deferreds = clients.map { client ->
                                         async(Dispatchers.IO) {
