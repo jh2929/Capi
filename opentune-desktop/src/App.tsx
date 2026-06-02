@@ -506,7 +506,11 @@ function App() {
           setBuffering(false);
           setLoading(false);
         }).catch(err => {
-          console.error("Playback error:", err);
+          console.error("Playback error:", err, "for stream:", stream);
+          // If local src fails, show error popup for testing clarity
+          if (stream.startsWith("asset:") || stream.startsWith("http://asset")) {
+            alert("No se pudo reproducir el archivo local: " + err.message);
+          }
           setBuffering(false);
           setLoading(false);
         });

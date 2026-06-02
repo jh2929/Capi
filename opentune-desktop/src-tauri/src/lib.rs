@@ -99,8 +99,8 @@ async fn descargar_cancion(
 ) -> Result<String, String> {
     let music_dir = app
         .path()
-        .audio_dir()
-        .map_err(|e| format!("No se pudo resolver el directorio de audio: {}", e))?;
+        .app_data_dir()
+        .map_err(|e| format!("No se pudo resolver el directorio de datos de la app: {}", e))?;
     
     let opentune_dir = music_dir.join("Opentune");
     if !opentune_dir.exists() {
