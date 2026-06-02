@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import Logo from "./assets/Logo.png";
 import { 
   Play, Pause, SkipForward, SkipBack, Search, Music, Volume2, 
   ListMusic, Heart, Loader2, Sparkles, ChevronLeft,
@@ -956,8 +957,8 @@ function App() {
             ) : (
               <>
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="w-10 h-10 min-w-10 rounded-xl bg-gradient-to-tr from-brand-primary to-brand-tertiary flex items-center justify-center shadow-lg shadow-brand-primary/20">
-                    <Sparkles className="w-5 h-5 text-bg-dark" />
+                  <div className="w-10 h-10 min-w-10 rounded-xl overflow-hidden flex items-center justify-center shadow-lg shadow-brand-primary/20 bg-bg-dark">
+                    <img src={Logo} alt="Logo" className="w-full h-full object-cover" />
                   </div>
                   <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-brand-primary to-brand-tertiary bg-clip-text text-transparent">
                     Capi
