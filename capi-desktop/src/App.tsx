@@ -7,12 +7,12 @@ import {
   ListMusic, Heart, Loader2, Sparkles, ChevronLeft,
   Trash2, Home, Library, Download, Shuffle, 
   MoreVertical, X, Sparkle, GripVertical, Copy, RefreshCw,
-  User, Radio, Mic2, LayoutGrid, List, Plus
+  User, Radio, Mic2, LayoutGrid, List, Plus, Bell
 } from "lucide-react";
 import "./App.css";
 
 interface NavState {
-  tab: "home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings";
+  tab: "home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos";
   artistId?: string;
   artistData?: any;
   currentAlbum?: any;
@@ -94,6 +94,51 @@ const HOME_FALLBACK_QUERIES = [
   { title: "Indie", query: "indie alternative 2025" },
 ];
 
+const NEW_RELEASES = [
+  {
+    id: "rel1",
+    title: "Radical Optimism",
+    artist: "Dua Lipa",
+    thumbnail: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=300",
+    releaseDate: "Mayo 2026"
+  },
+  {
+    id: "rel2",
+    title: "Hit Me Hard and Soft",
+    artist: "Billie Eilish",
+    thumbnail: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?q=80&w=300",
+    releaseDate: "Abril 2026"
+  },
+  {
+    id: "rel3",
+    title: "Hurry Up Tomorrow",
+    artist: "The Weeknd",
+    thumbnail: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=300",
+    releaseDate: "Marzo 2026"
+  },
+  {
+    id: "rel4",
+    title: "The Tortured Poets Department",
+    artist: "Taylor Swift",
+    thumbnail: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=300",
+    releaseDate: "Febrero 2026"
+  },
+  {
+    id: "rel5",
+    title: "C,XOXO",
+    artist: "Camila Cabello",
+    thumbnail: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=300",
+    releaseDate: "Enero 2026"
+  },
+  {
+    id: "rel6",
+    title: "Short n' Sweet",
+    artist: "Sabrina Carpenter",
+    thumbnail: "https://images.unsplash.com/photo-1506157786151-b8491531f063?q=80&w=300",
+    releaseDate: "Diciembre 2025"
+  }
+];
+
 const convertYTItemToTrack = (item: any): Track => ({
   id: item.id || item.browseId,
   title: item.title,
@@ -117,7 +162,7 @@ const getSectionIcon = (title: string) => {
 };
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos">("home");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     return localStorage.getItem("opentune_sidebar_collapsed") === "true";
   });
@@ -136,10 +181,22 @@ function App() {
     return (saved === "grid" || saved === "list") ? saved : "list";
   });
 
-  const [showSidebarProfile, setShowSidebarProfile] = useState<boolean>(() => {
-    const saved = localStorage.getItem("opentune_show_sidebar_profile");
+  const [showSidebarSettings, setShowSidebarSettings] = useState<boolean>(() => {
+    const saved = localStorage.getItem("opentune_show_sidebar_settings");
     return saved !== "false";
   });
+
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [carouselTouchStart, setCarouselTouchStart] = useState<number | null>(null);
+  const [carouselTouchEnd, setCarouselTouchEnd] = useState<number | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => {
+      setToastMessage(prev => prev === message ? null : prev);
+    }, 3000);
+  };
 
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState<number>(-1);
 
@@ -163,6 +220,9 @@ function App() {
   };
 
   const navigateTo = useCallback((tab: NavState["tab"], extra: Partial<NavState> = {}) => {
+    if (tab === "explore") {
+      setTracks([]);
+    }
     const newState: NavState = {
       tab,
       artistId: extra.artistId,
@@ -318,10 +378,21 @@ function App() {
   useEffect(() => { localStorage.setItem("opentune_downloaded_metadata", JSON.stringify(downloadedMetadata)); }, [downloadedMetadata]);
   useEffect(() => { localStorage.setItem("opentune_sidebar_collapsed", String(sidebarCollapsed)); }, [sidebarCollapsed]);
   useEffect(() => { localStorage.setItem("opentune_search_history", JSON.stringify(searchHistory)); }, [searchHistory]);
+  useEffect(() => { localStorage.setItem("opentune_show_sidebar_settings", String(showSidebarSettings)); }, [showSidebarSettings]);
   useEffect(() => {
     localStorage.setItem("opentune_volume", String(volume));
     if (audioRef.current) { audioRef.current.volume = volume; }
   }, [volume]);
+
+  // Carousel auto-scroll timer (4 seconds)
+  useEffect(() => {
+    if (activeTab !== "home") return;
+    const slidesCount = 5; // We show up to 5 tracks in the carousel
+    const interval = setInterval(() => {
+      setCarouselIndex(prev => (slidesCount > 0 ? (prev + 1) % slidesCount : 0));
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [activeTab]);
 
   // ESC key to close expanded player
   useEffect(() => {
@@ -1054,6 +1125,7 @@ function App() {
 
   // Genre search from Explore
   const searchGenre = async (genre: string) => {
+    setTracks([]); // Reset search results immediately to avoid flash of old content
     setQuery(genre);
     setActiveTab("buscar");
     setLoading(true);
@@ -1073,6 +1145,64 @@ function App() {
       setLoading(false);
     }
   };
+
+  const loadTrackWithoutPlay = async (track: Track) => {
+    try {
+      setLoading(true);
+      setCurrentTrack(track);
+      setIsPlaying(false);
+      setStreamUrl(null);
+      setCurrentTime(0);
+      setDuration(0);
+      setIsPlayerExpanded(true); // Open the full-screen player
+
+      // Add to queue if not present
+      if (!activeQueue.some(t => t.id === track.id)) {
+        setActiveQueue(prev => [track, ...prev]);
+      }
+
+      // Fetch stream URL but don't play it
+      const resultJson = await invoke<string>("obtener_stream", { id: track.id });
+      let stream = resultJson;
+      try {
+        const parsed = JSON.parse(resultJson);
+        if (parsed.streamUrl) stream = parsed.streamUrl;
+        else if (parsed.url) stream = parsed.url;
+      } catch {
+        if (stream.startsWith('"') && stream.endsWith('"')) {
+          stream = stream.substring(1, stream.length - 1);
+        }
+      }
+      stream = `http://127.0.0.1:${localPort}/play?url=${encodeURIComponent(stream)}`;
+      streamCacheRef.current[track.id] = stream;
+      setStreamUrl(stream);
+      if (audioRef.current) {
+        audioRef.current.src = stream;
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getCarouselTracks = () => {
+    if (homeSections.length > 0 && homeSections[0].items) {
+      return homeSections[0].items.map(convertYTItemToTrack).slice(0, 5);
+    }
+    return [];
+  };
+  const carouselTracks = getCarouselTracks();
+
+  const getQuickPicksTracks = () => {
+    if (homeSections.length > 0) {
+      const list = homeSections.flatMap(s => s.items.map(convertYTItemToTrack));
+      const carouselIds = new Set(carouselTracks.map((c: Track) => c.id));
+      return list.filter(t => !carouselIds.has(t.id)).slice(0, 9);
+    }
+    return [];
+  };
+  const quickPicksTracks = getQuickPicksTracks();
 
   return (
     <div className="flex h-screen w-screen bg-bg-dark text-text-primary overflow-hidden font-sans">
@@ -1140,57 +1270,36 @@ function App() {
             ))}
           </nav>
         </div>
-        {/* Bottom profile and settings section inside the sidebar, aligned with the player footer */}
-        {showSidebarProfile && (
-          <div className={`p-4 border-t border-white/5 flex items-center justify-between gap-3 ${sidebarCollapsed ? "flex-col py-6" : ""}`}>
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 min-w-10 rounded-full overflow-hidden border border-white/10 bg-surface-dark flex items-center justify-center flex-shrink-0">
-                <img 
-                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=100" 
-                  alt="Perfil" 
-                  className="w-full h-full object-cover" 
-                />
-              </div>
-              {!sidebarCollapsed && (
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate">Usuario Capi</p>
-                  <p className="text-[10px] text-text-secondary truncate">Plan Premium</p>
-                </div>
-              )}
-            </div>
+        {/* Bottom profile and settings section inside the sidebar */}
+        <div className={`p-4 border-t border-white/5 flex flex-col gap-2 ${sidebarCollapsed ? "items-center" : ""}`}>
+          {showSidebarSettings && (
             <button
               onClick={() => navigateTo("settings")}
-              className={`p-2 text-text-secondary hover:text-white rounded-xl hover:bg-white/5 transition flex-shrink-0 ${sidebarCollapsed ? "mt-2" : ""}`}
+              className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2" : "gap-3 px-4"} py-3 rounded-xl transition duration-200 ${
+                activeTab === "settings" ? "bg-white/5 text-brand-primary font-medium" : "text-text-secondary hover:bg-white/5 hover:text-text-primary"
+              }`}
               title="Configuración"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings flex-shrink-0"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              {!sidebarCollapsed && <span className="text-sm">Configuración</span>}
             </button>
-          </div>
-        )}
+          )}
+          <button
+            onClick={() => navigateTo("perfil")}
+            className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2" : "gap-3 px-4"} py-3 rounded-xl transition duration-200 ${
+              activeTab === "perfil" ? "bg-white/5 text-brand-primary font-medium" : "text-text-secondary hover:bg-white/5 hover:text-text-primary"
+            }`}
+            title="Perfil"
+          >
+            <User className="w-5 h-5 flex-shrink-0" />
+            {!sidebarCollapsed && <span className="text-sm">Perfil</span>}
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 bg-gradient-to-b from-surface-dark/40 to-bg-dark z-10 relative">
         <header className="h-20 flex items-center px-8 justify-between border-b border-white/5 gap-4">
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button
-              onClick={goBack}
-              disabled={navIndex === 0}
-              className="p-2 bg-surface-dark border border-white/10 hover:border-white/20 disabled:opacity-40 disabled:hover:border-white/10 rounded-full transition text-text-secondary hover:text-white"
-              title="Atrás"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={goForward}
-              disabled={navIndex === navHistory.length - 1}
-              className="p-2 bg-surface-dark border border-white/10 hover:border-white/20 disabled:opacity-40 disabled:hover:border-white/10 rounded-full transition text-text-secondary hover:text-white"
-              title="Adelante"
-            >
-              <ChevronLeft className="w-5 h-5 rotate-180" />
-            </button>
-          </div>
-
           <form onSubmit={handleSearch} className="flex-1 max-w-xl relative">
             <div className="relative">
               <input
@@ -1208,7 +1317,13 @@ function App() {
               {query.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => { setQuery(""); searchInputRef.current?.focus(); }}
+                  onClick={() => {
+                    setQuery("");
+                    setTracks([]);
+                    setSearchSuggestions([]);
+                    setActiveSuggestionIndex(-1);
+                    searchInputRef.current?.focus();
+                  }}
                   className="absolute right-3 top-2.5 p-0.5 text-text-secondary hover:text-text-primary transition"
                 >
                   <X className="w-4 h-4" />
@@ -1260,11 +1375,12 @@ function App() {
 
           <div className="flex items-center gap-4 flex-shrink-0">
             <button
-              onClick={() => navigateTo("settings")}
-              className="p-2.5 text-text-secondary hover:text-white rounded-xl hover:bg-white/5 transition"
-              title="Configuración"
+              onClick={() => navigateTo("lanzamientos")}
+              className="p-2.5 text-text-secondary hover:text-white rounded-xl hover:bg-white/5 transition relative"
+              title="Lanzamientos"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-brand-primary rounded-full animate-pulse" />
             </button>
           </div>
         </header>
@@ -1280,37 +1396,114 @@ function App() {
           {/* HOME VIEW */}
           {activeTab === "home" && (
             <div className="space-y-8 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold tracking-tight mb-1">Música Recomendada</h2>
-                  <p className="text-sm text-text-secondary">Personalizada según tus tendencias e historial.</p>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={async () => {
-                      setHomeSections([]);
-                      await fetchHomeData();
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-white/5 text-white rounded-xl text-sm font-semibold hover:bg-white/10 transition"
-                  >
-                    <RefreshCw className="w-4 h-4" /> Recargar
-                  </button>
-                  {homeSections.length > 0 && (
-                    <button 
-                      onClick={() => {
-                        const allTracks = homeSections.flatMap(s => s.items.map(convertYTItemToTrack));
-                        playShuffleQueue(allTracks);
-                      }}
-                      className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-bg-dark rounded-xl text-sm font-semibold hover:scale-105 transition"
-                    >
-                      <Shuffle className="w-4 h-4" /> Reproducción Aleatoria
-                    </button>
-                  )}
-                </div>
-              </div>
-
               {homeSections.length > 0 ? (
-                homeSections.map((section, idx) => (
+                <>
+                  {/* Carousel */}
+                  {carouselTracks.length > 0 && (
+                    <div className="relative w-full max-w-4xl mx-auto overflow-hidden rounded-3xl bg-surface-dark/30 border border-white/5 shadow-xl">
+                      <div 
+                        onTouchStart={(e) => {
+                          setCarouselTouchEnd(null);
+                          setCarouselTouchStart(e.targetTouches[0].clientX);
+                        }}
+                        onTouchMove={(e) => {
+                          setCarouselTouchEnd(e.targetTouches[0].clientX);
+                        }}
+                        onTouchEnd={() => {
+                          if (!carouselTouchStart || !carouselTouchEnd) return;
+                          const distance = carouselTouchStart - carouselTouchEnd;
+                          if (distance > 50) {
+                            setCarouselIndex(prev => (prev + 1) % carouselTracks.length);
+                          } else if (distance < -50) {
+                            setCarouselIndex(prev => (prev - 1 + carouselTracks.length) % carouselTracks.length);
+                          }
+                        }}
+                        onClick={() => loadTrackWithoutPlay(carouselTracks[carouselIndex])}
+                        className="cursor-pointer relative h-64 md:h-80 w-full overflow-hidden group"
+                      >
+                        {/* Background blurred cover */}
+                        <div className="absolute inset-0 scale-105 blur-lg opacity-40 transition-all duration-500">
+                          <img src={getHighQualityThumbnail(carouselTracks[carouselIndex].thumbnail)} className="w-full h-full object-cover" />
+                        </div>
+                        {/* Real content */}
+                        <div className="absolute inset-0 flex items-center justify-between px-8 md:px-16 z-10 gap-6">
+                          <div className="text-left max-w-md">
+                            <span className="text-xs uppercase font-bold tracking-widest text-brand-primary">Destacado</span>
+                            <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight mt-1 line-clamp-2 group-hover:text-brand-primary transition">
+                              {carouselTracks[carouselIndex].title}
+                            </h2>
+                            <p className="text-sm md:text-base text-text-secondary mt-2 truncate font-medium">
+                              {carouselTracks[carouselIndex].artist}
+                            </p>
+                          </div>
+                          <div className="w-36 h-36 md:w-48 md:h-48 rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex-shrink-0 group-hover:scale-105 transition duration-300">
+                            <img src={getHighQualityThumbnail(carouselTracks[carouselIndex].thumbnail)} className="w-full h-full object-cover" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 justify-center pb-4 bg-transparent">
+                        <button 
+                          onClick={() => setCarouselIndex(prev => (prev - 1 + carouselTracks.length) % carouselTracks.length)}
+                          className="p-1 bg-white/5 hover:bg-white/10 rounded-full text-white transition text-xs px-2"
+                        >
+                          &larr;
+                        </button>
+                        <div className="flex items-center gap-1">
+                          {carouselTracks.map((_: Track, i: number) => (
+                            <span 
+                              key={i} 
+                              className={`w-1.5 h-1.5 rounded-full transition-all ${i === carouselIndex ? "bg-brand-primary w-3" : "bg-white/20"}`}
+                            />
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => setCarouselIndex(prev => (prev + 1) % carouselTracks.length)}
+                          className="p-1 bg-white/5 hover:bg-white/10 rounded-full text-white transition text-xs px-2"
+                        >
+                          &rarr;
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick picks section */}
+                  {quickPicksTracks.length > 0 && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-bold text-text-primary border-l-4 border-brand-primary pl-2 flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-brand-primary" /> Quick picks
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {quickPicksTracks.map((track) => (
+                          <div 
+                            key={track.id}
+                            onClick={() => playTrack(track, quickPicksTracks)}
+                            onContextMenu={(e) => openContextMenu(e, track.id)}
+                            className="p-3 bg-surface-dark/30 hover:bg-surface-dark/70 rounded-xl transition border border-white/5 flex items-center justify-between group cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" />
+                              <div className="min-w-0 flex-1 ml-1">
+                                <p className="font-semibold text-sm truncate text-white">{track.title}</p>
+                                <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
+                              </div>
+                            </div>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                playTrack(track, quickPicksTracks);
+                              }}
+                              className="p-2 bg-brand-primary rounded-full text-bg-dark opacity-0 group-hover:opacity-100 transition shadow hover:scale-105"
+                            >
+                              <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Remaining sections */}
+                  {homeSections.map((section, idx) => (
                   <div key={idx} className="space-y-4 animate-fade-in">
                     <h3 className="text-lg font-bold text-text-primary border-l-4 border-brand-primary pl-2 flex items-center gap-2">
                       {getSectionIcon(section.title)} {section.title}
@@ -1364,7 +1557,8 @@ function App() {
                       })}
                     </div>
                   </div>
-                ))
+                  ))}
+                </>
               ) : (
                 <div className="h-64 flex flex-col items-center justify-center gap-3">
                   <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
@@ -1558,6 +1752,24 @@ function App() {
           {/* ARTIST VIEW */}
           {activeTab === "artist" && (
             <div className="space-y-6 animate-fade-in">
+              <div className="flex items-center gap-2 mb-4">
+                <button
+                  onClick={goBack}
+                  disabled={navIndex === 0}
+                  className="p-2 bg-surface-dark border border-white/10 hover:border-white/20 disabled:opacity-40 disabled:hover:border-white/10 rounded-full transition text-text-secondary hover:text-white"
+                  title="Atrás"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={goForward}
+                  disabled={navIndex === navHistory.length - 1}
+                  className="p-2 bg-surface-dark border border-white/10 hover:border-white/20 disabled:opacity-40 disabled:hover:border-white/10 rounded-full transition text-text-secondary hover:text-white"
+                  title="Adelante"
+                >
+                  <ChevronLeft className="w-5 h-5 rotate-180" />
+                </button>
+              </div>
               {loadingArtist ? (
                 <div className="h-64 flex items-center justify-center">
                   <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
@@ -1841,8 +2053,22 @@ function App() {
                           </div>
                           <div className="flex items-center gap-3">
                             {!showSelectionMode && (
-                              <button onClick={(e) => { e.stopPropagation(); playTrack(track, history); }} className="p-2 bg-brand-primary text-bg-dark rounded-full shadow hover:scale-105 transition">
-                                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                              <button 
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  if (currentTrack?.id === track.id) {
+                                    togglePlay();
+                                  } else {
+                                    playTrack(track, history); 
+                                  }
+                                }} 
+                                className="p-2 bg-brand-primary text-bg-dark rounded-full shadow hover:scale-105 transition"
+                              >
+                                {currentTrack?.id === track.id && isPlaying ? (
+                                  <Pause className="w-3.5 h-3.5 fill-current" />
+                                ) : (
+                                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                                )}
                               </button>
                             )}
                             <button onClick={(e) => { e.stopPropagation(); openContextMenu(e, track.id); }} className="p-2 text-text-secondary hover:text-brand-primary rounded-lg hover:bg-white/5 transition">
@@ -2051,6 +2277,24 @@ function App() {
           {/* DEDICATED ALBUM/PLAYLIST VIEW */}
           {activeTab === "album_view" && currentAlbum && (
             <div className="space-y-6 animate-fade-in">
+              <div className="flex items-center gap-2 mb-4">
+                <button
+                  onClick={goBack}
+                  disabled={navIndex === 0}
+                  className="p-2 bg-surface-dark border border-white/10 hover:border-white/20 disabled:opacity-40 disabled:hover:border-white/10 rounded-full transition text-text-secondary hover:text-white"
+                  title="Atrás"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={goForward}
+                  disabled={navIndex === navHistory.length - 1}
+                  className="p-2 bg-surface-dark border border-white/10 hover:border-white/20 disabled:opacity-40 disabled:hover:border-white/10 rounded-full transition text-text-secondary hover:text-white"
+                  title="Adelante"
+                >
+                  <ChevronLeft className="w-5 h-5 rotate-180" />
+                </button>
+              </div>
               <div className="flex flex-col md:flex-row items-center md:items-end gap-6 border-b border-white/5 pb-6">
                 <img 
                   src={getHighQualityThumbnail(currentAlbum.thumbnail)} 
@@ -2185,23 +2429,101 @@ function App() {
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-sm text-white">Mostrar perfil en barra lateral</h3>
-                    <p className="text-xs text-text-secondary mt-1">Activa o desactiva la vista del perfil y botón de ajustes al final del menú lateral.</p>
+                    <h3 className="font-semibold text-sm text-white">Ocultar acceso directo de ajustes de la barra lateral</h3>
+                    <p className="text-xs text-text-secondary mt-1">Oculta el botón de configuración de la barra lateral, manteniendo el del perfil visible.</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input 
                       type="checkbox" 
-                      checked={showSidebarProfile} 
+                      checked={!showSidebarSettings} 
                       onChange={(e) => {
-                        const val = e.target.checked;
-                        setShowSidebarProfile(val);
-                        localStorage.setItem("opentune_show_sidebar_profile", String(val));
+                        const val = !e.target.checked;
+                        setShowSidebarSettings(val);
+                        localStorage.setItem("opentune_show_sidebar_settings", String(val));
                       }}
                       className="sr-only peer" 
                     />
                     <div className="w-11 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
                   </label>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* PROFILE VIEW */}
+          {activeTab === "perfil" && (
+            <div className="space-y-6 max-w-2xl animate-fade-in text-left">
+              <div className="relative rounded-3xl overflow-hidden h-48 bg-gradient-to-tr from-brand-primary/20 via-brand-tertiary/10 to-bg-dark border border-white/5 flex items-end p-8">
+                <div className="relative z-10 flex items-center gap-6">
+                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/20 shadow-xl bg-surface-dark flex items-center justify-center flex-shrink-0">
+                    <img 
+                      src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150" 
+                      alt="Perfil" 
+                      className="w-full h-full object-cover" 
+                    />
+                  </div>
+                  <div>
+                    <h2 className="text-3xl font-extrabold tracking-tight">Usuario Capi</h2>
+                    <p className="text-sm text-text-secondary mt-1">Plan Premium • Miembro desde 2026</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-6 space-y-4">
+                <h3 className="font-semibold text-lg text-white">Opciones de Cuenta</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <button 
+                    onClick={() => navigateTo("settings")}
+                    className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition border border-white/5 text-left flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="font-semibold text-sm">Ajustes / Configuración</p>
+                      <p className="text-xs text-text-secondary mt-0.5">Modificar preferencias y visualización</p>
+                    </div>
+                    <ChevronLeft className="w-5 h-5 rotate-180 text-text-secondary" />
+                  </button>
+                  <button 
+                    onClick={() => navigateTo("favoritos")}
+                    className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition border border-white/5 text-left flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="font-semibold text-sm">Mis Favoritos</p>
+                      <p className="text-xs text-text-secondary mt-0.5">{favorites.length} canciones guardadas</p>
+                    </div>
+                    <ChevronLeft className="w-5 h-5 rotate-180 text-text-secondary" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* NEW RELEASES VIEW */}
+          {activeTab === "lanzamientos" && (
+            <div className="space-y-6 animate-fade-in text-left">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight mb-2">Nuevos Lanzamientos</h2>
+                <p className="text-sm text-text-secondary">Descubre la música más reciente lanzada al mercado.</p>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {NEW_RELEASES.map((release) => (
+                  <div 
+                    key={release.id}
+                    className="p-4 bg-surface-dark/40 hover:bg-surface-dark rounded-2xl border border-white/5 transition duration-300 group flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-black/20 shadow-md">
+                        <img 
+                          src={release.thumbnail} 
+                          alt={release.title} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
+                        />
+                      </div>
+                      <h4 className="font-bold text-sm truncate text-white">{release.title}</h4>
+                      <p className="text-xs text-text-secondary truncate mt-0.5">{release.artist}</p>
+                    </div>
+                    <p className="text-[10px] text-brand-primary font-semibold mt-3 uppercase tracking-wider">{release.releaseDate}</p>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -2523,6 +2845,17 @@ function App() {
                 <Download className="w-4 h-4" /> Descargar en disco
               </button>
               <button 
+                onClick={() => {
+                  const url = `https://music.youtube.com/watch?v=${contextMenuTrack.id}`;
+                  navigator.clipboard.writeText(url);
+                  showToast("Enlace de canción copiado al portapapeles");
+                  setContextMenuTrack(null);
+                }}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <Copy className="w-4 h-4" /> Compartir canción
+              </button>
+              <button 
                 onClick={() => { setShowAddToPlaylistModal(contextMenuTrack); setContextMenuTrack(null); }}
                 className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
               >
@@ -2628,6 +2961,13 @@ function App() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-28 left-1/2 -translate-x-1/2 bg-brand-primary text-bg-dark px-6 py-3 rounded-full font-bold text-sm shadow-2xl flex items-center gap-2 z-[70] animate-fade-in border border-white/10">
+          <span>{toastMessage}</span>
         </div>
       )}
     </div>
