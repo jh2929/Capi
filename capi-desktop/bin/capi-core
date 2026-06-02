@@ -1,3 +1,3 @@
 #!/bin/bash
 export JAVA_HOME="/home/emixdy/.local/share/mise/installs/java/graalvm-community-21.0.2"
-exec /home/emixdy/Documentos/opentune-desktop/opentune-core/build/install/opentune-core/bin/opentune-core "$@"
+exec /home/emixdy/Documentos/Capi/capi-core/build/install/capi-core/bin/capi-core "$@"

@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    opentune_desktop_lib::run()
+    capi_desktop_lib::run()
 }
