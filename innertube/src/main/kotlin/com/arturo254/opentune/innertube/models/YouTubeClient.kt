@@ -33,6 +33,9 @@ data class YouTubeClient(
     val isMusic: Boolean
         get() = clientName == "WEB_REMIX" || clientName.endsWith("_MUSIC") || clientName.endsWith("MUSIC")
 
+    val isWebOrEmbedded: Boolean
+        get() = clientName.startsWith("WEB") || clientName.startsWith("MWEB") || clientName.startsWith("TV")
+
     fun toContext(locale: YouTubeLocale, visitorData: String?, dataSyncId: String?) = Context(
         client = Context.Client(
             clientName = clientName,
@@ -44,7 +47,7 @@ data class YouTubeClient(
             androidSdkVersion = androidSdkVersion,
             gl = locale.gl,
             hl = locale.hl,
-            visitorData = visitorData
+            visitorData = if (isWebOrEmbedded) visitorData else null
         ),
         user = Context.User(
             onBehalfOfUser = if (loginSupported) dataSyncId else null

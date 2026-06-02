@@ -35,6 +35,12 @@ data class MusicResponsiveListItemRenderer(
     val overlay: Overlay?,
     val navigationEndpoint: NavigationEndpoint?,
 ) {
+    val videoId: String?
+        get() = playlistItemData?.videoId
+            ?: overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId
+            ?: navigationEndpoint?.watchEndpoint?.videoId
+            ?: navigationEndpoint?.watchPlaylistEndpoint?.videoId
+
     val isSong: Boolean
         get() = navigationEndpoint == null || navigationEndpoint.watchEndpoint != null || navigationEndpoint.watchPlaylistEndpoint != null
     val isPlaylist: Boolean

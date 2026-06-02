@@ -46,3 +46,45 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(208, 188, 255, 0.4);
 }
+
+/* Drag handle for queue items */
+.drag-handle {
+  cursor: grab;
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Dragging queue item */
+.dragging-queue-item {
+  opacity: 0.5;
+  background: rgba(208, 188, 255, 0.1);
+}
+
+.drag-over-queue-item {
+  border-top: 2px solid var(--color-brand-primary);
+}
+
+/* Modal overlay animation */
+.modal-overlay {
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-content {
+  animation: slideUp 0.2s ease-out;
+}
+
+/* Search suggestions dropdown */
+.suggestions-dropdown {
+  animation: slideUp 0.15s ease-out;
+}

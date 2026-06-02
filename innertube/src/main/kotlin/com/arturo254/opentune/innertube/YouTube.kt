@@ -68,6 +68,7 @@ import com.arturo254.opentune.innertube.pages.SearchSummary
 import com.arturo254.opentune.innertube.pages.SearchSummaryPage
 import com.arturo254.opentune.innertube.utils.PoTokenGenerator
 import io.ktor.client.call.body
+import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsText
 
 import kotlinx.serialization.encodeToString
@@ -79,6 +80,16 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.net.Proxy
 import java.util.Locale
 import kotlin.random.Random
+
+private val jsonParser = Json {
+    ignoreUnknownKeys = true
+    explicitNulls = false
+    coerceInputValues = true
+}
+
+private suspend inline fun <reified T> HttpResponse.bodyManual(): T {
+    return jsonParser.decodeFromString<T>(this.bodyAsText())
+}
 
 /**
  * Parse useful data with [InnerTube] sending requests.
@@ -171,7 +182,7 @@ object YouTube {
     }
 
     suspend fun searchSuggestions(query: String): Result<SearchSuggestions> = runCatching {
-        val response = innerTube.getSearchSuggestions(WEB_REMIX, query).body<GetSearchSuggestionsResponse>()
+        val response = innerTube.getSearchSuggestions(WEB_REMIX, query).bodyManual<GetSearchSuggestionsResponse>()
         SearchSuggestions(
             queries = response.contents?.getOrNull(0)?.searchSuggestionsSectionRenderer?.contents?.mapNotNull { content ->
                 content.searchSuggestionRenderer?.suggestion?.runs?.joinToString(separator = "") { it.text }
@@ -185,7 +196,7 @@ object YouTube {
     }
 
     suspend fun searchSummary(query: String): Result<SearchSummaryPage> = runCatching {
-        val response = innerTube.search(WEB_REMIX, query).body<SearchResponse>()
+        val response = innerTube.search(WEB_REMIX, query).bodyManual<SearchResponse>()
         SearchSummaryPage(
             summaries = response.contents?.tabbedSearchResultsRenderer?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.mapNotNull { it ->
                 if (it.musicCardShelfRenderer != null)
@@ -216,7 +227,7 @@ object YouTube {
     }
 
     suspend fun search(query: String, filter: SearchFilter): Result<SearchResult> = runCatching {
-        val response = innerTube.search(WEB_REMIX, query, filter.value).body<SearchResponse>()
+        val response = innerTube.search(WEB_REMIX, query, filter.value).bodyManual<SearchResponse>()
         SearchResult(
             items = response.contents?.tabbedSearchResultsRenderer?.tabs?.firstOrNull()
                 ?.tabRenderer?.content?.sectionListRenderer?.contents?.lastOrNull()
@@ -230,7 +241,7 @@ object YouTube {
     }
 
     suspend fun searchContinuation(continuation: String): Result<SearchResult> = runCatching {
-        val response = innerTube.search(WEB_REMIX, continuation = continuation).body<SearchResponse>()
+        val response = innerTube.search(WEB_REMIX, continuation = continuation).bodyManual<SearchResponse>()
         val items = response.continuationContents?.musicShelfContinuation?.contents
             ?.mapNotNull {
                 SearchPage.toYTItem(it.musicResponsiveListItemRenderer)
@@ -242,7 +253,7 @@ object YouTube {
     }
 
     suspend fun album(browseId: String, withSongs: Boolean = true): Result<AlbumPage> = runCatching {
-        val response = innerTube.browse(WEB_REMIX, browseId).body<BrowseResponse>()
+        val response = innerTube.browse(WEB_REMIX, browseId).bodyManual<BrowseResponse>()
         val contents = response.contents ?: throw IllegalStateException("Missing browse contents for $browseId")
         val twoColumn = contents.twoColumnBrowseResultsRenderer
             ?: throw IllegalStateException("Missing twoColumnBrowseResultsRenderer for $browseId")
@@ -300,7 +311,7 @@ object YouTube {
     }
 
     suspend fun albumSongs(playlistId: String, album: AlbumItem? = null): Result<List<SongItem>> = runCatching {
-        var response = innerTube.browse(WEB_REMIX, "VL$playlistId").body<BrowseResponse>()
+        var response = innerTube.browse(WEB_REMIX, "VL$playlistId").bodyManual<BrowseResponse>()
         val songs = response.contents?.twoColumnBrowseResultsRenderer
             ?.secondaryContents?.sectionListRenderer
             ?.contents?.firstOrNull()
@@ -326,7 +337,7 @@ object YouTube {
             response = innerTube.browse(
                 client = WEB_REMIX,
                 continuation = continuation,
-            ).body<BrowseResponse>()
+            ).bodyManual<BrowseResponse>()
             
             val newSongs = response.onResponseReceivedActions?.firstOrNull()?.appendContinuationItemsAction?.continuationItems?.getItems()?.mapNotNull {
                 AlbumPage.getSong(it, album)
@@ -346,7 +357,7 @@ object YouTube {
     }
 
     suspend fun artist(browseId: String): Result<ArtistPage> = runCatching {
-        val response = innerTube.browse(WEB_REMIX, browseId).body<BrowseResponse>()
+        val response = innerTube.browse(WEB_REMIX, browseId).bodyManual<BrowseResponse>()
 
         ArtistPage(
             artist = ArtistItem(
@@ -375,7 +386,7 @@ object YouTube {
     }
 
     suspend fun artistItems(endpoint: BrowseEndpoint): Result<ArtistItemsPage> = runCatching {
-        val response = innerTube.browse(WEB_REMIX, endpoint.browseId, endpoint.params).body<BrowseResponse>()
+        val response = innerTube.browse(WEB_REMIX, endpoint.browseId, endpoint.params).bodyManual<BrowseResponse>()
         val gridRenderer = response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()
             ?.tabRenderer?.content?.sectionListRenderer?.contents?.firstOrNull()
             ?.gridRenderer
@@ -404,7 +415,7 @@ object YouTube {
     }
 
     suspend fun artistItemsContinuation(continuation: String): Result<ArtistItemsContinuationPage> = runCatching {
-        val response = innerTube.browse(WEB_REMIX, continuation = continuation).body<BrowseResponse>()
+        val response = innerTube.browse(WEB_REMIX, continuation = continuation).bodyManual<BrowseResponse>()
 
         when {
             response.continuationContents?.gridContinuation != null -> {
@@ -450,7 +461,7 @@ object YouTube {
             client = WEB_REMIX,
             browseId = "VL$playlistId",
             setLogin = true
-        ).body<BrowseResponse>()
+        ).bodyManual<BrowseResponse>()
         val base = response.contents?.twoColumnBrowseResultsRenderer?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.firstOrNull()
         val header = base?.musicResponsiveHeaderRenderer ?: base?.musicEditablePlaylistDetailHeaderRenderer?.header?.musicResponsiveHeaderRenderer
         if (header == null) throw IllegalStateException("PLAYLIST_PRIVATE")
@@ -497,7 +508,7 @@ object YouTube {
             continuation = continuation,
             browseId = "",
             setLogin = true
-        ).body<BrowseResponse>()
+        ).bodyManual<BrowseResponse>()
 
         val mainContents: List<MusicShelfRenderer.Content> = buildList {
             response.continuationContents?.sectionListContinuation?.contents
@@ -550,7 +561,8 @@ object YouTube {
             return@runCatching homeContinuation(continuation).getOrThrow()
         }
 
-        val response = innerTube.browse(WEB_REMIX, browseId = "FEmusic_home", params = params, setLogin = true).body<BrowseResponse>()
+        val httpResponse = innerTube.browse(WEB_REMIX, browseId = "FEmusic_home", params = params, setLogin = true)
+        val response = httpResponse.bodyManual<BrowseResponse>()
         val continuation = response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()
             ?.tabRenderer?.content?.sectionListRenderer?.continuations?.getContinuation()
         val sectionListRender = response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()
@@ -565,8 +577,9 @@ object YouTube {
     }
 
     private suspend fun homeContinuation(continuation: String): Result<HomePage> = runCatching {
-        val response =
-            innerTube.browse(WEB_REMIX, continuation = continuation).body<BrowseResponse>()
+        val httpResponse =
+            innerTube.browse(WEB_REMIX, continuation = continuation)
+        val response = httpResponse.bodyManual<BrowseResponse>()
         val sections = response.continuationContents?.sectionListContinuation?.contents
             ?.mapNotNull { it.musicCarouselShelfRenderer }
             ?.mapNotNull {
@@ -583,7 +596,7 @@ object YouTube {
     }
 
     suspend fun explore(): Result<ExplorePage> = runCatching {
-        val response = innerTube.browse(WEB_REMIX, browseId = "FEmusic_explore").body<BrowseResponse>()
+        val response = innerTube.browse(WEB_REMIX, browseId = "FEmusic_explore").bodyManual<BrowseResponse>()
         ExplorePage(
             newReleaseAlbums = response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.find {
                 it.musicCarouselShelfRenderer?.header?.musicCarouselShelfBasicHeaderRenderer?.moreContentButton?.buttonRenderer?.navigationEndpoint?.browseEndpoint?.browseId == "FEmusic_new_releases_albums"
@@ -600,7 +613,7 @@ object YouTube {
     }
 
     suspend fun newReleaseAlbums(): Result<List<AlbumItem>> = runCatching {
-        val response = innerTube.browse(WEB_REMIX, browseId = "FEmusic_new_releases_albums").body<BrowseResponse>()
+        val response = innerTube.browse(WEB_REMIX, browseId = "FEmusic_new_releases_albums").bodyManual<BrowseResponse>()
         val contents =
             response.contents
                 ?.singleColumnBrowseResultsRenderer
@@ -637,13 +650,13 @@ object YouTube {
     }
 
     suspend fun moodAndGenres(): Result<List<MoodAndGenres>> = runCatching {
-        val response = innerTube.browse(WEB_REMIX, browseId = "FEmusic_moods_and_genres").body<BrowseResponse>()
+        val response = innerTube.browse(WEB_REMIX, browseId = "FEmusic_moods_and_genres").bodyManual<BrowseResponse>()
         response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents!!
             .mapNotNull(MoodAndGenres.Companion::fromSectionListRendererContent)
     }
 
     suspend fun browse(browseId: String, params: String?): Result<BrowseResult> = runCatching {
-        val response = innerTube.browse(WEB_REMIX, browseId = browseId, params = params).body<BrowseResponse>()
+        val response = innerTube.browse(WEB_REMIX, browseId = browseId, params = params).bodyManual<BrowseResponse>()
         BrowseResult(
             title = response.header?.musicHeaderRenderer?.title?.runs?.firstOrNull()?.text,
             items = response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()?.tabRenderer?.content?.sectionListRenderer?.contents?.mapNotNull { content ->
@@ -677,7 +690,7 @@ object YouTube {
             client = WEB_REMIX,
             browseId = browseId,
             setLogin = true
-        ).body<BrowseResponse>()
+        ).bodyManual<BrowseResponse>()
 
         val tabs = response.contents?.singleColumnBrowseResultsRenderer?.tabs
 
@@ -720,7 +733,7 @@ object YouTube {
             client = WEB_REMIX,
             continuation = continuation,
             setLogin = true
-        ).body<BrowseResponse>()
+        ).bodyManual<BrowseResponse>()
 
         val contents = response.continuationContents
 
@@ -761,7 +774,7 @@ object YouTube {
             client = WEB_REMIX,
             continuation = continuation,
             setLogin = true
-        ).body<BrowseResponse>()
+        ).bodyManual<BrowseResponse>()
 
         val gridItems = response.continuationContents?.sectionListContinuation?.contents?.firstOrNull()
             ?.gridRenderer?.items
@@ -807,7 +820,7 @@ object YouTube {
             browseId = "FEmusic_charts",
             params = "ggMGCgQIgAQ%3D",
             continuation = continuation
-        ).body<BrowseResponse>()
+        ).bodyManual<BrowseResponse>()
 
         val sections = mutableListOf<ChartsPage.ChartSection>()
     
@@ -878,7 +891,7 @@ object YouTube {
     private fun convertToChartItem(renderer: MusicResponsiveListItemRenderer): YTItem? {
         return try {
             when {
-                renderer.flexColumns.size >= 3 && renderer.playlistItemData?.videoId != null -> {
+                renderer.flexColumns.size >= 3 && renderer.videoId != null -> {
                     val firstColumn = renderer.flexColumns.getOrNull(0)
                         ?.musicResponsiveListItemFlexColumnRenderer
                         ?.text ?: return null
@@ -904,7 +917,7 @@ object YouTube {
                         ?.text
 
                     SongItem(
-                        id = renderer.playlistItemData.videoId,
+                        id = renderer.videoId ?: return null,
                         title = title,
                         artists = artists,
                         thumbnail = renderer.thumbnail?.musicThumbnailRenderer?.getThumbnailUrl() ?: return null,
@@ -974,7 +987,7 @@ object YouTube {
             client = WEB_REMIX,
             browseId = "FEmusic_history",
             setLogin = true
-        ).body<BrowseResponse>()
+        ).bodyManual<BrowseResponse>()
 
         HistoryPage(
             sections = response.contents?.singleColumnBrowseResultsRenderer?.tabs?.firstOrNull()
@@ -1032,7 +1045,7 @@ object YouTube {
     }
 
     suspend fun createPlaylist(title: String) = runCatching {
-        innerTube.createPlaylist(WEB_REMIX, title).body<CreatePlaylistResponse>().playlistId
+        innerTube.createPlaylist(WEB_REMIX, title).bodyManual<CreatePlaylistResponse>().playlistId
     }
 
     suspend fun renamePlaylist(playlistId: String, name: String) = runCatching {
@@ -1045,7 +1058,7 @@ object YouTube {
 
     suspend fun player(videoId: String, playlistId: String? = null, client: YouTubeClient, signatureTimestamp: Int? = null, poToken: String? = null): Result<PlayerResponse> = runCatching {
         val resolvedPoToken = resolvePlayerPoToken(client, videoId, poToken)
-        innerTube.player(client, videoId, playlistId, signatureTimestamp, resolvedPoToken).body<PlayerResponse>()
+        innerTube.player(client, videoId, playlistId, signatureTimestamp, resolvedPoToken).bodyManual<PlayerResponse>()
     }
 
     suspend fun registerPlayback(playlistId: String? = null, playbackTracking: String) = runCatching {
@@ -1077,7 +1090,7 @@ object YouTube {
             endpoint.playlistSetVideoId,
             endpoint.index,
             endpoint.params,
-            continuation).body<NextResponse>()
+            continuation).bodyManual<NextResponse>()
         val playlistPanelRenderer = response.continuationContents?.playlistPanelContinuation
             ?: response.contents.singleColumnMusicWatchNextResultsRenderer?.tabbedRenderer
                 ?.watchNextTabbedResultsRenderer?.tabs?.get(0)?.tabRenderer?.content?.musicQueueRenderer
@@ -1118,12 +1131,12 @@ object YouTube {
     }
 
     suspend fun lyrics(endpoint: BrowseEndpoint): Result<String?> = runCatching {
-        val response = innerTube.browse(WEB_REMIX, endpoint.browseId, endpoint.params).body<BrowseResponse>()
+        val response = innerTube.browse(WEB_REMIX, endpoint.browseId, endpoint.params).bodyManual<BrowseResponse>()
         response.contents?.sectionListRenderer?.contents?.firstOrNull()?.musicDescriptionShelfRenderer?.description?.runs?.firstOrNull()?.text
     }
 
     suspend fun related(endpoint: BrowseEndpoint): Result<RelatedPage> = runCatching {
-        val response = innerTube.browse(WEB_REMIX, endpoint.browseId).body<BrowseResponse>()
+        val response = innerTube.browse(WEB_REMIX, endpoint.browseId).bodyManual<BrowseResponse>()
         val songs = mutableListOf<SongItem>()
         val albums = mutableListOf<AlbumItem>()
         val artists = mutableListOf<ArtistItem>()
@@ -1153,7 +1166,7 @@ object YouTube {
         if (videoIds != null) {
             assert(videoIds.size <= MAX_GET_QUEUE_SIZE) // Max video limit
         }
-        innerTube.getQueue(WEB_REMIX, videoIds, playlistId).body<GetQueueResponse>().queueDatas
+        innerTube.getQueue(WEB_REMIX, videoIds, playlistId).bodyManual<GetQueueResponse>().queueDatas
             .mapNotNull {
                 it.content.playlistPanelVideoRenderer?.let { renderer ->
                     NextPage.fromPlaylistPanelVideoRenderer(renderer)
@@ -1162,7 +1175,7 @@ object YouTube {
     }
 
     suspend fun transcript(videoId: String): Result<String> = runCatching {
-        val response = innerTube.getTranscript(WEB, videoId).body<GetTranscriptResponse>()
+        val response = innerTube.getTranscript(WEB, videoId).bodyManual<GetTranscriptResponse>()
         response.actions?.firstOrNull()?.updateEngagementPanelAction?.content?.transcriptRenderer?.body?.transcriptBodyRenderer?.cueGroups?.joinToString(separator = "\n") { group ->
             val time = group.transcriptCueGroupRenderer.cues[0].transcriptCueRenderer.startOffsetMs
             val text = group.transcriptCueGroupRenderer.cues[0].transcriptCueRenderer.cue.simpleText
@@ -1185,7 +1198,7 @@ object YouTube {
     }
 
     suspend fun accountInfo(): Result<AccountInfo> = runCatching {
-        val response = innerTube.accountMenu(WEB_REMIX).body<AccountMenuResponse>()
+        val response = innerTube.accountMenu(WEB_REMIX).bodyManual<AccountMenuResponse>()
         val accountInfo = response.actions.firstOrNull()
             ?.openPopupAction?.popup?.multiPageMenuRenderer
             ?.header?.activeAccountHeaderRenderer

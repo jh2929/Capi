@@ -17,6 +17,8 @@ import com.arturo254.opentune.innertube.models.body.*
 import com.arturo254.opentune.innertube.models.response.NextResponse
 import com.arturo254.opentune.innertube.utils.parseCookieString
 import com.arturo254.opentune.innertube.utils.sha1
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.client.*
 import io.ktor.client.call.body
 import io.ktor.client.engine.okhttp.*
@@ -52,6 +54,24 @@ class InnerTube {
     var visitorData: String? = null
     var dataSyncId: String? = null
     var poToken: String? = null
+    
+    init {
+        // Enforce GraalVM inclusion of serializable components in the :innertube module scope
+        val forceKeep = listOf(
+            com.arturo254.opentune.innertube.models.response.BrowseResponse.serializer(),
+            com.arturo254.opentune.innertube.models.response.SearchResponse.serializer(),
+            com.arturo254.opentune.innertube.models.response.PlayerResponse.serializer(),
+            com.arturo254.opentune.innertube.models.response.NextResponse.serializer(),
+            com.arturo254.opentune.innertube.models.body.BrowseBody.serializer(),
+            com.arturo254.opentune.innertube.models.body.SearchBody.serializer(),
+            com.arturo254.opentune.innertube.models.body.PlayerBody.serializer(),
+            com.arturo254.opentune.innertube.models.body.NextBody.serializer()
+        )
+        if (System.getenv("OPENTUNE_GRAALVM_FORCE") != null) {
+            forceKeep.forEach { println(it.descriptor.serialName) }
+        }
+    }
+
     var cookie: String? = null
         set(value) {
             field = value
@@ -166,20 +186,20 @@ class InnerTube {
         query: String? = null,
         params: String? = null,
         continuation: String? = null,
-    ) = withRetry {
+    ): HttpResponse = withRetry {
         httpClient.post("search") {
         ytClient(client, setLogin = useLoginForBrowse)
-        setBody(
-            SearchBody(
-                context = client.toContext(
-                    locale,
-                    visitorData,
-                    if (useLoginForBrowse) dataSyncId else null
-                ),
-                query = query,
-                params = params
-            )
+        val body = SearchBody(
+            context = client.toContext(
+                locale,
+                visitorData,
+                if (useLoginForBrowse) dataSyncId else null
+            ),
+            query = query,
+            params = params
         )
+        val jsonString = Json.encodeToString(SearchBody.serializer(), body)
+        setBody(jsonString)
         parameter("continuation", continuation)
         parameter("ctoken", continuation)
         }
@@ -194,31 +214,31 @@ class InnerTube {
     ) = withRetry {
         httpClient.post("player") {
         ytClient(client, setLogin = true)
-        setBody(
-            PlayerBody(
-                context = client.toContext(locale, visitorData, dataSyncId).let {
-                    if (client.isEmbedded) {
-                        it.copy(
-                            thirdParty = Context.ThirdParty(
-                                embedUrl = "https://www.youtube.com/watch?v=${videoId}"
-                            )
-                        )
-                    } else it
-                },
-                videoId = videoId,
-                playlistId = playlistId,
-                playbackContext = if (client.useSignatureTimestamp && signatureTimestamp != null) {
-                    PlayerBody.PlaybackContext(
-                        PlayerBody.PlaybackContext.ContentPlaybackContext(
-                            signatureTimestamp
+        val body = PlayerBody(
+            context = client.toContext(locale, visitorData, dataSyncId).let {
+                if (client.isEmbedded) {
+                    it.copy(
+                        thirdParty = Context.ThirdParty(
+                            embedUrl = "https://www.youtube.com/watch?v=${videoId}"
                         )
                     )
-                } else null,
-                serviceIntegrityDimensions = poToken?.let {
-                    PlayerBody.ServiceIntegrityDimensions(poToken = it)
-                },
-            )
+                } else it
+            },
+            videoId = videoId,
+            playlistId = playlistId,
+            playbackContext = if (client.useSignatureTimestamp && signatureTimestamp != null) {
+                PlayerBody.PlaybackContext(
+                    PlayerBody.PlaybackContext.ContentPlaybackContext(
+                        signatureTimestamp
+                    )
+                )
+            } else null,
+            serviceIntegrityDimensions = poToken?.let {
+                PlayerBody.ServiceIntegrityDimensions(poToken = it)
+            },
         )
+        val jsonString = Json.encodeToString(PlayerBody.serializer(), body)
+        setBody(jsonString)
         }
     }
 
@@ -252,21 +272,21 @@ class InnerTube {
         params: String? = null,
         continuation: String? = null,
         setLogin: Boolean = false,
-    ) = withRetry {
+    ): HttpResponse = withRetry {
         httpClient.post("browse") {
             ytClient(client, setLogin = setLogin || useLoginForBrowse)
-            setBody(
-                BrowseBody(
-                    context = client.toContext(
-                        locale,
-                        visitorData,
-                        if (setLogin || useLoginForBrowse) dataSyncId else null
-                    ),
-                    browseId = browseId,
-                    params = params,
-                    continuation = continuation
-                )
+            val body = BrowseBody(
+                context = client.toContext(
+                    locale,
+                    visitorData,
+                    if (setLogin || useLoginForBrowse) dataSyncId else null
+                ),
+                browseId = browseId,
+                params = params,
+                continuation = continuation
             )
+            val jsonString = Json.encodeToString(BrowseBody.serializer(), body)
+            setBody(jsonString)
         }
     }
 
@@ -281,17 +301,17 @@ class InnerTube {
     ) = withRetry {
         httpClient.post("next") {
             ytClient(client, setLogin = true)
-            setBody(
-                NextBody(
-                    context = client.toContext(locale, visitorData, dataSyncId),
-                    videoId = videoId,
-                    playlistId = playlistId,
-                    playlistSetVideoId = playlistSetVideoId,
-                    index = index,
-                    params = params,
-                    continuation = continuation
-                )
+            val body = NextBody(
+                context = client.toContext(locale, visitorData, dataSyncId),
+                videoId = videoId,
+                playlistId = playlistId,
+                playlistSetVideoId = playlistSetVideoId,
+                index = index,
+                params = params,
+                continuation = continuation
             )
+            val jsonString = Json.encodeToString(NextBody.serializer(), body)
+            setBody(jsonString)
         }
     }
 
