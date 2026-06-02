@@ -41,19 +41,20 @@ fn start_local_server(opentune_dir: PathBuf) -> u16 {
                                         range_header = Some(line.to_string());
                                     }
                                 }
-                                
-                                let res = tauri::async_runtime::block_on(async {
-                                    let mut req = reqwest::Client::new().get(&decoded_url);
-                                    if let Some(ref r) = range_header {
-                                        if let Some(val) = r.split(':').nth(1) {
-                                            req = req.header("Range", val.trim());
-                                        }
+                                println!("[PROXY] Incoming request for url: {}", &decoded_url[..std::cmp::min(100, decoded_url.len())]);
+                                let mut req = reqwest::blocking::Client::new().get(&decoded_url);
+                                if let Some(ref r) = range_header {
+                                    println!("[PROXY] Request Range: {:?}", r);
+                                    if let Some(val) = r.split(':').nth(1) {
+                                        req = req.header("Range", val.trim());
                                     }
-                                    req.send().await
-                                });
+                                }
                                 
-                                if let Ok(response) = res {
+                                let req_start = std::time::Instant::now();
+                                if let Ok(mut response) = req.send() {
+                                    let req_duration = req_start.elapsed().as_millis();
                                     let status = response.status();
+                                    println!("[PROXY] reqwest send took: {}ms | Status: {}", req_duration, status);
                                     let headers = response.headers();
                                     
                                     let content_type = headers.get("content-type")
@@ -77,20 +78,21 @@ fn start_local_server(opentune_dir: PathBuf) -> u16 {
                                     response_headers.push_str("\r\n");
                                     
                                     if stream.write_all(response_headers.as_bytes()).is_ok() {
-                                        let mut body_stream = response.bytes_stream();
-                                        tauri::async_runtime::block_on(async {
-                                            while let Some(chunk_result) = body_stream.next().await {
-                                                if let Ok(chunk) = chunk_result {
-                                                    if stream.write_all(&chunk).is_err() {
-                                                        break;
-                                                    }
-                                                } else {
-                                                    break;
-                                                }
-                                            }
-                                        });
-                                    }
-                                    return;
+                                         let mut buf = [0; 65536];
+                                         let mut total_bytes = 0;
+                                         let write_start = std::time::Instant::now();
+                                         while let Ok(bytes_read) = response.read(&mut buf) {
+                                             if bytes_read == 0 {
+                                                 break;
+                                             }
+                                             if stream.write_all(&buf[..bytes_read]).is_err() {
+                                                 break;
+                                             }
+                                             total_bytes += bytes_read;
+                                         }
+                                         println!("[PROXY] Finished sending stream. Total bytes: {} | Time: {}ms", total_bytes, write_start.elapsed().as_millis());
+                                     }
+                                     return;
                                 }
                             } else if let Some(pos) = path_and_query.find("path=") {
                                 let encoded_path = &path_and_query[pos + 5..];

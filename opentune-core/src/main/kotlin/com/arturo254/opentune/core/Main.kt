@@ -291,18 +291,11 @@ fun main(args: Array<String>) {
                                  val sig = cachedSignatureTimestamp ?: NewPipeUtils.getSignatureTimestamp(videoId).getOrNull()?.also {
                                      cachedSignatureTimestamp = it
                                  }
-                                 val clients = listOf(
-                                     YouTubeClient.ANDROID_MUSIC,
-                                     YouTubeClient.IOS_MUSIC,
-                                     YouTubeClient.TVHTML5,
-                                     YouTubeClient.WEB_REMIX,
-                                     YouTubeClient.ANDROID_VR_NO_AUTH,
-                                     YouTubeClient.ANDROID_VR_1_61_48,
-                                     YouTubeClient.ANDROID_VR_1_43_32,
-                                     YouTubeClient.IOS,
-                                     YouTubeClient.WEB,
-                                     YouTubeClient.MWEB
-                                 )
+                                  val clients = listOf(
+                                      YouTubeClient.ANDROID_VR_NO_AUTH,
+                                      YouTubeClient.ANDROID_VR_1_61_48,
+                                      YouTubeClient.ANDROID_VR_1_43_32
+                                  )
                                 val streamUrl = kotlinx.coroutines.supervisorScope {
                                      val deferreds = clients.map { client ->
                                         async(Dispatchers.IO) {
@@ -480,17 +473,10 @@ fun main(args: Array<String>) {
                         }
                         
                          val clients = listOf(
-                             YouTubeClient.ANDROID_MUSIC,
-                             YouTubeClient.IOS_MUSIC,
-                             YouTubeClient.TVHTML5,
-                             YouTubeClient.WEB_REMIX,
-                             YouTubeClient.ANDROID_VR_NO_AUTH,
-                             YouTubeClient.ANDROID_VR_1_61_48,
-                             YouTubeClient.ANDROID_VR_1_43_32,
-                             YouTubeClient.IOS,
-                             YouTubeClient.WEB,
-                             YouTubeClient.MWEB
-                         )
+                              YouTubeClient.ANDROID_VR_NO_AUTH,
+                              YouTubeClient.ANDROID_VR_1_61_48,
+                              YouTubeClient.ANDROID_VR_1_43_32
+                          )
                         
                         val streamUrl = coroutineScope {
                             val deferreds = clients.map { client ->
