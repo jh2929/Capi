@@ -1,15 +1,90 @@
 @import "tailwindcss";
 
-@theme {
-  --color-brand-primary: #d0bcff;
-  --color-brand-secondary: #ccc2dc;
-  --color-brand-tertiary: #efb8c8;
-  --color-bg-dark: #1c1b1f;
-  --color-surface-dark: #25232a;
-  --color-surface-variant: #49454f;
-  --color-text-primary: #e6e1e5;
-  --color-text-secondary: #cac4d0;
+:root {
+  --brand-primary: #d0bcff;
+  --brand-secondary: #ccc2dc;
+  --brand-tertiary: #efb8c8;
+  --bg-dark: #1c1b1f;
+  --surface-dark: #25232a;
+  --surface-variant: #49454f;
+  --text-primary: #e6e1e5;
+  --text-secondary: #cac4d0;
 }
+
+:root.theme-ultra-dark {
+  --brand-primary: #a855f7;
+  --brand-secondary: #c084fc;
+  --brand-tertiary: #e9d5ff;
+  --bg-dark: #000000;
+  --surface-dark: #121212;
+  --surface-variant: #262626;
+  --text-primary: #ffffff;
+  --text-secondary: #a3a3a3;
+}
+
+:root.theme-light-mode {
+  --brand-primary: #7c3aed;
+  --brand-secondary: #8b5cf6;
+  --brand-tertiary: #a78bfa;
+  --bg-dark: #f9fafb;
+  --surface-dark: #ffffff;
+  --surface-variant: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+}
+
+:root.theme-midnight-blue {
+  --brand-primary: #38bdf8;
+  --brand-secondary: #0ea5e9;
+  --brand-tertiary: #7dd3fc;
+  --bg-dark: #0f172a;
+  --surface-dark: #1e293b;
+  --surface-variant: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+}
+
+:root.theme-forest-green {
+  --brand-primary: #10b981;
+  --brand-secondary: #059669;
+  --brand-tertiary: #6ee7b7;
+  --bg-dark: #064e3b;
+  --surface-dark: #022c22;
+  --surface-variant: #065f46;
+  --text-primary: #ecfdf5;
+  --text-secondary: #a7f3d0;
+}
+
+@theme {
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-tertiary: var(--brand-tertiary);
+  --color-bg-dark: var(--bg-dark);
+  --color-surface-dark: var(--surface-dark);
+  --color-surface-variant: var(--surface-variant);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+}
+
+@keyframes pulseRotate {
+  0% {
+    transform: rotate(0deg) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: rotate(180deg) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+    opacity: 0.8;
+  }
+}
+
+.animate-pulse-rotate {
+  animation: pulseRotate 2s linear infinite;
+}
+
 
 body {
   margin: 0;

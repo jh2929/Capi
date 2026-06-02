@@ -12,7 +12,7 @@ import {
 import "./App.css";
 
 interface NavState {
-  tab: "home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos";
+  tab: "home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos" | "download_manager";
   artistId?: string;
   artistData?: any;
   currentAlbum?: any;
@@ -162,7 +162,7 @@ const getSectionIcon = (title: string) => {
 };
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos" | "download_manager">("home");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     return localStorage.getItem("opentune_sidebar_collapsed") === "true";
   });
@@ -303,6 +303,19 @@ function App() {
   const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
   const [contextMenuTrack, setContextMenuTrack] = useState<Track | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({});
+  const [capiUsername, setCapiUsername] = useState<string>(() => localStorage.getItem("capi_username") || "");
+  const [capiAvatar, setCapiAvatar] = useState<string>(() => localStorage.getItem("capi_user_avatar") || "");
+  const [theme, setTheme] = useState<string>(() => localStorage.getItem("capi_theme") || "capi-default");
+  const [activeDownloads, setActiveDownloads] = useState<Record<string, Track>>({});
+  const activeDownloadsRef = useRef<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove("theme-ultra-dark", "theme-light-mode", "theme-midnight-blue", "theme-forest-green");
+    if (theme !== "capi-default") {
+      root.classList.add(`theme-${theme}`);
+    }
+  }, [theme]);
   const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState<Track | null>(null);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
@@ -357,12 +370,13 @@ function App() {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
-  // Listen to download progress events from Rust
   useEffect(() => {
     const unlisten = listen<{ track_id: string; progress: number }>("download-progress", (event) => {
+      const trackId = event.payload.track_id;
+      if (!activeDownloadsRef.current[trackId]) return;
       setDownloadProgress(prev => ({
         ...prev,
-        [event.payload.track_id]: Math.round(event.payload.progress)
+        [trackId]: Math.round(event.payload.progress)
       }));
     });
     return () => {
@@ -793,6 +807,8 @@ function App() {
         }
       }
 
+      setActiveDownloads(prev => ({ ...prev, [track.id]: track }));
+      activeDownloadsRef.current[track.id] = true;
       setDownloadProgress(prev => ({ ...prev, [track.id]: 0 }));
 
       const localPath = await invoke<string>("descargar_cancion", {
@@ -802,15 +818,28 @@ function App() {
         url: stream
       });
 
+      if (!activeDownloadsRef.current[track.id]) {
+        // Download was cancelled, do not save
+        return;
+      }
+
       setDownloads(prev => ({ ...prev, [track.id]: localPath }));
       setDownloadedMetadata(prev => {
         if (prev.some(t => t.id === track.id)) return prev;
         return [...prev, track];
       });
     } catch (error) {
-      console.error("Download failed:", error);
-      alert("Error al descargar.");
+      if (activeDownloadsRef.current[track.id]) {
+        console.error("Download failed:", error);
+        alert("Error al descargar.");
+      }
     } finally {
+      setActiveDownloads(prev => {
+        const copy = { ...prev };
+        delete copy[track.id];
+        return copy;
+      });
+      activeDownloadsRef.current[track.id] = false;
       setDownloadProgress(prev => {
         const copy = { ...prev };
         delete copy[track.id];
@@ -1291,8 +1320,19 @@ function App() {
             }`}
             title="Perfil"
           >
-            <User className="w-5 h-5 flex-shrink-0" />
-            {!sidebarCollapsed && <span className="text-sm">Perfil</span>}
+            <div className="w-6 h-6 rounded-full overflow-hidden border border-white/10 flex-shrink-0 flex items-center justify-center bg-surface-dark">
+              <img 
+                src={capiAvatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150"} 
+                alt="Perfil" 
+                className="w-full h-full object-cover" 
+              />
+            </div>
+            {!sidebarCollapsed && (
+              <div className="text-left min-w-0 flex-1">
+                <p className="text-sm font-semibold truncate leading-none text-white">{capiUsername || "Usuario Capi"}</p>
+                <p className="text-[10px] text-text-secondary truncate mt-1">Ver perfil</p>
+              </div>
+            )}
           </button>
         </div>
       </aside>
@@ -1374,6 +1414,15 @@ function App() {
           </form>
 
           <div className="flex items-center gap-4 flex-shrink-0">
+            {Object.keys(downloadProgress).length > 0 && (
+              <button
+                onClick={() => navigateTo("download_manager")}
+                className="p-2.5 text-brand-primary hover:text-white rounded-xl hover:bg-white/5 transition relative animate-fade-in"
+                title="Descargas activas"
+              >
+                <Download className="w-5 h-5 animate-pulse-rotate" />
+              </button>
+            )}
             <button
               onClick={() => navigateTo("lanzamientos")}
               className="p-2.5 text-text-secondary hover:text-white rounded-xl hover:bg-white/5 transition relative"
@@ -2427,6 +2476,28 @@ function App() {
                   </div>
                 </div>
 
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div>
+                    <h3 className="font-semibold text-sm text-white">Tema Visual</h3>
+                    <p className="text-xs text-text-secondary mt-1">Elige el tema de colores para la interfaz de Capi.</p>
+                  </div>
+                  <select
+                    value={theme}
+                    onChange={(e) => {
+                      const selectedTheme = e.target.value;
+                      setTheme(selectedTheme);
+                      localStorage.setItem("capi_theme", selectedTheme);
+                    }}
+                    className="bg-surface-dark border border-white/10 rounded-xl px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand-primary cursor-pointer"
+                  >
+                    <option value="capi-default">Capi Default</option>
+                    <option value="ultra-dark">Ultra Dark</option>
+                    <option value="light-mode">Light Mode</option>
+                    <option value="midnight-blue">Midnight Blue</option>
+                    <option value="forest-green">Forest Green</option>
+                  </select>
+                </div>
+
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold text-sm text-white">Ocultar acceso directo de ajustes de la barra lateral</h3>
@@ -2457,14 +2528,54 @@ function App() {
                 <div className="relative z-10 flex items-center gap-6">
                   <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/20 shadow-xl bg-surface-dark flex items-center justify-center flex-shrink-0">
                     <img 
-                      src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150" 
+                      src={capiAvatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150"} 
                       alt="Perfil" 
                       className="w-full h-full object-cover" 
                     />
                   </div>
                   <div>
-                    <h2 className="text-3xl font-extrabold tracking-tight">Usuario Capi</h2>
+                    <h2 className="text-3xl font-extrabold tracking-tight">{capiUsername || "Usuario Capi"}</h2>
                     <p className="text-sm text-text-secondary mt-1">Plan Premium • Miembro desde 2026</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-6 space-y-4">
+                <h3 className="font-semibold text-lg text-white">Editar Perfil</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Nombre de Usuario</label>
+                    <input
+                      type="text"
+                      value={capiUsername}
+                      onChange={(e) => {
+                        const newName = e.target.value;
+                        setCapiUsername(newName);
+                        localStorage.setItem("capi_username", newName);
+                      }}
+                      placeholder="Usuario Capi"
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-brand-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Foto de Perfil</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            const base64String = reader.result as string;
+                            setCapiAvatar(base64String);
+                            localStorage.setItem("capi_user_avatar", base64String);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20 file:cursor-pointer"
+                    />
                   </div>
                 </div>
               </div>
@@ -2524,6 +2635,74 @@ function App() {
                     <p className="text-[10px] text-brand-primary font-semibold mt-3 uppercase tracking-wider">{release.releaseDate}</p>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* DOWNLOAD MANAGER VIEW */}
+          {activeTab === "download_manager" && (
+            <div className="space-y-6 max-w-4xl animate-fade-in text-left">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight mb-2 text-white">Gestor de Descargas</h2>
+                <p className="text-sm text-text-secondary">Monitorea y gestiona tus descargas activas en tiempo real.</p>
+              </div>
+
+              <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-6 space-y-4">
+                {Object.keys(downloadProgress).length === 0 ? (
+                  <div className="h-48 flex flex-col items-center justify-center gap-3">
+                    <Download className="w-8 h-8 text-text-secondary animate-pulse" />
+                    <p className="text-sm text-text-secondary">No hay descargas activas en este momento.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-white/5">
+                    {Object.entries(downloadProgress).map(([trackId, progress]) => {
+                      const track = activeDownloads[trackId];
+                      if (!track) return null;
+                      return (
+                        <div key={trackId} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
+                          <img
+                            src={track.thumbnail}
+                            alt={track.title}
+                            className="w-12 h-12 rounded-lg object-cover bg-black/40 flex-shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-semibold text-sm text-white truncate">{track.title}</h4>
+                            <p className="text-xs text-text-secondary truncate">{track.artist}</p>
+                            <div className="w-full bg-white/10 rounded-full h-1.5 mt-2 overflow-hidden">
+                              <div
+                                className="bg-brand-primary h-full transition-all duration-300"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 flex-shrink-0">
+                            <span className="text-xs font-mono font-semibold text-brand-primary">
+                              {progress}%
+                            </span>
+                            <button
+                              onClick={() => {
+                                setDownloadProgress(prev => {
+                                  const copy = { ...prev };
+                                  delete copy[trackId];
+                                  return copy;
+                                });
+                                setActiveDownloads(prev => {
+                                  const copy = { ...prev };
+                                  delete copy[trackId];
+                                  return copy;
+                                });
+                                delete activeDownloadsRef.current[trackId];
+                              }}
+                              className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold rounded-lg transition border border-red-500/20 cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -2610,10 +2789,10 @@ function App() {
 
         {/* EXPANDED FULLSCREEN PLAYER */}
         {isPlayerExpanded && currentTrack && (
-          <div className="absolute inset-0 bg-bg-dark/95 z-30 flex flex-col md:flex-row p-8 gap-8 items-center justify-center animate-fade-in backdrop-blur-lg">
+          <div className="absolute inset-0 bg-bg-dark/95 z-30 flex flex-col md:flex-row p-8 gap-8 items-center justify-start md:justify-center overflow-y-auto md:overflow-y-hidden animate-fade-in backdrop-blur-lg">
             <button 
               onClick={() => setIsPlayerExpanded(false)}
-              className="absolute top-6 right-6 p-3 bg-white/5 hover:bg-white/10 text-white rounded-full transition"
+              className="fixed top-6 right-6 p-3 bg-white/5 hover:bg-white/10 text-white rounded-full transition z-40"
             >
               <X className="w-6 h-6" />
             </button>
@@ -2624,7 +2803,7 @@ function App() {
             </div>
 
             {/* Left Panel: Cover Art & Controls */}
-            <div className="w-full md:w-1/2 flex flex-col items-center justify-center z-10 max-w-md gap-6">
+            <div className="w-full md:w-1/2 flex flex-col items-center justify-center z-10 max-w-md gap-6 flex-shrink-0">
               {/* Cover Art */}
               <div 
                 onTouchStart={handleTouchStart}
@@ -2670,7 +2849,7 @@ function App() {
             </div>
 
             {/* Right Panel: Tabs (Queue / Lyrics / Related) */}
-            <div className="w-full md:w-1/2 h-[350px] md:h-[500px] flex flex-col z-10 max-w-lg border border-white/5 rounded-3xl bg-surface-dark/30 backdrop-blur-md overflow-hidden">
+            <div className="w-full md:w-1/2 h-[350px] md:h-[500px] flex flex-col z-10 max-w-lg border border-white/5 rounded-3xl bg-surface-dark/30 backdrop-blur-md overflow-hidden flex-shrink-0">
               {/* Tab bar */}
               <div className="flex border-b border-white/5">
                 {[
