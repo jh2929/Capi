@@ -19,14 +19,14 @@ dependencies {
 }
 
 application {
-    mainClass.set("com.arturo254.opentune.core.MainKt")
+    mainClass.set("com.arturo254.capi.core.MainKt")
 }
 
 graalvmNative {
     binaries {
         named("main") {
-            imageName.set("opentune-core")
-            mainClass.set("com.arturo254.opentune.core.MainKt")
+            imageName.set("capi-core")
+            mainClass.set("com.arturo254.capi.core.MainKt")
             buildArgs.addAll(
                 "--no-fallback",
                 "--initialize-at-build-time=kotlin.DeprecationLevel",

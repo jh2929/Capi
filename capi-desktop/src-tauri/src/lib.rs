@@ -210,18 +210,18 @@ struct DownloadProgress {
 
 fn get_binary_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     // 1. Check development/absolute workspace path first to allow running the target/release binary directly
-    let dev_path = std::path::Path::new("/home/emixdy/Documentos/opentune-desktop/opentune-desktop/bin/opentune-core");
+    let dev_path = std::path::Path::new("/home/emixdy/Documentos/Capi/capi-desktop/bin/capi-core");
     if dev_path.exists() {
         return Ok(dev_path.to_path_buf());
     }
 
     // 2. Check compiled bundle resources
     if let Ok(dir) = app.path().resource_dir() {
-        let path = dir.join("bin").join("opentune-core");
+        let path = dir.join("bin").join("capi-core");
         if path.exists() {
             return Ok(path);
         }
-        let path_flat = dir.join("opentune-core");
+        let path_flat = dir.join("capi-core");
         if path_flat.exists() {
             return Ok(path_flat);
         }
@@ -230,11 +230,11 @@ fn get_binary_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     // 3. Check adjacent to current running binary directory
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(parent) = exe_path.parent() {
-            let path = parent.join("bin").join("opentune-core");
+            let path = parent.join("bin").join("capi-core");
             if path.exists() {
                 return Ok(path);
             }
-            let path_flat = parent.join("opentune-core");
+            let path_flat = parent.join("capi-core");
             if path_flat.exists() {
                 return Ok(path_flat);
             }
@@ -245,7 +245,7 @@ fn get_binary_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     app.path()
         .resource_dir()
         .map_err(|e| e.to_string())
-        .map(|dir| dir.join("bin").join("opentune-core"))
+        .map(|dir| dir.join("bin").join("capi-core"))
 }
 
 use std::process::{ChildStdin, ChildStdout, Stdio};
@@ -591,7 +591,7 @@ pub fn run() {
             }
 
             let mut child = cmd.spawn()
-                .map_err(|e| format!("Fallo al iniciar opentune-core daemon: {}", e))?;
+                .map_err(|e| format!("Fallo al iniciar capi-core daemon: {}", e))?;
 
             let stdin = child.stdin.take().unwrap();
             let mut stdout = BufReader::new(child.stdout.take().unwrap());
@@ -615,10 +615,10 @@ pub fn run() {
             // Start localhost HTTP server for local music playback
             let app_data = app.handle().path().app_data_dir()
                 .map_err(|e| format!("No se pudo resolver el directorio de datos: {}", e))?;
-            let opentune_dir = app_data.join("Opentune");
+            let opentune_dir = app_data.join("Capi");
             if !opentune_dir.exists() {
                 std::fs::create_dir_all(&opentune_dir)
-                    .map_err(|e| format!("No se pudo crear el directorio de Opentune: {}", e))?;
+                    .map_err(|e| format!("No se pudo crear el directorio de Capi: {}", e))?;
             }
             let local_port = start_local_server(opentune_dir);
             app.manage(LocalServerState { port: local_port });

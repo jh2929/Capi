@@ -1,4 +1,4 @@
-package com.arturo254.opentune.core
+package com.arturo254.capi.core
 
 import com.arturo254.opentune.innertube.YouTube
 import com.arturo254.opentune.innertube.YouTube.SearchFilter
