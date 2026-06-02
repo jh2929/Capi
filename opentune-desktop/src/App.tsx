@@ -276,19 +276,24 @@ function App() {
   useEffect(() => {
     if (!currentTrack) return;
     const nextTrack = getNextTrackToPlay();
-    if (nextTrack && !downloads[nextTrack.id] && !streamCacheRef.current[nextTrack.id]) {
+    // Skip preload for playlist/radio IDs - they need playlist resolution first
+    const isPlaylistId = nextTrack && (nextTrack.id.startsWith('RDCLAK') || nextTrack.id.startsWith('OLAK') || nextTrack.id.startsWith('PL'));
+    if (nextTrack && !isPlaylistId && !downloads[nextTrack.id] && !streamCacheRef.current[nextTrack.id]) {
       invoke<string>("obtener_stream", { id: nextTrack.id }).then(resultJson => {
         let stream = resultJson;
         try {
           const parsed = JSON.parse(resultJson);
+          if (parsed.error) return; // Don't cache errors
           if (parsed.streamUrl) stream = parsed.streamUrl;
           else if (parsed.url) stream = parsed.url;
         } catch {}
         if (stream.startsWith('"') && stream.endsWith('"')) {
           stream = stream.substring(1, stream.length - 1);
         }
+        // Wrap in proxy for consistency
+        stream = `http://127.0.0.1:${localPort}/play?url=${encodeURIComponent(stream)}`;
         streamCacheRef.current[nextTrack.id] = stream;
-        console.log(`[PRELOAD] Cache hit preloaded for next track: ${nextTrack.title}`);
+        console.log(`[PRELOAD] Preloaded next track: ${nextTrack.title}`);
       }).catch(err => {
         console.error("[PRELOAD] Failed preloading track stream:", err);
       });
@@ -465,6 +470,33 @@ function App() {
 
   const playTrack = async (track: Track, queueList: Track[] = []) => {
     try {
+      // Detect playlist/radio IDs and resolve them into actual songs first
+      const isPlaylistId = track.id.startsWith('RDCLAK') || track.id.startsWith('OLAK') || track.id.startsWith('PL');
+      if (isPlaylistId) {
+        console.log(`[PLAY] Detected playlist ID: ${track.id}, resolving songs...`);
+        setLoading(true);
+        setBuffering(true);
+        try {
+          const playlistJson = await invoke<string>("obtener_playlist", { id: track.id });
+          const songs: Track[] = JSON.parse(playlistJson);
+          if (songs.length > 0) {
+            console.log(`[PLAY] Resolved ${songs.length} songs from playlist, playing first: ${songs[0].title}`);
+            setLoading(false);
+            setBuffering(false);
+            return playTrack(songs[0], songs);
+          } else {
+            throw new Error("Playlist vacía");
+          }
+        } catch (err: any) {
+          console.error("[PLAY] Failed to resolve playlist:", err);
+          alert("Error al cargar la playlist: " + (err.message || err));
+          setLoading(false);
+          setBuffering(false);
+          return;
+        }
+      }
+
+      console.time(`[PLAY-TIMING] ${track.title}`);
       const isCachedOrLocal = !!(downloads[track.id] || streamCacheRef.current[track.id]);
       if (!isCachedOrLocal) {
         setLoading(true);
@@ -475,6 +507,7 @@ function App() {
       setStreamUrl(null);
       setCurrentTime(0);
       setDuration(0);
+      console.timeLog(`[PLAY-TIMING] ${track.title}`, 'state updates done');
 
       if (queueList.length > 0) {
         setActiveQueue(queueList);
@@ -491,10 +524,14 @@ function App() {
       if (downloads[track.id]) {
         const path = downloads[track.id];
         stream = `http://127.0.0.1:${localPort}/play?path=${encodeURIComponent(path)}`;
+        console.timeLog(`[PLAY-TIMING] ${track.title}`, 'using downloaded file');
       } else if (streamCacheRef.current[track.id]) {
         stream = streamCacheRef.current[track.id];
+        console.timeLog(`[PLAY-TIMING] ${track.title}`, 'using cached stream URL');
       } else {
+        console.timeLog(`[PLAY-TIMING] ${track.title}`, 'calling obtener_stream...');
         const resultJson = await invoke<string>("obtener_stream", { id: track.id });
+        console.timeLog(`[PLAY-TIMING] ${track.title}`, 'obtener_stream returned');
         stream = resultJson;
         try {
           const parsed = JSON.parse(resultJson);
@@ -515,19 +552,24 @@ function App() {
         // Wrap the YouTube stream URL in our local HTTP server to bypass GStreamer SSL/TLS negotiation bugs
         stream = `http://127.0.0.1:${localPort}/play?url=${encodeURIComponent(stream)}`;
         streamCacheRef.current[track.id] = stream;
+        console.timeLog(`[PLAY-TIMING] ${track.title}`, 'stream URL wrapped in proxy');
       }
 
       setStreamUrl(stream);
+      console.timeLog(`[PLAY-TIMING] ${track.title}`, 'setting audio.src...');
       
       if (audioRef.current) {
         audioRef.current.src = stream;
+        console.timeLog(`[PLAY-TIMING] ${track.title}`, 'calling audio.play()...');
         audioRef.current.play().then(() => {
+          console.timeEnd(`[PLAY-TIMING] ${track.title}`);
+          console.log(`[PLAY-TIMING] ✅ Playback started for: ${track.title}`);
           setIsPlaying(true);
           setBuffering(false);
           setLoading(false);
         }).catch(err => {
+          console.timeEnd(`[PLAY-TIMING] ${track.title}`);
           console.error("Playback error:", err, "for stream:", stream);
-          // If local src fails, show error popup for testing clarity
           if (stream.startsWith("http://127.0.0.1")) {
             alert("No se pudo reproducir el archivo local: " + err.message);
           }

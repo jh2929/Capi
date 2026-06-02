@@ -115,12 +115,16 @@ object NewPipeUtils {
             }
 
             val resolvedUrl = runCatching {
-                retryWithBackoff(
-                    maxAttempts = 3,
-                    initialDelayMs = 250L,
-                    maxDelayMs = 2_000L
-                ) {
-                    YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated(videoId, url)
+                if (client?.useSignatureTimestamp == true) {
+                    retryWithBackoff(
+                        maxAttempts = 3,
+                        initialDelayMs = 250L,
+                        maxDelayMs = 2_000L
+                    ) {
+                        YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated(videoId, url)
+                    }
+                } else {
+                    url
                 }
             }.getOrElse { url }
 

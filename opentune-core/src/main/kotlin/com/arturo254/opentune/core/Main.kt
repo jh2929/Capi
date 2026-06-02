@@ -226,22 +226,32 @@ fun main(args: Array<String>) {
         System.err.println("[DEBUG] [${System.currentTimeMillis()}] Starting main coroutine blocking...")
         try {
             if (action == "--daemon") {
-                // Initialize visitorData and PO Tokens once
-                val visitorData = withTimeoutOrNull(5000) {
-                    YouTube.visitorData().getOrNull()
-                }
-                YouTube.visitorData = visitorData
-                if (visitorData != null) {
-                    try {
-                        YouTube.poToken = PoTokenGenerator.generateColdStartToken(visitorData)
-                        YouTube.poTokenGvs = PoTokenGenerator.generateSessionToken(visitorData)
-                        YouTube.poTokenPlayer = PoTokenGenerator.generateColdStartToken(visitorData, "player")
-                        System.err.println("[DAEMON] PO Tokens generated successfully")
-                    } catch (e: Exception) {
-                        System.err.println("[DAEMON] WARNING: Failed to generate PO Tokens: ${e.message}")
-                    }
+                val extPoToken = System.getenv("OPENTUNE_PO_TOKEN")
+                val extVisitorData = System.getenv("OPENTUNE_VISITOR_DATA")
+                if (!extPoToken.isNullOrBlank() && !extVisitorData.isNullOrBlank()) {
+                    YouTube.visitorData = extVisitorData
+                    YouTube.poToken = extPoToken
+                    YouTube.poTokenGvs = extPoToken
+                    YouTube.poTokenPlayer = extPoToken
+                    System.err.println("[DAEMON] Using EXTERNAL genuine PO Token")
                 } else {
-                    System.err.println("[DAEMON] WARNING: visitorData is null, PO Tokens not generated")
+                    // Initialize visitorData and PO Tokens once
+                    val visitorData = withTimeoutOrNull(20000) {
+                        YouTube.visitorData().getOrNull()
+                    }
+                    YouTube.visitorData = visitorData
+                    if (visitorData != null) {
+                        try {
+                            YouTube.poToken = PoTokenGenerator.generateColdStartToken(visitorData)
+                            YouTube.poTokenGvs = PoTokenGenerator.generateSessionToken(visitorData)
+                            YouTube.poTokenPlayer = PoTokenGenerator.generateColdStartToken(visitorData, "player")
+                            System.err.println("[DAEMON] PO Tokens generated successfully")
+                        } catch (e: Exception) {
+                            System.err.println("[DAEMON] WARNING: Failed to generate PO Tokens: ${e.message}")
+                        }
+                    } else {
+                        System.err.println("[DAEMON] WARNING: visitorData is null, PO Tokens not generated")
+                    }
                 }
 
                 // Pre-fetch signature timestamp in background to eliminate latency on first play
@@ -288,15 +298,17 @@ fun main(args: Array<String>) {
                             }
                             "get-stream" -> {
                                 val videoId = cmdObj["id"]?.jsonPrimitive?.contentOrNull ?: throw Exception("Missing id")
-                                 val sig = cachedSignatureTimestamp ?: NewPipeUtils.getSignatureTimestamp(videoId).getOrNull()?.also {
-                                     cachedSignatureTimestamp = it
-                                 }
-                                  val clients = listOf(
-                                      YouTubeClient.ANDROID_VR_NO_AUTH,
-                                      YouTubeClient.ANDROID_VR_1_61_48,
-                                      YouTubeClient.ANDROID_VR_1_43_32
-                                  )
-                                val streamUrl = kotlinx.coroutines.supervisorScope {
+                                     val clients = listOf(
+                                         YouTubeClient.ANDROID_VR_NO_AUTH,
+                                         YouTubeClient.VISIONOS,
+                                         YouTubeClient.IPADOS
+                                     )
+                                    val sig = if (clients.any { it.useSignatureTimestamp }) {
+                                        cachedSignatureTimestamp ?: NewPipeUtils.getSignatureTimestamp(videoId).getOrNull()?.also {
+                                            cachedSignatureTimestamp = it
+                                        }
+                                    } else null
+                                    val streamUrl = kotlinx.coroutines.supervisorScope {
                                      val deferreds = clients.map { client ->
                                         async(Dispatchers.IO) {
                                             try {
@@ -426,6 +438,37 @@ fun main(args: Array<String>) {
                                     throw Exception("Failed to refresh visitorData")
                                 }
                             }
+                            "set-tokens" -> {
+                                val newPoToken = cmdObj["poToken"]?.jsonPrimitive?.contentOrNull
+                                val newVisitorData = cmdObj["visitorData"]?.jsonPrimitive?.contentOrNull
+                                if (newPoToken != null && newVisitorData != null) {
+                                    YouTube.visitorData = newVisitorData
+                                    YouTube.poToken = newPoToken
+                                    YouTube.poTokenGvs = newPoToken
+                                    YouTube.poTokenPlayer = newPoToken
+                                    System.err.println("[DAEMON] Dynamic PO Token set successfully")
+                                    Json.encodeToString(mapOf("success" to true))
+                                } else {
+                                    throw Exception("Missing poToken or visitorData")
+                                }
+                            }
+                            "get-playlist" -> {
+                                val playlistId = cmdObj["id"]?.jsonPrimitive?.contentOrNull ?: throw Exception("Missing id")
+                                val playlistPage = YouTube.playlist(playlistId).getOrThrow()
+                                val songs = playlistPage.songs.map {
+                                    SongDTO(
+                                        id = it.id,
+                                        title = it.title,
+                                        artist = it.artists.joinToString(", ") { a -> a.name },
+                                        album = it.album?.name,
+                                        duration = it.duration,
+                                        thumbnail = it.thumbnail,
+                                        explicit = it.explicit,
+                                        artistId = it.artists.firstOrNull()?.id
+                                    )
+                                }
+                                Json.encodeToString(songs)
+                            }
                             else -> throw Exception("Unknown action: $act")
                         }
                     } catch (e: Exception) {
@@ -468,17 +511,43 @@ fun main(args: Array<String>) {
                             exitProcess(1)
                         }
                         val videoId = args[1]
-                        val sig = cachedSignatureTimestamp ?: NewPipeUtils.getSignatureTimestamp(videoId).getOrNull()?.also {
-                            cachedSignatureTimestamp = it
-                        }
                         
-                         val clients = listOf(
-                              YouTubeClient.ANDROID_VR_NO_AUTH,
-                              YouTubeClient.ANDROID_VR_1_61_48,
-                              YouTubeClient.ANDROID_VR_1_43_32
-                          )
+                         val extPoToken = System.getenv("OPENTUNE_PO_TOKEN")
+                         val extVisitorData = System.getenv("OPENTUNE_VISITOR_DATA")
+                         if (!extPoToken.isNullOrBlank() && !extVisitorData.isNullOrBlank()) {
+                             YouTube.visitorData = extVisitorData
+                             YouTube.poToken = extPoToken
+                             YouTube.poTokenGvs = extPoToken
+                             YouTube.poTokenPlayer = extPoToken
+                             System.err.println("[CLI] Using EXTERNAL genuine PO Token")
+                         } else {
+                             val visitorData = YouTube.visitorData().getOrNull()
+                             YouTube.visitorData = visitorData
+                             if (visitorData != null) {
+                                 try {
+                                     YouTube.poToken = PoTokenGenerator.generateColdStartToken(visitorData)
+                                     YouTube.poTokenGvs = PoTokenGenerator.generateSessionToken(visitorData)
+                                     YouTube.poTokenPlayer = PoTokenGenerator.generateColdStartToken(visitorData, "player")
+                                 } catch (e: Exception) {
+                                     System.err.println("[CLI] Failed to generate PO Tokens: ${e.message}")
+                                 }
+                             }
+                         }
                         
-                        val streamUrl = coroutineScope {
+                                 val clients = listOf(
+                                 YouTubeClient.ANDROID_VR_NO_AUTH,
+                                 YouTubeClient.IPADOS,
+                                 YouTubeClient.VISIONOS,
+                                 YouTubeClient.MWEB
+                             )
+                         
+                         val sig = if (clients.any { it.useSignatureTimestamp }) {
+                             cachedSignatureTimestamp ?: NewPipeUtils.getSignatureTimestamp(videoId).getOrNull()?.also {
+                                 cachedSignatureTimestamp = it
+                             }
+                         } else null
+                         
+                         val streamUrl = coroutineScope {
                             val deferreds = clients.map { client ->
                                 async(Dispatchers.IO) {
                                     try {

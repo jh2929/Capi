@@ -16,10 +16,16 @@ fn start_local_server(opentune_dir: PathBuf) -> u16 {
     let port = listener.local_addr().expect("Failed to get local address").port();
     let opentune_dir = opentune_dir.clone();
     
+    let client = reqwest::blocking::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .build()
+        .expect("Failed to build proxy HTTP client");
+    
     std::thread::spawn(move || {
         for stream in listener.incoming() {
             if let Ok(mut stream) = stream {
                 let opentune_dir = opentune_dir.clone();
+                let client = client.clone();
                 std::thread::spawn(move || {
                     let mut buffer = [0; 4096];
                     if let Ok(n) = stream.read(&mut buffer) {
@@ -42,7 +48,7 @@ fn start_local_server(opentune_dir: PathBuf) -> u16 {
                                     }
                                 }
                                 println!("[PROXY] Incoming request for url: {}", &decoded_url[..std::cmp::min(100, decoded_url.len())]);
-                                let mut req = reqwest::blocking::Client::new().get(&decoded_url);
+                                let mut req = client.get(&decoded_url);
                                 if let Some(ref r) = range_header {
                                     println!("[PROXY] Request Range: {:?}", r);
                                     if let Some(val) = r.split(':').nth(1) {
@@ -77,7 +83,9 @@ fn start_local_server(opentune_dir: PathBuf) -> u16 {
                                     }
                                     response_headers.push_str("\r\n");
                                     
+                                    let _ = stream.set_nodelay(true);
                                     if stream.write_all(response_headers.as_bytes()).is_ok() {
+                                         stream.flush().ok();
                                          let mut buf = [0; 65536];
                                          let mut total_bytes = 0;
                                          let write_start = std::time::Instant::now();
@@ -88,6 +96,7 @@ fn start_local_server(opentune_dir: PathBuf) -> u16 {
                                              if stream.write_all(&buf[..bytes_read]).is_err() {
                                                  break;
                                              }
+                                             let _ = stream.flush();
                                              total_bytes += bytes_read;
                                          }
                                          println!("[PROXY] Finished sending stream. Total bytes: {} | Time: {}ms", total_bytes, write_start.elapsed().as_millis());
@@ -249,14 +258,24 @@ struct DaemonProcess {
 }
 
 fn send_daemon_command(daemon: &DaemonProcess, command: &str) -> Result<String, String> {
+    let total_start = std::time::Instant::now();
+    
+    let lock_start = std::time::Instant::now();
     let mut stdin = daemon.stdin.lock().map_err(|e| e.to_string())?;
     let mut stdout = daemon.stdout.lock().map_err(|e| e.to_string())?;
+    println!("[TIMING] Mutex lock took: {}ms", lock_start.elapsed().as_millis());
     
+    let write_start = std::time::Instant::now();
     writeln!(stdin, "{}", command).map_err(|e| e.to_string())?;
     stdin.flush().map_err(|e| e.to_string())?;
+    println!("[TIMING] Write+flush took: {}ms", write_start.elapsed().as_millis());
     
+    let read_start = std::time::Instant::now();
     let mut response = String::new();
     stdout.read_line(&mut response).map_err(|e| e.to_string())?;
+    println!("[TIMING] read_line took: {}ms", read_start.elapsed().as_millis());
+    println!("[TIMING] send_daemon_command TOTAL: {}ms | cmd: {}", total_start.elapsed().as_millis(), &command[..std::cmp::min(60, command.len())]);
+    
     Ok(response.trim().to_string())
 }
 
@@ -273,6 +292,15 @@ async fn buscar_cancion(daemon: tauri::State<'_, DaemonProcess>, query: String) 
 async fn obtener_stream(daemon: tauri::State<'_, DaemonProcess>, id: String) -> Result<String, String> {
     let cmd = serde_json::json!({
         "action": "get-stream",
+        "id": id
+    }).to_string();
+    send_daemon_command(&daemon, &cmd)
+}
+
+#[tauri::command]
+async fn obtener_playlist(daemon: tauri::State<'_, DaemonProcess>, id: String) -> Result<String, String> {
+    let cmd = serde_json::json!({
+        "action": "get-playlist",
         "id": id
     }).to_string();
     send_daemon_command(&daemon, &cmd)
@@ -500,18 +528,69 @@ fn obtener_local_port(state: tauri::State<'_, LocalServerState>) -> u16 {
     state.port
 }
 
+fn get_po_tokens_from_docker() -> Option<(String, String)> {
+    let _ = Command::new("docker").args(["rm", "-f", "opentune-pot"]).output();
+    let run_res = Command::new("docker")
+        .args(["run", "-d", "-p", "4416:4416", "--name", "opentune-pot", "brainicism/bgutil-ytdlp-pot-provider"])
+        .output();
+    if run_res.is_err() {
+        eprintln!("[RUST] Failed to start Docker container");
+        return None;
+    }
+
+    let client = reqwest::blocking::Client::new();
+    let mut ready = false;
+    for _ in 0..20 {
+        if let Ok(resp) = client.get("http://127.0.0.1:4416/ping").send() {
+            if resp.status().is_success() {
+                ready = true;
+                break;
+            }
+        }
+        std::thread::sleep(std::time::Duration::from_millis(300));
+    }
+
+    if !ready {
+        eprintln!("[RUST] Docker container didn't respond to ping in time");
+        return None;
+    }
+
+    if let Ok(resp) = client.post("http://127.0.0.1:4416/get_pot").send() {
+        if let Ok(text) = resp.text() {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
+                if let (Some(po_token), Some(visitor_data)) = (
+                    json.get("poToken").and_then(|v| v.as_str()),
+                    json.get("contentBinding").and_then(|v| v.as_str()),
+                ) {
+                    println!("[RUST] Successfully obtained genuine PO token from Docker");
+                    return Some((po_token.to_string(), visitor_data.to_string()));
+                }
+            }
+        }
+    }
+
+    eprintln!("[RUST] Failed to fetch poToken from Docker sidecar");
+    None
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let binary = get_binary_path(&app.handle())?;
-            let mut child = Command::new(&binary)
-                .arg("--daemon")
-                .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
-                .stderr(Stdio::inherit())
-                .spawn()
+            let mut cmd = Command::new(&binary);
+            cmd.arg("--daemon")
+               .stdin(Stdio::piped())
+               .stdout(Stdio::piped())
+               .stderr(Stdio::inherit());
+
+            if let Some((po_token, visitor_data)) = get_po_tokens_from_docker() {
+                cmd.env("OPENTUNE_PO_TOKEN", po_token);
+                cmd.env("OPENTUNE_VISITOR_DATA", visitor_data);
+            }
+
+            let mut child = cmd.spawn()
                 .map_err(|e| format!("Fallo al iniciar opentune-core daemon: {}", e))?;
 
             let stdin = child.stdin.take().unwrap();
@@ -549,6 +628,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             buscar_cancion,
             obtener_stream,
+            obtener_playlist,
             descargar_cancion,
             borrar_cancion,
             obtener_home,
@@ -560,4 +640,7 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+    
+    // Clean up Docker container on exit
+    let _ = Command::new("docker").args(["rm", "-f", "opentune-pot"]).output();
 }

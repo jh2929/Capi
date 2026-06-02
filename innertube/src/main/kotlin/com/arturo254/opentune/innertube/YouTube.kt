@@ -149,7 +149,12 @@ object YouTube {
             name == "WEB_EMBEDDED_PLAYER" ||
             name == "TVHTML5" ||
             name == "TVHTML5_SIMPLY_EMBEDDED_PLAYER" ||
-            name == "TVHTML5_SIMPLY"
+            name == "TVHTML5_SIMPLY" ||
+            name == "ANDROID_MUSIC" ||
+            name == "IOS_MUSIC" ||
+            name == "VISIONOS" ||
+            name == "IOS" ||
+            name == "ANDROID_VR"
     }
 
     private fun resolvePlayerPoToken(client: YouTubeClient, videoId: String, explicitPoToken: String?): String? {
