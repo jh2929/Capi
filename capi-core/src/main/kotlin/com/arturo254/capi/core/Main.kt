@@ -225,6 +225,26 @@ fun main(args: Array<String>) {
         YouTube.webClientPoTokenEnabled = true
         System.err.println("[DEBUG] [${System.currentTimeMillis()}] Starting main coroutine blocking...")
         try {
+            if (action == "--generate-only") {
+                val visitorData = withTimeoutOrNull(20000) {
+                    YouTube.visitorData().getOrNull()
+                }
+                if (visitorData != null) {
+                    try {
+                        val token = PoTokenGenerator.generateColdStartToken(visitorData)
+                        println(Json.encodeToString(mapOf("poToken" to token, "visitorData" to visitorData)))
+                        System.out.flush()
+                        exitProcess(0)
+                    } catch (e: Exception) {
+                        System.err.println("Error generating PO token: ${e.message}")
+                        exitProcess(1)
+                    }
+                } else {
+                    System.err.println("visitorData is null")
+                    exitProcess(1)
+                }
+            }
+
             if (action == "--daemon") {
                 val extPoToken = System.getenv("OPENTUNE_PO_TOKEN")
                 val extVisitorData = System.getenv("OPENTUNE_VISITOR_DATA")
@@ -298,11 +318,18 @@ fun main(args: Array<String>) {
                             }
                             "get-stream" -> {
                                 val videoId = cmdObj["id"]?.jsonPrimitive?.contentOrNull ?: throw Exception("Missing id")
-                                     val clients = listOf(
-                                         YouTubeClient.ANDROID_VR_NO_AUTH,
-                                         YouTubeClient.VISIONOS,
-                                         YouTubeClient.IPADOS
-                                     )
+                                val reqPoToken = cmdObj["poToken"]?.jsonPrimitive?.contentOrNull
+                                val reqVisitorData = cmdObj["visitorData"]?.jsonPrimitive?.contentOrNull
+                                if (!reqPoToken.isNullOrBlank() && !reqVisitorData.isNullOrBlank()) {
+                                    YouTube.visitorData = reqVisitorData
+                                    YouTube.poToken = reqPoToken
+                                    YouTube.poTokenGvs = reqPoToken
+                                    YouTube.poTokenPlayer = reqPoToken
+                                }
+                                      val clients = listOf(
+                                          YouTubeClient.ANDROID_MUSIC,
+                                          YouTubeClient.ANDROID_VR_NO_AUTH
+                                      )
                                     val sig = if (clients.any { it.useSignatureTimestamp }) {
                                         cachedSignatureTimestamp ?: NewPipeUtils.getSignatureTimestamp(videoId).getOrNull()?.also {
                                             cachedSignatureTimestamp = it
@@ -318,7 +345,7 @@ fun main(args: Array<String>) {
                                                     signatureTimestamp = sig
                                                 ).getOrThrow()
 
-                                                val audioFormats = playerResp.streamingData?.adaptiveFormats?.filter { it.isAudio } ?: emptyList()
+                                                val audioFormats = playerResp.streamingData?.adaptiveFormats?.filter { it.isAudio && it.mimeType?.contains("codecs=\"opus\"") != true } ?: emptyList()
                                                 if (audioFormats.isNotEmpty()) {
                                                     val format = audioFormats.maxByOrNull { it.bitrate }!!
                                                     val urlResult = NewPipeUtils.getStreamUrl(format, videoId, client)
@@ -534,11 +561,9 @@ fun main(args: Array<String>) {
                              }
                          }
                         
-                                 val clients = listOf(
-                                 YouTubeClient.ANDROID_VR_NO_AUTH,
-                                 YouTubeClient.IPADOS,
-                                 YouTubeClient.VISIONOS,
-                                 YouTubeClient.MWEB
+                             val clients = listOf(
+                                 YouTubeClient.ANDROID_MUSIC,
+                                 YouTubeClient.ANDROID_VR_NO_AUTH
                              )
                          
                          val sig = if (clients.any { it.useSignatureTimestamp }) {
@@ -557,9 +582,9 @@ fun main(args: Array<String>) {
                                             signatureTimestamp = sig
                                         ).getOrThrow()
 
-                                        val audioFormats = playerResp.streamingData?.adaptiveFormats?.filter { it.isAudio } ?: emptyList()
-                                        if (audioFormats.isNotEmpty()) {
-                                            val format = audioFormats.maxByOrNull { it.bitrate }!!
+                                         val audioFormats = playerResp.streamingData?.adaptiveFormats?.filter { it.isAudio && it.mimeType?.contains("codecs=\"opus\"") != true } ?: emptyList()
+                                         if (audioFormats.isNotEmpty()) {
+                                             val format = audioFormats.maxByOrNull { it.bitrate }!!
                                             val url = NewPipeUtils.getStreamUrl(format, videoId, client).getOrNull()
                                             if (url != null) {
                                                 return@async url
