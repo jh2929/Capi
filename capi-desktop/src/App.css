@@ -9,6 +9,12 @@
   --surface-variant: #49454f;
   --text-primary: #e6e1e5;
   --text-secondary: #cac4d0;
+  
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-active: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(37, 35, 42, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
 :root.theme-ultra-dark {
@@ -20,17 +26,29 @@
   --surface-variant: #262626;
   --text-primary: #ffffff;
   --text-secondary: #a3a3a3;
+  
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-active: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(18, 18, 18, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
 :root.theme-light-mode {
   --brand-primary: #7c3aed;
   --brand-secondary: #8b5cf6;
   --brand-tertiary: #a78bfa;
-  --bg-dark: #f9fafb;
+  --bg-dark: #f3f4f6;
   --surface-dark: #ffffff;
-  --surface-variant: #f3f4f6;
+  --surface-variant: #e5e7eb;
   --text-primary: #111827;
-  --text-secondary: #4b5563;
+  --text-secondary: #27272a; /* Dark zinc for high contrast */
+  
+  --border-subtle: rgba(0, 0, 0, 0.15); /* Darker borders */
+  --bg-hover: rgba(0, 0, 0, 0.06);
+  --bg-active: rgba(0, 0, 0, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.85); /* More opaque glass */
+  --glass-border: rgba(0, 0, 0, 0.15);
 }
 
 :root.theme-midnight-blue {
@@ -42,6 +60,12 @@
   --surface-variant: #334155;
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
+  
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-active: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(30, 41, 59, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
 :root.theme-forest-green {
@@ -53,6 +77,12 @@
   --surface-variant: #065f46;
   --text-primary: #ecfdf5;
   --text-secondary: #a7f3d0;
+  
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-active: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(2, 44, 34, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
 @theme {
@@ -64,6 +94,10 @@
   --color-surface-variant: var(--surface-variant);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
+  
+  --color-border-subtle: var(--border-subtle);
+  --color-bg-hover: var(--bg-hover);
+  --color-bg-active: var(--bg-active);
 }
 
 @keyframes pulseRotate {
@@ -85,7 +119,6 @@
   animation: pulseRotate 2s linear infinite;
 }
 
-
 body {
   margin: 0;
   background-color: var(--color-bg-dark);
@@ -97,10 +130,10 @@ body {
 
 /* Glassmorphism custom components */
 .glass {
-  background: rgba(37, 35, 42, 0.7);
+  background: var(--glass-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border);
 }
 
 /* Custom scrollbars */
@@ -163,3 +196,35 @@ body {
 .suggestions-dropdown {
   animation: slideUp 0.15s ease-out;
 }
+
+/* Light mode specificity overrides for better contrast & accessibility */
+:root.theme-light-mode {
+  /* Override subtle borders so they are visible */
+  .border-white\/5,
+  .border-white\/10 {
+    border-color: rgba(0, 0, 0, 0.16) !important;
+  }
+  
+  /* Increase card contrast & add shadows */
+  .bg-surface-dark\/30,
+  .bg-surface-dark\/40,
+  .bg-white\/5 {
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.03) !important;
+    border-color: rgba(0, 0, 0, 0.12) !important;
+  }
+  
+  /* Hover state for cards */
+  .hover\:bg-surface-dark\/70:hover,
+  .hover\:bg-surface-dark:hover,
+  .hover\:bg-white\/10:hover {
+    background-color: rgba(255, 255, 255, 1) !important;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.09), 0 2px 4px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  /* Make placeholder text more readable in light mode */
+  input::placeholder {
+    color: #6b7280 !important;
+  }
+}
+

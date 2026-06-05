@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import Logo from "./assets/Logo.png";
 import { 
-  Play, Pause, SkipForward, SkipBack, Search, Music, Volume2, 
+  Play, Pause, SkipForward, SkipBack, Search, Music, Volume2, VolumeX,
   ListMusic, Heart, Loader2, Sparkles, ChevronLeft,
   Trash2, Home, Library, Download, Shuffle, 
   MoreVertical, X, Sparkle, GripVertical, Copy, RefreshCw,
@@ -92,6 +92,26 @@ const HOME_FALLBACK_QUERIES = [
   { title: "Baladas en Español", query: "baladas en español románticas" },
   { title: "R&B Soul", query: "r&b soul hits" },
   { title: "Indie", query: "indie alternative 2025" },
+];
+
+export const ACCENT_COLORS = [
+  { id: "purple", name: "Púrpura", dark: "#d0bcff", darkSec: "#ccc2dc", darkTert: "#efb8c8", light: "#7c3aed", lightSec: "#8b5cf6", lightTert: "#a78bfa" },
+  { id: "blue", name: "Azul", dark: "#38bdf8", darkSec: "#7dd3fc", darkTert: "#0ea5e9", light: "#0284c7", lightSec: "#0ea5e9", lightTert: "#38bdf8" },
+  { id: "green", name: "Verde", dark: "#34d399", darkSec: "#6ee7b7", darkTert: "#059669", light: "#059669", lightSec: "#10b981", lightTert: "#34d399" },
+  { id: "rose", name: "Rosa", dark: "#f43f5e", darkSec: "#fda4af", darkTert: "#be123c", light: "#e11d48", lightSec: "#f43f5e", lightTert: "#fda4af" },
+  { id: "orange", name: "Naranja", dark: "#fb923c", darkSec: "#ffedd5", darkTert: "#d97706", light: "#ea580c", lightSec: "#f97316", lightTert: "#fb923c" },
+  { id: "teal", name: "Teal", dark: "#2dd4bf", darkSec: "#99f6e4", darkTert: "#0d9488", light: "#0d9488", lightSec: "#14b8a6", lightTert: "#2dd4bf" },
+  { id: "red", name: "Rojo", dark: "#f87171", darkSec: "#fca5a5", darkTert: "#ef4444", light: "#dc2626", lightSec: "#ef4444", lightTert: "#fca5a5" },
+  { id: "indigo", name: "Indigo", dark: "#818cf8", darkSec: "#a5b4fc", darkTert: "#6366f1", light: "#4f46e5", lightSec: "#6366f1", lightTert: "#a5b4fc" },
+  { id: "violet", name: "Violeta", dark: "#c084fc", darkSec: "#d8b4fe", darkTert: "#a855f7", light: "#7c3aed", lightSec: "#8b5cf6", lightTert: "#d8b4fe" },
+  { id: "cyan", name: "Cian", dark: "#22d3ee", darkSec: "#67e8f9", darkTert: "#06b6d4", light: "#0891b2", lightSec: "#06b6d4", lightTert: "#67e8f9" },
+  { id: "emerald", name: "Esmeralda", dark: "#34d399", darkSec: "#6ee7b7", darkTert: "#10b981", light: "#059669", lightSec: "#10b981", lightTert: "#6ee7b7" },
+  { id: "amber", name: "Ámbar", dark: "#fbbf24", darkSec: "#fde047", darkTert: "#f59e0b", light: "#d97706", lightSec: "#f59e0b", lightTert: "#fcd34d" },
+  { id: "yellow", name: "Amarillo", dark: "#facc15", darkSec: "#fef08a", darkTert: "#eab308", light: "#ca8a04", lightSec: "#eab308", lightTert: "#fef08a" },
+  { id: "lime", name: "Lima", dark: "#a3e635", darkSec: "#d9f99d", darkTert: "#84cc16", light: "#65a30d", lightSec: "#84cc16", lightTert: "#d9f99d" },
+  { id: "celeste", name: "Celeste", dark: "#38bdf8", darkSec: "#bae6fd", darkTert: "#0ea5e9", light: "#0284c7", lightSec: "#38bdf8", lightTert: "#bae6fd" },
+  { id: "fuchsia", name: "Fucsia", dark: "#f0abfc", darkSec: "#f5d0fe", darkTert: "#d946ef", light: "#c026d3", lightSec: "#d946ef", lightTert: "#f5d0fe" },
+  { id: "clavel", name: "Clavel", dark: "#fb7185", darkSec: "#fecdd3", darkTert: "#f43f5e", light: "#e11d48", lightSec: "#fb7185", lightTert: "#fecdd3" }
 ];
 
 const NEW_RELEASES = [
@@ -208,8 +228,22 @@ function App() {
   ]);
   const [navIndex, setNavIndex] = useState<number>(0);
 
+  const [preMuteVolume, setPreMuteVolume] = useState<number>(0.8);
+  const [contextMenuPlaylist, setContextMenuPlaylist] = useState<Playlist | null>(null);
+  const [showThemeDropdown, setShowThemeDropdown] = useState(false);
+  const [accentColor, setAccentColor] = useState<string>(() => localStorage.getItem("capi_accent_color") || "purple");
+  const [showAccentDropdown, setShowAccentDropdown] = useState(false);
+  const [accentSearchQuery, setAccentSearchQuery] = useState("");
+  const colorInputRef = useRef<HTMLInputElement | null>(null);
+
   const applyNavState = (state: NavState) => {
     setActiveTab(state.tab);
+    if (state.tab !== "buscar") {
+      setQuery("");
+      setSearchSuggestions([]);
+      setShowSearchDropdown(false);
+      setActiveSuggestionIndex(-1);
+    }
     if (state.artistData) {
       setArtistData(state.artistData);
     }
@@ -315,7 +349,25 @@ function App() {
     if (theme !== "capi-default") {
       root.classList.add(`theme-${theme}`);
     }
-  }, [theme]);
+
+    // Apply custom accent color overrides
+    if (accentColor === "custom") {
+      const customColor = localStorage.getItem("capi_custom_accent_color") || "#7c3aed";
+      root.style.setProperty('--brand-primary', customColor);
+      root.style.setProperty('--brand-secondary', customColor + "dd");
+      root.style.setProperty('--brand-tertiary', customColor + "aa");
+    } else {
+      const isLight = theme === "light-mode";
+      const colorObj = ACCENT_COLORS.find(c => c.id === accentColor) || ACCENT_COLORS[0];
+      const pri = isLight ? colorObj.light : colorObj.dark;
+      const sec = isLight ? colorObj.lightSec : colorObj.darkSec;
+      const tert = isLight ? colorObj.lightTert : colorObj.darkTert;
+
+      root.style.setProperty('--brand-primary', pri);
+      root.style.setProperty('--brand-secondary', sec);
+      root.style.setProperty('--brand-tertiary', tert);
+    }
+  }, [theme, accentColor]);
   const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState<Track | null>(null);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
@@ -408,11 +460,24 @@ function App() {
     return () => clearInterval(interval);
   }, [activeTab]);
 
-  // ESC key to close expanded player
+  // ESC key to close expanded player or clear track if folded
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isPlayerExpanded) {
-        setIsPlayerExpanded(false);
+      if (e.key === "Escape") {
+        if (isPlayerExpanded) {
+          setIsPlayerExpanded(false);
+        } else {
+          // Clear active song from player when folded
+          setCurrentTrack(null);
+          setStreamUrl(null);
+          setIsPlaying(false);
+          setCurrentTime(0);
+          setDuration(0);
+          if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.src = "";
+          }
+        }
       }
     };
     window.addEventListener("keydown", handleKey);
@@ -783,6 +848,45 @@ function App() {
     setIsShuffle(true);
     const shuffled = [...tracksToPlay].sort(() => Math.random() - 0.5);
     playTrack(shuffled[0], tracksToPlay);
+  };
+
+  const handleCustomColorChange = (color: string) => {
+    setAccentColor("custom");
+    localStorage.setItem("capi_accent_color", "custom");
+    localStorage.setItem("capi_custom_accent_color", color);
+    
+    const root = document.documentElement;
+    root.style.setProperty('--brand-primary', color);
+    root.style.setProperty('--brand-secondary', color + "dd");
+    root.style.setProperty('--brand-tertiary', color + "aa");
+  };
+
+  const toggleMute = () => {
+    if (volume > 0) {
+      setPreMuteVolume(volume);
+      setVolume(0);
+    } else {
+      setVolume(preMuteVolume > 0 ? preMuteVolume : 0.8);
+    }
+  };
+
+  const downloadAllTracks = async (playlistTracks: Track[]) => {
+    showToast(`Iniciando descarga de ${playlistTracks.length} canciones...`);
+    for (const t of playlistTracks) {
+      if (!downloads[t.id]) {
+        try {
+          await downloadTrack(t);
+        } catch (e) {
+          console.error("Error downloading track in playlist:", e);
+        }
+      }
+    }
+  };
+
+  const openPlaylistContextMenu = (e: React.MouseEvent, playlist: Playlist) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenuPlaylist(playlist);
   };
 
   const downloadTrack = async (track: Track) => {
@@ -1449,7 +1553,7 @@ function App() {
                 <>
                   {/* Carousel */}
                   {carouselTracks.length > 0 && (
-                    <div className="relative w-full max-w-4xl mx-auto overflow-hidden rounded-3xl bg-surface-dark/30 border border-white/5 shadow-xl">
+                    <div className="relative w-full max-w-4xl mx-auto overflow-hidden rounded-3xl bg-surface-dark/30 border border-white/5 shadow-xl group/carousel">
                       <div 
                         onTouchStart={(e) => {
                           setCarouselTouchEnd(null);
@@ -1475,7 +1579,7 @@ function App() {
                           <img src={getHighQualityThumbnail(carouselTracks[carouselIndex].thumbnail)} className="w-full h-full object-cover" />
                         </div>
                         {/* Real content */}
-                        <div className="absolute inset-0 flex items-center justify-between px-8 md:px-16 z-10 gap-6">
+                        <div className="absolute inset-0 flex items-center justify-between px-12 md:px-20 z-10 gap-6">
                           <div className="text-left max-w-md">
                             <span className="text-xs uppercase font-bold tracking-widest text-brand-primary">Destacado</span>
                             <h2 className="text-2xl md:text-4xl font-extrabold text-white tracking-tight mt-1 line-clamp-2 group-hover:text-brand-primary transition">
@@ -1490,27 +1594,37 @@ function App() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-2 justify-center pb-4 bg-transparent">
-                        <button 
-                          onClick={() => setCarouselIndex(prev => (prev - 1 + carouselTracks.length) % carouselTracks.length)}
-                          className="p-1 bg-white/5 hover:bg-white/10 rounded-full text-white transition text-xs px-2"
-                        >
-                          &larr;
-                        </button>
-                        <div className="flex items-center gap-1">
-                          {carouselTracks.map((_: Track, i: number) => (
-                            <span 
-                              key={i} 
-                              className={`w-1.5 h-1.5 rounded-full transition-all ${i === carouselIndex ? "bg-brand-primary w-3" : "bg-white/20"}`}
-                            />
-                          ))}
-                        </div>
-                        <button 
-                          onClick={() => setCarouselIndex(prev => (prev + 1) % carouselTracks.length)}
-                          className="p-1 bg-white/5 hover:bg-white/10 rounded-full text-white transition text-xs px-2"
-                        >
-                          &rarr;
-                        </button>
+                      
+                      {/* Left Arrow Button */}
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCarouselIndex(prev => (prev - 1 + carouselTracks.length) % carouselTracks.length);
+                        }}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 hover:bg-black/60 text-white transition-all opacity-0 group-hover/carousel:opacity-100 border border-white/5"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+
+                      {/* Right Arrow Button */}
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCarouselIndex(prev => (prev + 1) % carouselTracks.length);
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/40 hover:bg-black/60 text-white transition-all opacity-0 group-hover/carousel:opacity-100 border border-white/5"
+                      >
+                        <ChevronLeft className="w-5 h-5 rotate-180" />
+                      </button>
+
+                      {/* Indicators */}
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1 z-20">
+                        {carouselTracks.map((_: Track, i: number) => (
+                          <span 
+                            key={i} 
+                            className={`w-1.5 h-1.5 rounded-full transition-all ${i === carouselIndex ? "bg-brand-primary w-3.5" : "bg-white/30"}`}
+                          />
+                        ))}
                       </div>
                     </div>
                   )}
@@ -1726,7 +1840,7 @@ function App() {
                             )}
                           </div>
                           <h3 className="font-semibold text-sm truncate">{track.title}</h3>
-                          <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
+                          <p className="text-xs text-black dark:text-neutral-300 font-semibold truncate mt-0.5">{track.artist}</p>
                         </div>
                         <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5">
                           <span className="text-xs text-text-secondary">{formatTime(track.duration)}</span>
@@ -1751,8 +1865,8 @@ function App() {
                         <span className="text-xs text-text-secondary w-5 text-right font-medium">{idx + 1}</span>
                         <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-white"}`}>{track.title}</p>
-                          <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
+                          <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-text-primary"}`}>{track.title}</p>
+                          <p className="text-xs text-black dark:text-neutral-300 font-semibold truncate mt-0.5">{track.artist}</p>
                         </div>
                         <div className="text-xs text-text-secondary hidden md:block w-1/4 truncate">
                           {track.album || "Sencillo"}
@@ -2035,14 +2149,28 @@ function App() {
                             )}
                             <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" />
                             <div className="min-w-0 flex-1 ml-1">
-                              <p className="font-semibold text-sm truncate text-white">{track.title}</p>
+                              <p className="font-semibold text-sm truncate text-text-primary">{track.title}</p>
                               <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
                             {!showSelectionMode && (
-                              <button onClick={(e) => { e.stopPropagation(); playTrack(track, downloadedMetadata); }} className="p-2 bg-brand-primary text-bg-dark rounded-full shadow hover:scale-105 transition">
-                                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                              <button 
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  if (currentTrack?.id === track.id) {
+                                    togglePlay();
+                                  } else {
+                                    playTrack(track, downloadedMetadata); 
+                                  }
+                                }} 
+                                className="p-2 bg-brand-primary text-bg-dark rounded-full shadow hover:scale-105 transition"
+                              >
+                                {currentTrack?.id === track.id && isPlaying ? (
+                                  <Pause className="w-3.5 h-3.5 fill-current" />
+                                ) : (
+                                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                                )}
                               </button>
                             )}
                             <button onClick={(e) => { e.stopPropagation(); deleteLocalTrack(track.id); }} className="p-2 text-text-secondary hover:text-red-400 rounded-lg hover:bg-white/5 transition">
@@ -2096,7 +2224,7 @@ function App() {
                             )}
                             <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" />
                             <div className="min-w-0 flex-1 ml-1">
-                              <p className="font-semibold text-sm truncate text-white">{track.title}</p>
+                              <p className="font-semibold text-sm truncate text-text-primary">{track.title}</p>
                               <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
                             </div>
                           </div>
@@ -2167,14 +2295,22 @@ function App() {
                             {playlist.tracks.length > 0 && (
                               <button 
                                 onClick={() => playShuffleQueue(playlist.tracks)}
-                                className="px-4 py-2 bg-brand-primary text-bg-dark rounded-xl text-sm font-semibold flex items-center gap-1"
+                                className="px-4 py-2 bg-brand-primary text-bg-dark rounded-xl text-sm font-semibold flex items-center gap-1 hover:scale-105 active:scale-95 transition"
                               >
                                 <Shuffle className="w-4 h-4" /> Reproducción Aleatoria
                               </button>
                             )}
+                            {playlist.tracks.length > 0 && (
+                              <button 
+                                onClick={() => downloadAllTracks(playlist.tracks)}
+                                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-text-primary border border-white/10 rounded-xl text-sm font-semibold flex items-center gap-1.5 hover:scale-105 active:scale-95 transition"
+                              >
+                                <Download className="w-4 h-4" /> Descargar Todo
+                              </button>
+                            )}
                             <button
                               onClick={() => deletePlaylist(playlist.id)}
-                              className="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-white/5 transition flex items-center gap-2 text-sm"
+                              className="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-white/5 transition flex items-center gap-2 text-sm hover:scale-105 active:scale-95"
                             >
                               <Trash2 className="w-4 h-4" /> Eliminar Lista
                             </button>
@@ -2198,10 +2334,24 @@ function App() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <button onClick={() => playTrack(track, playlist.tracks)} className="p-2 bg-brand-primary rounded-full text-bg-dark">
-                                    <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (currentTrack?.id === track.id) {
+                                        togglePlay();
+                                      } else {
+                                        playTrack(track, playlist.tracks);
+                                      }
+                                    }} 
+                                    className="p-2 bg-brand-primary rounded-full text-bg-dark hover:scale-105 active:scale-95 transition"
+                                  >
+                                    {currentTrack?.id === track.id && isPlaying ? (
+                                      <Pause className="w-3.5 h-3.5 fill-current" />
+                                    ) : (
+                                      <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                                    )}
                                   </button>
-                                  <button onClick={() => removeTrackFromPlaylist(track.id, playlist.id)} className="p-2 text-text-secondary hover:text-red-400">
+                                  <button onClick={(e) => { e.stopPropagation(); removeTrackFromPlaylist(track.id, playlist.id); }} className="p-2 text-text-secondary hover:text-red-400">
                                     <Trash2 className="w-4 h-4" />
                                   </button>
                                 </div>
@@ -2232,6 +2382,7 @@ function App() {
                     <div
                       key={playlist.id}
                       onClick={() => setSelectedPlaylistId(playlist.id)}
+                      onContextMenu={(e) => openPlaylistContextMenu(e, playlist)}
                       className="p-5 rounded-2xl bg-surface-dark/50 hover:bg-surface-dark border border-transparent hover:border-white/10 cursor-pointer transition flex flex-col justify-between group h-40"
                     >
                       <div className="flex justify-between items-start">
@@ -2283,7 +2434,7 @@ function App() {
                         <span className="text-xs text-text-secondary w-5 text-right font-medium">{idx + 1}</span>
                         <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" />
                         <div className="min-w-0 flex-1 ml-1">
-                          <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-white"}`}>{track.title}</p>
+                          <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-text-primary"}`}>{track.title}</p>
                           <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
                         </div>
                       </div>
@@ -2396,7 +2547,7 @@ function App() {
                       <span className="text-xs text-text-secondary w-5 text-right font-medium">{idx + 1}</span>
                       <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-white"}`}>{track.title}</p>
+                        <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-text-primary"}`}>{track.title}</p>
                         <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
                       </div>
                       <span className="text-xs text-text-secondary hidden sm:block w-16 text-right mr-2">{formatTime(track.duration)}</span>
@@ -2447,7 +2598,7 @@ function App() {
               <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-6 space-y-6">
                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
                   <div>
-                    <h3 className="font-semibold text-sm text-white">Modo de búsqueda por defecto</h3>
+                    <h3 className="font-semibold text-sm text-text-primary">Modo de búsqueda por defecto</h3>
                     <p className="text-xs text-text-secondary mt-1">Elige cómo se muestran los resultados al realizar una búsqueda.</p>
                   </div>
                   <div className="flex bg-white/5 p-1 rounded-xl">
@@ -2476,31 +2627,154 @@ function App() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                {/* Custom Interactive Theme Dropdown */}
+                <div className="flex items-center justify-between border-b border-white/5 pb-4 relative z-30">
                   <div>
-                    <h3 className="font-semibold text-sm text-white">Tema Visual</h3>
+                    <h3 className="font-semibold text-sm text-text-primary">Tema Visual</h3>
                     <p className="text-xs text-text-secondary mt-1">Elige el tema de colores para la interfaz de Capi.</p>
                   </div>
-                  <select
-                    value={theme}
-                    onChange={(e) => {
-                      const selectedTheme = e.target.value;
-                      setTheme(selectedTheme);
-                      localStorage.setItem("capi_theme", selectedTheme);
-                    }}
-                    className="bg-surface-dark border border-white/10 rounded-xl px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-brand-primary cursor-pointer"
-                  >
-                    <option value="capi-default">Capi Default</option>
-                    <option value="ultra-dark">Ultra Dark</option>
-                    <option value="light-mode">Light Mode</option>
-                    <option value="midnight-blue">Midnight Blue</option>
-                    <option value="forest-green">Forest Green</option>
-                  </select>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowThemeDropdown(!showThemeDropdown)}
+                      className="glass px-4 py-2 rounded-xl text-xs font-semibold text-text-primary flex items-center gap-2 hover:scale-105 active:scale-95 transition border border-white/10"
+                    >
+                      {theme === "capi-default" && "Capi Default"}
+                      {theme === "ultra-dark" && "Ultra Dark"}
+                      {theme === "light-mode" && "Light Mode"}
+                      {theme === "midnight-blue" && "Midnight Blue"}
+                      {theme === "forest-green" && "Forest Green"}
+                      <ChevronLeft className={`w-3 h-3 transition-transform duration-200 ${showThemeDropdown ? "-rotate-90" : "rotate-180"}`} />
+                    </button>
+                    {showThemeDropdown && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowThemeDropdown(false)} />
+                        <div className="absolute right-0 mt-2 w-48 glass rounded-2xl p-1.5 shadow-2xl z-20 space-y-0.5 border border-white/10">
+                          {[
+                            { id: "capi-default", name: "Capi Default" },
+                            { id: "ultra-dark", name: "Ultra Dark" },
+                            { id: "light-mode", name: "Light Mode" },
+                            { id: "midnight-blue", name: "Midnight Blue" },
+                            { id: "forest-green", name: "Forest Green" }
+                          ].map((t) => (
+                            <button
+                              key={t.id}
+                              onClick={() => {
+                                setTheme(t.id);
+                                localStorage.setItem("capi_theme", t.id);
+                                setShowThemeDropdown(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 text-xs rounded-xl transition flex items-center justify-between ${
+                                theme === t.id ? "bg-brand-primary text-bg-dark font-bold" : "text-text-primary hover:bg-white/5"
+                              }`}
+                            >
+                              <span>{t.name}</span>
+                              {theme === t.id && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between">
+                {/* Custom Accent Color Dropdown */}
+                <div className="flex items-center justify-between border-b border-white/5 pb-4 relative z-20">
                   <div>
-                    <h3 className="font-semibold text-sm text-white">Ocultar acceso directo de ajustes de la barra lateral</h3>
+                    <h3 className="font-semibold text-sm text-text-primary">Color de Acento</h3>
+                    <p className="text-xs text-text-secondary mt-1">Elige un color de acento personalizado para la interfaz.</p>
+                  </div>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowAccentDropdown(!showAccentDropdown)}
+                      className="glass px-4 py-2 rounded-xl text-xs font-semibold text-text-primary flex items-center gap-2 hover:scale-105 active:scale-95 transition border border-white/10"
+                    >
+                      <span 
+                        className="w-3.5 h-3.5 rounded-full inline-block border border-white/10"
+                        style={{ backgroundColor: accentColor === "custom" ? (localStorage.getItem("capi_custom_accent_color") || "#7c3aed") : (theme === "light-mode" ? 
+                          (ACCENT_COLORS.find(c => c.id === accentColor)?.light || ACCENT_COLORS[0].light) : 
+                          (ACCENT_COLORS.find(c => c.id === accentColor)?.dark || ACCENT_COLORS[0].dark) 
+                        )}}
+                      />
+                      <span>{accentColor === "custom" ? "Custom" : (ACCENT_COLORS.find(c => c.id === accentColor)?.name || "Púrpura")}</span>
+                      <ChevronLeft className={`w-3 h-3 transition-transform duration-200 ${showAccentDropdown ? "-rotate-90" : "rotate-180"}`} />
+                    </button>
+                    {showAccentDropdown && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => { setShowAccentDropdown(false); setAccentSearchQuery(""); }} />
+                        <div className="absolute right-0 mt-2 w-56 glass rounded-2xl p-2 shadow-2xl z-20 flex flex-col border border-white/10">
+                          {/* Search bar */}
+                          <div className="p-1">
+                            <input 
+                              type="text" 
+                              placeholder="Buscar color..." 
+                              value={accentSearchQuery} 
+                              onChange={(e) => setAccentSearchQuery(e.target.value)} 
+                              className="w-full px-2.5 py-1.5 text-xs bg-neutral-100 dark:bg-white/5 border border-neutral-300 dark:border-white/10 rounded-lg text-text-primary placeholder-text-secondary focus:outline-none focus:border-brand-primary"
+                            />
+                          </div>
+                          
+                          {/* Options container with scrolling */}
+                          <div className="max-h-48 overflow-y-auto space-y-0.5 mt-1 pr-0.5">
+                            {ACCENT_COLORS.filter(c => c.name.toLowerCase().includes(accentSearchQuery.toLowerCase())).map((c) => (
+                              <button
+                                key={c.id}
+                                onClick={() => {
+                                  setAccentColor(c.id);
+                                  localStorage.setItem("capi_accent_color", c.id);
+                                  setShowAccentDropdown(false);
+                                  setAccentSearchQuery("");
+                                }}
+                                className={`w-full text-left px-3 py-2 text-xs rounded-xl transition flex items-center gap-3 ${
+                                  accentColor === c.id ? "bg-brand-primary text-bg-dark font-bold" : "text-text-primary hover:bg-white/5"
+                                }`}
+                              >
+                                <span 
+                                  className="w-3.5 h-3.5 rounded-full border border-white/10 flex-shrink-0"
+                                  style={{ backgroundColor: theme === "light-mode" ? c.light : c.dark }}
+                                />
+                                <span className="flex-1">{c.name}</span>
+                                {accentColor === c.id && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+                              </button>
+                            ))}
+                            {ACCENT_COLORS.filter(c => c.name.toLowerCase().includes(accentSearchQuery.toLowerCase())).length === 0 && (
+                              <div className="text-[10px] text-text-secondary text-center py-2">Sin resultados</div>
+                            )}
+                          </div>
+                          
+                          {/* Elegir Custom option */}
+                          <div className="border-t border-white/10 mt-1.5 pt-1.5">
+                            <button
+                              onClick={() => {
+                                colorInputRef.current?.click();
+                                setShowAccentDropdown(false);
+                                setAccentSearchQuery("");
+                              }}
+                              className={`w-full text-left px-3 py-2 text-xs rounded-xl transition flex items-center gap-3 ${
+                                accentColor === "custom" ? "bg-brand-primary text-bg-dark font-bold" : "text-text-primary hover:bg-white/5"
+                              }`}
+                            >
+                              <span 
+                                className="w-3.5 h-3.5 rounded-full border border-white/10 flex-shrink-0 bg-gradient-to-tr from-red-500 via-green-500 to-blue-500"
+                              />
+                              <span className="flex-1">Elegir Custom...</span>
+                              {accentColor === "custom" && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    <input 
+                      type="color" 
+                      ref={colorInputRef} 
+                      className="absolute opacity-0 pointer-events-none w-0 h-0" 
+                      onChange={(e) => handleCustomColorChange(e.target.value)} 
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div>
+                    <h3 className="font-semibold text-sm text-text-primary">Ocultar acceso directo de ajustes de la barra lateral</h3>
                     <p className="text-xs text-text-secondary mt-1">Oculta el botón de configuración de la barra lateral, manteniendo el del perfil visible.</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
@@ -2514,9 +2788,65 @@ function App() {
                       }}
                       className="sr-only peer" 
                     />
-                    <div className="w-11 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                    <div className="w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
                   </label>
                 </div>
+
+                {/* Profile Edit Fields moved inside Settings */}
+                <div className="space-y-4 pt-2">
+                  <h3 className="font-semibold text-sm text-text-primary">Editar Perfil</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Nombre de Usuario</label>
+                      <input
+                        type="text"
+                        value={capiUsername}
+                        onChange={(e) => {
+                          const newName = e.target.value;
+                          setCapiUsername(newName);
+                          localStorage.setItem("capi_username", newName);
+                        }}
+                        placeholder="Usuario Capi"
+                        className="w-full bg-neutral-100 dark:bg-white/5 border border-neutral-300 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-brand-primary transition shadow-inner"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Foto de Perfil</label>
+                      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                const base64String = reader.result as string;
+                                setCapiAvatar(base64String);
+                                localStorage.setItem("capi_user_avatar", base64String);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                          className="flex-1 text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20 file:cursor-pointer"
+                        />
+                        {capiAvatar && (
+                          <button
+                            onClick={() => {
+                              setCapiAvatar("");
+                              localStorage.removeItem("capi_user_avatar");
+                              showToast("Foto de perfil eliminada");
+                            }}
+                            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-xl text-xs font-semibold transition hover:scale-105 active:scale-95"
+                          >
+                            Eliminar foto
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           )}
@@ -2534,74 +2864,34 @@ function App() {
                     />
                   </div>
                   <div>
-                    <h2 className="text-3xl font-extrabold tracking-tight">{capiUsername || "Usuario Capi"}</h2>
-                    <p className="text-sm text-text-secondary mt-1">Plan Premium • Miembro desde 2026</p>
+                    <h2 className="text-3xl font-extrabold tracking-tight text-text-primary">{capiUsername || "Usuario Capi"}</h2>
+                    <p className="text-sm text-text-secondary mt-1 font-semibold">Plan Capi Max</p>
                   </div>
                 </div>
               </div>
 
               <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-6 space-y-4">
-                <h3 className="font-semibold text-lg text-white">Editar Perfil</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Nombre de Usuario</label>
-                    <input
-                      type="text"
-                      value={capiUsername}
-                      onChange={(e) => {
-                        const newName = e.target.value;
-                        setCapiUsername(newName);
-                        localStorage.setItem("capi_username", newName);
-                      }}
-                      placeholder="Usuario Capi"
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-brand-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Foto de Perfil</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            const base64String = reader.result as string;
-                            setCapiAvatar(base64String);
-                            localStorage.setItem("capi_user_avatar", base64String);
-                          };
-                          reader.readAsDataURL(file);
-                        }
-                      }}
-                      className="w-full text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20 file:cursor-pointer"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-6 space-y-4">
-                <h3 className="font-semibold text-lg text-white">Opciones de Cuenta</h3>
+                <h3 className="font-semibold text-lg text-text-primary">Opciones de Cuenta</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <button 
                     onClick={() => navigateTo("settings")}
-                    className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition border border-white/5 text-left flex items-center justify-between"
+                    className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition border border-white/5 text-left flex items-center justify-between group"
                   >
                     <div>
-                      <p className="font-semibold text-sm">Ajustes / Configuración</p>
+                      <p className="font-semibold text-sm text-text-primary">Ajustes / Configuración</p>
                       <p className="text-xs text-text-secondary mt-0.5">Modificar preferencias y visualización</p>
                     </div>
-                    <ChevronLeft className="w-5 h-5 rotate-180 text-text-secondary" />
+                    <ChevronLeft className="w-5 h-5 rotate-180 text-text-secondary group-hover:text-brand-primary transition-transform duration-200" />
                   </button>
                   <button 
                     onClick={() => navigateTo("favoritos")}
-                    className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition border border-white/5 text-left flex items-center justify-between"
+                    className="p-4 rounded-xl bg-white/5 hover:bg-white/10 transition border border-white/5 text-left flex items-center justify-between group"
                   >
                     <div>
-                      <p className="font-semibold text-sm">Mis Favoritos</p>
+                      <p className="font-semibold text-sm text-text-primary">Mis Favoritos</p>
                       <p className="text-xs text-text-secondary mt-0.5">{favorites.length} canciones guardadas</p>
                     </div>
-                    <ChevronLeft className="w-5 h-5 rotate-180 text-text-secondary" />
+                    <ChevronLeft className="w-5 h-5 rotate-180 text-text-secondary group-hover:text-brand-primary transition-transform duration-200" />
                   </button>
                 </div>
               </div>
@@ -2759,6 +3049,13 @@ function App() {
               <button onClick={playNext} disabled={activeQueue.length === 0} className="text-text-secondary hover:text-text-primary disabled:opacity-40 transition duration-150">
                 <SkipForward className="w-5 h-5" />
               </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); currentTrack && toggleFavorite(currentTrack); }}
+                disabled={!currentTrack}
+                className={`transition ${currentTrack && isFavorite(currentTrack) ? "text-brand-primary animate-pulse" : "text-text-secondary hover:text-text-primary"} disabled:opacity-40`}
+              >
+                <Heart className={`w-4 h-4 ${currentTrack && isFavorite(currentTrack) ? "fill-current" : ""}`} />
+              </button>
             </div>
             <div className="w-full flex items-center gap-3">
               <span className="text-[10px] text-text-secondary w-8 text-right">{formatTime(currentTime)}</span>
@@ -2778,7 +3075,12 @@ function App() {
                 <MoreVertical className="w-4 h-4" />
               </button>
             )}
-            <Volume2 className="w-4 h-4 text-text-secondary" />
+            <button 
+              onClick={toggleMute}
+              className="text-text-secondary hover:text-text-primary transition"
+            >
+              {volume === 0 ? <VolumeX className="w-4 h-4 text-brand-primary" /> : <Volume2 className="w-4 h-4" />}
+            </button>
             <input
               type="range" min="0" max="1" step="0.01" value={volume}
               onChange={(e) => setVolume(parseFloat(e.target.value))}
@@ -3058,6 +3360,60 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* PLAYLIST CONTEXT MENU MODAL */}
+      {contextMenuPlaylist && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] modal-overlay" onClick={() => setContextMenuPlaylist(null)}>
+          <div className="glass p-5 rounded-2xl max-w-xs w-full border border-white/10 shadow-2xl mx-4 modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/5">
+              <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                <ListMusic className="w-5 h-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-sm truncate">{contextMenuPlaylist.name}</p>
+                <p className="text-xs text-text-secondary truncate">{contextMenuPlaylist.tracks.length} canciones</p>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <button 
+                onClick={() => { setSelectedPlaylistId(contextMenuPlaylist.id); setContextMenuPlaylist(null); setActiveTab("playlists"); }}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <Library className="w-4 h-4" /> Ver detalles
+              </button>
+              {contextMenuPlaylist.tracks.length > 0 && (
+                <button 
+                  onClick={() => { playShuffleQueue(contextMenuPlaylist.tracks); setContextMenuPlaylist(null); }}
+                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+                >
+                  <Shuffle className="w-4 h-4" /> Reproducción aleatoria
+                </button>
+              )}
+              {contextMenuPlaylist.tracks.length > 0 && (
+                <button 
+                  onClick={() => { downloadAllTracks(contextMenuPlaylist.tracks); setContextMenuPlaylist(null); }}
+                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+                >
+                  <Download className="w-4 h-4" /> Descargar todo
+                </button>
+              )}
+              <button 
+                onClick={() => { deletePlaylist(contextMenuPlaylist.id); setContextMenuPlaylist(null); }}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-red-500 hover:text-white rounded-xl transition text-red-300 flex items-center gap-3"
+              >
+                <Trash2 className="w-4 h-4" /> Eliminar Lista
+              </button>
+            </div>
+            <button
+              onClick={() => setContextMenuPlaylist(null)}
+              className="w-full mt-3 pt-3 border-t border-white/5 text-center text-xs text-text-secondary hover:text-text-primary transition py-2"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
 
       {/* Playlist modal */}
       {showAddToPlaylistModal && (
