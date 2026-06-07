@@ -214,14 +214,23 @@ function App() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselTouchStart, setCarouselTouchStart] = useState<number | null>(null);
   const [carouselTouchEnd, setCarouselTouchEnd] = useState<number | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Structured toast state
+  type ToastData =
+    | { kind: "text"; message: string }
+    | { kind: "seek"; direction: "forward" | "backward"; seconds: number }
+    | { kind: "volume"; level: number }; // 0..1
+
+  const [toastData, setToastData] = useState<ToastData | null>(null);
+  const toastDismissRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = (message: string) => {
-    setToastMessage(message);
-    setTimeout(() => {
-      setToastMessage(prev => prev === message ? null : prev);
-    }, 3000);
+    if (toastDismissRef.current) clearTimeout(toastDismissRef.current);
+    setToastData({ kind: "text", message });
+    toastDismissRef.current = setTimeout(() => setToastData(null), 3000);
   };
+
+
 
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState<number>(-1);
 
@@ -641,6 +650,11 @@ function App() {
 
   // ESC, Space, and Arrow shortcuts
   useEffect(() => {
+    const dismissArrow = () => {
+      if (toastDismissRef.current) clearTimeout(toastDismissRef.current);
+      toastDismissRef.current = setTimeout(() => setToastData(null), 1500);
+    };
+
     const handleKey = (e: KeyboardEvent) => {
       const activeEl = document.activeElement;
       if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.getAttribute("contenteditable") === "true")) {
@@ -651,7 +665,6 @@ function App() {
         if (isPlayerExpanded) {
           setIsPlayerExpanded(false);
         } else {
-          // Clear active song from player when folded
           setCurrentTrack(null);
           setStreamUrl(null);
           setIsPlaying(false);
@@ -673,15 +686,11 @@ function App() {
             const newTime = Math.min(audioRef.current.currentTime + STEP, audioRef.current.duration || 0);
             audioRef.current.currentTime = newTime;
             setCurrentTime(newTime);
-            // Accumulate seek
-            seekAccumRef.current += STEP;
+            seekAccumRef.current = Math.max(seekAccumRef.current, 0) + STEP;
             if (seekAccumTimerRef.current) clearTimeout(seekAccumTimerRef.current);
-            const accumulated = seekAccumRef.current;
-            setToastMessage(`⏩ Adelantado ${accumulated}s`);
-            seekAccumTimerRef.current = setTimeout(() => {
-              seekAccumRef.current = 0;
-              setToastMessage(prev => (prev?.startsWith("⏩") ? null : prev));
-            }, 1500);
+            setToastData({ kind: "seek", direction: "forward", seconds: seekAccumRef.current });
+            seekAccumTimerRef.current = setTimeout(() => { seekAccumRef.current = 0; }, 1500);
+            dismissArrow();
           }
         } else if (e.key === "ArrowLeft") {
           e.preventDefault();
@@ -690,30 +699,20 @@ function App() {
             const newTime = Math.max(audioRef.current.currentTime - STEP, 0);
             audioRef.current.currentTime = newTime;
             setCurrentTime(newTime);
-            // Accumulate seek
-            seekAccumRef.current -= STEP;
+            seekAccumRef.current = Math.min(seekAccumRef.current, 0) - STEP;
             if (seekAccumTimerRef.current) clearTimeout(seekAccumTimerRef.current);
-            const accumulated = Math.abs(seekAccumRef.current);
-            setToastMessage(`⏪ Retrocedido ${accumulated}s`);
-            seekAccumTimerRef.current = setTimeout(() => {
-              seekAccumRef.current = 0;
-              setToastMessage(prev => (prev?.startsWith("⏪") ? null : prev));
-            }, 1500);
+            setToastData({ kind: "seek", direction: "backward", seconds: Math.abs(seekAccumRef.current) });
+            seekAccumTimerRef.current = setTimeout(() => { seekAccumRef.current = 0; }, 1500);
+            dismissArrow();
           }
         } else if (e.key === "ArrowUp") {
           e.preventDefault();
           setVolume(prev => {
             const newVol = Math.min(prev + 0.05, 1);
             if (audioRef.current) audioRef.current.volume = newVol;
-            const pct = Math.round(newVol * 100);
-            const bars = Math.round(newVol * 10);
-            const filled = "█".repeat(bars);
-            const empty = "░".repeat(10 - bars);
             if (volumeToastTimerRef.current) clearTimeout(volumeToastTimerRef.current);
-            setToastMessage(`🔊 ${filled}${empty} ${pct}%`);
-            volumeToastTimerRef.current = setTimeout(() => {
-              setToastMessage(prev => (prev?.startsWith("🔊") || prev?.startsWith("🔇") ? null : prev));
-            }, 1500);
+            setToastData({ kind: "volume", level: newVol });
+            dismissArrow();
             return newVol;
           });
         } else if (e.key === "ArrowDown") {
@@ -721,16 +720,9 @@ function App() {
           setVolume(prev => {
             const newVol = Math.max(prev - 0.05, 0);
             if (audioRef.current) audioRef.current.volume = newVol;
-            const pct = Math.round(newVol * 100);
-            const emoji = newVol === 0 ? "🔇" : "🔊";
-            const bars = Math.round(newVol * 10);
-            const filled = "█".repeat(bars);
-            const empty = "░".repeat(10 - bars);
             if (volumeToastTimerRef.current) clearTimeout(volumeToastTimerRef.current);
-            setToastMessage(`${emoji} ${filled}${empty} ${pct}%`);
-            volumeToastTimerRef.current = setTimeout(() => {
-              setToastMessage(prev => (prev?.startsWith("🔊") || prev?.startsWith("🔇") ? null : prev));
-            }, 1500);
+            setToastData({ kind: "volume", level: newVol });
+            dismissArrow();
             return newVol;
           });
         }
@@ -4936,12 +4928,105 @@ function App() {
         </div>
       )}
 
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-28 left-1/2 -translate-x-1/2 bg-brand-primary text-bg-dark px-6 py-3 rounded-full font-bold text-sm shadow-2xl flex items-center gap-2 z-[70] animate-fade-in border border-white/10">
-          <span>{toastMessage}</span>
-        </div>
-      )}
+      {/* Premium Arrow-Key Toast Notification */}
+      {toastData && (() => {
+        if (toastData.kind === "volume") {
+          const pct = Math.round(toastData.level * 100);
+          const isMuted = toastData.level === 0;
+          return (
+            <div key="toast-vol" className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[70] animate-fade-in pointer-events-none">
+              <div className="flex flex-col items-center gap-2.5 px-5 py-4 rounded-2xl border border-white/10 shadow-2xl"
+                style={{ background: "rgba(18,18,24,0.82)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)", minWidth: 160 }}
+              >
+                {/* Speaker SVG icon */}
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+                  className="text-white"
+                >
+                  {isMuted ? (
+                    <>
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" className="text-white/70" />
+                      <line x1="23" y1="9" x2="17" y2="15" />
+                      <line x1="17" y1="9" x2="23" y2="15" />
+                    </>
+                  ) : pct < 35 ? (
+                    <>
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" className="text-white/70" />
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                    </>
+                  ) : pct < 70 ? (
+                    <>
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" className="text-white/70" />
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                    </>
+                  ) : (
+                    <>
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" className="text-white/70" />
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+                    </>
+                  )}
+                </svg>
+
+                {/* Apple-style smooth bar */}
+                <div className="w-full rounded-full overflow-hidden" style={{ height: 4, background: "rgba(255,255,255,0.15)" }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-100"
+                    style={{ width: `${pct}%`, background: "var(--brand-primary)" }}
+                  />
+                </div>
+
+                {/* Percentage label */}
+                <span className="text-white/70 text-xs font-semibold tabular-nums tracking-wide">{pct}%</span>
+              </div>
+            </div>
+          );
+        }
+
+        if (toastData.kind === "seek") {
+          const isForward = toastData.direction === "forward";
+          return (
+            <div key="toast-seek" className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[70] animate-fade-in pointer-events-none">
+              <div className="flex items-center gap-3 px-5 py-3.5 rounded-2xl border border-white/10 shadow-2xl"
+                style={{ background: "rgba(18,18,24,0.82)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}
+              >
+                {/* Seek SVG */}
+                {isForward ? (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white flex-shrink-0">
+                    <polygon points="5 4 15 12 5 20 5 4" fill="currentColor" stroke="none" className="text-white/80" />
+                    <polygon points="13 4 23 12 13 20 13 4" fill="currentColor" stroke="none" className="text-white/50" />
+                  </svg>
+                ) : (
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white flex-shrink-0">
+                    <polygon points="19 4 9 12 19 20 19 4" fill="currentColor" stroke="none" className="text-white/80" />
+                    <polygon points="11 4 1 12 11 20 11 4" fill="currentColor" stroke="none" className="text-white/50" />
+                  </svg>
+                )}
+                <div className="flex flex-col">
+                  <span className="text-white font-semibold text-sm leading-tight">
+                    {isForward ? "Adelantar" : "Retroceder"}
+                  </span>
+                  <span className="text-white/50 text-xs font-medium tabular-nums">{toastData.seconds}s</span>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        if (toastData.kind === "text") {
+          return (
+            <div key="toast-text" className="fixed bottom-28 left-1/2 -translate-x-1/2 z-[70] animate-fade-in pointer-events-none">
+              <div className="px-5 py-3 rounded-2xl border border-white/10 shadow-2xl"
+                style={{ background: "rgba(18,18,24,0.82)", backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)" }}
+              >
+                <span className="text-white font-semibold text-sm">{toastData.message}</span>
+              </div>
+            </div>
+          );
+        }
+
+        return null;
+      })()}
 
       {/* GLOBAL CONFIRMATION MODAL */}
       {confirmDialog.isOpen && (
