@@ -4,13 +4,15 @@ import { listen } from "@tauri-apps/api/event";
 import Logo from "./assets/Logo.png";
 import { 
   Play, Pause, SkipForward, SkipBack, Search, Music, Volume2, VolumeX,
-  ListMusic, Heart, Loader2, Sparkles, ChevronLeft,
-  Trash2, Home, Library, Download, Shuffle, 
+  ListMusic, Heart, Loader2, Sparkles, ChevronLeft, ChevronDown,
+  Trash2, Home, Library, Download, Shuffle, ListPlus, Disc3, FolderOpen,
   MoreVertical, X, Sparkle, GripVertical, Copy, RefreshCw,
   User, Radio, Mic2, LayoutGrid, List, Plus, Bell,
   Moon, Timer, BarChart3, Languages, Palette, RotateCcw, Trophy, Users, Repeat, Repeat1, Lock, Unlock, Upload
 } from "lucide-react";
 import "./App.css";
+import { t, Locale, LOCALE_NAMES, TranslationKeys } from "./i18n";
+import { recordPlayEvent, getRecommendationQueries, getTopArtistsFromDB, ArtistAffinity } from "./recommendations";
 
 interface NavState {
   tab: "home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos" | "download_manager" | "stats";
@@ -115,59 +117,19 @@ export const ACCENT_COLORS = [
   { id: "clavel", name: "Clavel", dark: "#fb7185", darkSec: "#fecdd3", darkTert: "#f43f5e", light: "#e11d48", lightSec: "#fb7185", lightTert: "#fecdd3" }
 ];
 
-const NEW_RELEASES = [
-  {
-    id: "rel1",
-    title: "Radical Optimism",
-    artist: "Dua Lipa",
-    thumbnail: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=300",
-    releaseDate: "Mayo 2026"
-  },
-  {
-    id: "rel2",
-    title: "Hit Me Hard and Soft",
-    artist: "Billie Eilish",
-    thumbnail: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?q=80&w=300",
-    releaseDate: "Abril 2026"
-  },
-  {
-    id: "rel3",
-    title: "Hurry Up Tomorrow",
-    artist: "The Weeknd",
-    thumbnail: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?q=80&w=300",
-    releaseDate: "Marzo 2026"
-  },
-  {
-    id: "rel4",
-    title: "The Tortured Poets Department",
-    artist: "Taylor Swift",
-    thumbnail: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?q=80&w=300",
-    releaseDate: "Febrero 2026"
-  },
-  {
-    id: "rel5",
-    title: "C,XOXO",
-    artist: "Camila Cabello",
-    thumbnail: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?q=80&w=300",
-    releaseDate: "Enero 2026"
-  },
-  {
-    id: "rel6",
-    title: "Short n' Sweet",
-    artist: "Sabrina Carpenter",
-    thumbnail: "https://images.unsplash.com/photo-1506157786151-b8491531f063?q=80&w=300",
-    releaseDate: "Diciembre 2025"
-  }
-];
+// NEW_RELEASES state will be used instead of static constant
 
 const convertYTItemToTrack = (item: any): Track => ({
   id: item.id || item.browseId,
   title: item.title,
-  artist: item.artists ? item.artists.join(", ") : (item.author && item.author !== "YT Music" ? item.author : "Artista Desconocido"),
+  artist: item.artists
+    ? (typeof item.artists[0] === 'object' ? item.artists.map((a: any) => a.name || a).join(", ") : item.artists.join(", "))
+    : (item.author && item.author !== "YT Music" ? item.author : "Artista Desconocido"),
   album: item.album || "",
   duration: item.duration || 0,
   thumbnail: item.thumbnail || "https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=300",
-  explicit: item.explicit || false
+  explicit: item.explicit || false,
+  artistId: item.artists?.[0]?.id || item.artistId || item.artists?.[0]?.browseId || ""
 });
 
 const getSectionIcon = (title: string) => {
@@ -181,6 +143,27 @@ const getSectionIcon = (title: string) => {
   if (t.includes("indie")) return <Sparkles className="w-4 h-4 text-brand-primary" />;
   return <Music className="w-4 h-4 text-brand-primary" />;
 };
+
+const SkeletonCard = () => (
+  <div className="p-4 bg-surface-dark/30 rounded-2xl border border-white/5 flex flex-col justify-between group relative h-[250px] animate-pulse">
+    <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-white/5 skeleton-shimmer" />
+    <div className="space-y-2 flex-1">
+      <div className="h-4 w-3/4 rounded bg-white/5 skeleton-shimmer" />
+      <div className="h-3 w-1/2 rounded bg-white/5 skeleton-shimmer" />
+    </div>
+  </div>
+);
+
+const SkeletonRow = () => (
+  <div className="flex items-center gap-4 p-3 rounded-xl border border-white/5 bg-surface-dark/30 animate-pulse w-full">
+    <div className="w-11 h-11 rounded-lg bg-white/5 skeleton-shimmer flex-shrink-0" />
+    <div className="flex-1 min-w-0 space-y-2">
+      <div className="h-4 w-1/3 rounded bg-white/5 skeleton-shimmer" />
+      <div className="h-3 w-1/4 rounded bg-white/5 skeleton-shimmer" />
+    </div>
+    <div className="w-12 h-3 rounded bg-white/5 skeleton-shimmer hidden sm:block" />
+  </div>
+);
 
 function App() {
   const [activeTab, setActiveTab] = useState<"home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos" | "download_manager" | "stats">("home");
@@ -236,6 +219,12 @@ function App() {
 
   const [currentAlbum, setCurrentAlbum] = useState<{ id: string; title: string; thumbnail: string; type: string; artist?: string } | null>(null);
   const [currentAlbumTracks, setCurrentAlbumTracks] = useState<Track[]>([]);
+  const [newReleases, setNewReleases] = useState<Track[]>([]);
+  const [locale, setLocale] = useState<Locale>(() => (localStorage.getItem("capi_locale") as Locale) || "es");
+  const T = useCallback((key: keyof TranslationKeys) => t(key, locale), [locale]);
+  const [topArtists, setTopArtists] = useState<ArtistAffinity[]>([]);
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
+  const [langSearchQuery, setLangSearchQuery] = useState("");
 
   const [navHistory, setNavHistory] = useState<NavState[]>([
     { tab: "home" }
@@ -496,9 +485,11 @@ function App() {
 
   // Repeat mode and manual lyrics scroll states
   const [repeatMode, setRepeatMode] = useState<"none" | "one" | "all">("none");
-  const [userScrolled, setUserScrolled] = useState(false);
   const ignoreNextScrollRef = useRef(false);
   const [lyricsScrollLocked, setLyricsScrollLocked] = useState(true);
+  const [downloadDragIndex, setDownloadDragIndex] = useState<number | null>(null);
+  const [downloadDragOverIndex, setDownloadDragOverIndex] = useState<number | null>(null);
+  const downloadDragIndexRef = useRef<number | null>(null);
 
   // Global Confirmation Dialog State
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -786,13 +777,28 @@ function App() {
   // Load Homepage dynamic recommendations
   useEffect(() => { fetchHomeData(); }, []);
 
+  // Fetch new releases on-demand when activeTab is "lanzamientos"
+  useEffect(() => {
+    if (activeTab === "lanzamientos" && newReleases.length === 0) {
+      fetchNewReleases();
+    }
+  }, [activeTab, newReleases.length]);
+
   const autoScrollTimeoutRef = useRef<number | null>(null);
 
+  const currentTimeRef = useRef(currentTime);
+  currentTimeRef.current = currentTime;
+
+  const parsedLyricsRef = useRef(parsedLyrics);
+  parsedLyricsRef.current = parsedLyrics;
+
   const syncLyricsScroll = useCallback((force = false) => {
-    if (parsedLyrics.length === 0) return;
-    const index = parsedLyrics.findIndex((line, i) => {
-      const nextLine = parsedLyrics[i + 1];
-      return currentTime >= line.time && (!nextLine || currentTime < nextLine.time);
+    const curLyrics = parsedLyricsRef.current;
+    const curTime = currentTimeRef.current;
+    if (curLyrics.length === 0) return;
+    const index = curLyrics.findIndex((line, i) => {
+      const nextLine = curLyrics[i + 1];
+      return curTime >= line.time && (!nextLine || curTime < nextLine.time);
     });
     if (index !== -1) {
       setCurrentLyricIndex(index);
@@ -812,17 +818,9 @@ function App() {
             behavior: "smooth"
           });
         }
-        if (force || lyricsScrollLocked) {
-          setUserScrolled(false);
-        }
       }
     }
-  }, [currentTime, parsedLyrics, userScrolled, lyricsScrollLocked]);
-
-  const handleLyricsScroll = () => {
-    if (ignoreNextScrollRef.current) return;
-    setUserScrolled(true);
-  };
+  }, [lyricsScrollLocked]);
 
   // Synchronized lyrics updater
   useEffect(() => {
@@ -831,13 +829,13 @@ function App() {
 
   // Auto-sync lyrics scroll when player is expanded or tab is set to lyrics
   useEffect(() => {
-    if (isPlayerExpanded && playerTab === "lyrics") {
+    if (isPlayerExpanded && playerTab === "lyrics" && lyricsScrollLocked) {
       const timer = setTimeout(() => {
         syncLyricsScroll(true);
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [isPlayerExpanded, playerTab, syncLyricsScroll]);
+  }, [isPlayerExpanded, playerTab, lyricsScrollLocked, syncLyricsScroll]);
 
   // Fetch lyrics when track changes
   useEffect(() => {
@@ -878,6 +876,13 @@ function App() {
 
   const fetchHomeData = async () => {
     try {
+      const top = await getTopArtistsFromDB(10);
+      setTopArtists(top);
+    } catch (e) {
+      console.error("Failed to load top artists for home circular section:", e);
+    }
+
+    try {
       const response = await invoke<string>("obtener_home", { continuation: null });
       const parsed = JSON.parse(response);
       if (parsed && parsed.sections && parsed.sections.length > 0) {
@@ -887,8 +892,66 @@ function App() {
     } catch (e) {
       console.error("Failed to load dynamic home data:", e);
     }
+
+    try {
+      const recQueries = await getRecommendationQueries(20);
+      if (recQueries.length > 0) {
+        const sections: any[] = [];
+        for (const query of recQueries) {
+          try {
+            const res = await invoke<string>("buscar_cancion", { query });
+            const data = JSON.parse(res);
+            const items = (Array.isArray(data) ? data : data.tracks || data.results || []).slice(0, 8);
+            if (items.length > 0) {
+              const title = query.charAt(0).toUpperCase() + query.slice(1);
+              sections.push({ title, items });
+            }
+          } catch (err) {
+            console.error(`Failed to load rec query ${query}:`, err);
+          }
+        }
+        if (sections.length > 0) {
+          setHomeSections(sections);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to generate recommendation queries:", err);
+    }
+
     // Fallback: fetch multiple genre searches
     loadHomeFallback();
+  };
+
+  const fetchNewReleases = async () => {
+    try {
+      const response = await invoke<string>("obtener_home", { continuation: null });
+      const parsed = JSON.parse(response);
+      const sections = Array.isArray(parsed) ? parsed : (parsed.sections || []);
+      const newReleasesSection = sections.find((s: any) => 
+        s.title?.toLowerCase().includes("new releases") || 
+        s.title?.toLowerCase().includes("novedades") ||
+        s.title?.toLowerCase().includes("lanzamientos")
+      );
+      if (newReleasesSection && newReleasesSection.items?.length > 0) {
+        setNewReleases(newReleasesSection.items.map(convertYTItemToTrack));
+      } else {
+        const searchRes = await invoke<string>("buscar_cancion", { query: "new music releases" });
+        const parsedSearch = JSON.parse(searchRes);
+        const tracks = Array.isArray(parsedSearch) ? parsedSearch : (parsedSearch.tracks || parsedSearch.results || []);
+        setNewReleases(tracks.map(convertYTItemToTrack).slice(0, 12));
+      }
+    } catch (e) {
+      console.error("Failed to fetch new releases:", e);
+      try {
+        const searchRes = await invoke<string>("buscar_cancion", { query: "trending music" });
+        const parsedSearch = JSON.parse(searchRes);
+        const tracks = Array.isArray(parsedSearch) ? parsedSearch : (parsedSearch.tracks || parsedSearch.results || []);
+        setNewReleases(tracks.map(convertYTItemToTrack).slice(0, 12));
+      } catch (err2) {
+        console.error("All fallback release fetches failed:", err2);
+      }
+    }
   };
 
   const loadHomeFallback = async () => {
@@ -923,6 +986,59 @@ function App() {
     }
   };
 
+  const playTrackNext = (track: Track) => {
+    setActiveQueue(prev => {
+      const filtered = prev.filter(t => t.id !== track.id);
+      const currentIndex = filtered.findIndex(t => t.id === currentTrack?.id);
+      if (currentIndex === -1) {
+        return [track, ...filtered];
+      }
+      const newQueue = [...filtered];
+      newQueue.splice(currentIndex + 1, 0, track);
+      return newQueue;
+    });
+    showToast(`"${track.title}" se reproducirá a continuación`);
+  };
+
+  const addToQueue = (track: Track) => {
+    setActiveQueue(prev => {
+      if (prev.some(t => t.id === track.id)) {
+        showToast(`"${track.title}" ya está en la cola`);
+        return prev;
+      }
+      showToast(`"${track.title}" añadida a la cola`);
+      return [...prev, track];
+    });
+  };
+
+  const viewAlbumFromTrack = async (track: Track) => {
+    if (!track.album) return;
+    setLoading(true);
+    try {
+      const query = `${track.album} ${track.artist}`;
+      const searchRes = await invoke<string>("buscar_cancion", { query });
+      const parsed = JSON.parse(searchRes);
+      const items = Array.isArray(parsed) ? parsed : (parsed.albums || parsed.results || []);
+      const albumItem = items.find((item: any) => item.type === "album" || item.type?.toLowerCase().includes("album")) || items[0];
+      if (albumItem && (albumItem.id || albumItem.browseId)) {
+        loadAlbumProfile(
+          albumItem.id || albumItem.browseId,
+          albumItem.title || track.album,
+          albumItem.thumbnail || track.thumbnail,
+          "album",
+          track.artist
+        );
+      } else {
+        showToast("No se pudo encontrar el álbum");
+      }
+    } catch (e) {
+      console.error("Error finding album:", e);
+      showToast("Error al buscar el álbum");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadAlbumProfile = async (id: string, title: string, thumbnail: string, type: string, artistName?: string) => {
     setCurrentAlbum({ id, title, thumbnail, type, artist: artistName });
     setCurrentAlbumTracks([]);
@@ -930,8 +1046,34 @@ function App() {
       currentAlbum: { id, title, thumbnail, type, artist: artistName },
       currentAlbumTracks: []
     });
+    let playlistJson = "";
     try {
-      const playlistJson = await invoke<string>("obtener_playlist", { id });
+      playlistJson = await invoke<string>("obtener_playlist", { id });
+    } catch (err) {
+      console.warn("obtener_playlist failed, attempting fallback search for album/playlist", err);
+      try {
+        const searchQuery = `${title} ${artistName || ""}`;
+        const searchRes = await invoke<string>("buscar_cancion", { query: searchQuery });
+        const parsedSearch = JSON.parse(searchRes);
+        const items = Array.isArray(parsedSearch) ? parsedSearch : (parsedSearch.albums || parsedSearch.playlists || parsedSearch.results || []);
+        const matchedItem = items.find((item: any) => 
+          (item.type === "album" || item.type === "playlist") && 
+          item.title?.toLowerCase() === title.toLowerCase()
+        ) || items[0];
+        
+        if (matchedItem && (matchedItem.id || matchedItem.browseId)) {
+          const fallbackId = matchedItem.id || matchedItem.browseId;
+          playlistJson = await invoke<string>("obtener_playlist", { id: fallbackId });
+        } else {
+          throw new Error("No matching album/playlist found in fallback search");
+        }
+      } catch (fallbackErr) {
+        console.error("Failed fallback search for album:", fallbackErr);
+        playlistJson = "[]";
+      }
+    }
+
+    try {
       const songs: Track[] = JSON.parse(playlistJson);
       setCurrentAlbumTracks(songs);
       
@@ -946,7 +1088,7 @@ function App() {
         return copy;
       });
     } catch (err) {
-      console.error("Failed to load album tracks:", err);
+      console.error("Failed to parse album tracks:", err);
       alert("Error al cargar las canciones del álbum.");
     }
   };
@@ -1439,6 +1581,8 @@ function App() {
         const filtered = prev.filter(t => t.id !== track.id);
         return [track, ...filtered].slice(0, 50);
       });
+
+      recordPlayEvent(track).catch(err => console.error("recordPlayEvent failed:", err));
       
       let stream: string;
       if (track.id.startsWith("local://")) {
@@ -2376,6 +2520,148 @@ function App() {
                     </div>
                   )}
 
+                  {/* Row: Tus Playlists */}
+                  {playlists.length > 0 && (
+                    <div className="space-y-4 animate-fade-in">
+                      <h3 className="text-lg font-bold text-text-primary border-l-4 border-brand-primary pl-2 flex items-center gap-2">
+                        <ListMusic className="w-4 h-4 text-brand-primary" /> {T("your_playlists")}
+                      </h3>
+                      <div className="relative group/section">
+                        {/* Left arrow */}
+                        <button
+                          onClick={() => {
+                            const el = sectionScrollRefs.current[1000];
+                            if (el) el.scrollBy({ left: -440, behavior: "smooth" });
+                          }}
+                          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-9 h-9 rounded-full bg-surface-dark/90 border border-white/10 shadow-lg flex items-center justify-center text-white opacity-0 group-hover/section:opacity-100 transition-all hover:bg-brand-primary hover:border-brand-primary hover:text-bg-dark hover:scale-110"
+                          aria-label="Anterior"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+
+                        {/* Scrollable container */}
+                        <div
+                          ref={(el) => { sectionScrollRefs.current[1000] = el; }}
+                          className="flex gap-4 pb-2 overflow-x-auto"
+                          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                        >
+                          {playlists.map((playlist) => {
+                            const firstTrackThumb = playlist.tracks?.[0]?.thumbnail || "https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=300";
+                            return (
+                              <div
+                                key={playlist.id}
+                                onClick={() => {
+                                  setSelectedPlaylistId(playlist.id);
+                                  navigateTo("playlists");
+                                }}
+                                className="min-w-[200px] w-[200px] p-4 bg-surface-dark/40 hover:bg-surface-dark rounded-2xl transition border border-white/5 flex flex-col justify-between group relative cursor-pointer"
+                              >
+                                <div>
+                                  <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-black/20 shadow-md">
+                                    <img src={getHighQualityThumbnail(firstTrackThumb)} alt={playlist.name} onError={handleImageError} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                                      <Play className="w-8 h-8 text-brand-primary fill-current" />
+                                    </div>
+                                  </div>
+                                  <h4 className="font-semibold text-sm truncate text-white">{playlist.name}</h4>
+                                  <p className="text-xs text-text-secondary truncate mt-0.5">{playlist.tracks?.length || 0} {T("tab_local").toLowerCase() === "local" ? "canciones" : "songs"}</p>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Right arrow */}
+                        <button
+                          onClick={() => {
+                            const el = sectionScrollRefs.current[1000];
+                            if (el) el.scrollBy({ left: 440, behavior: "smooth" });
+                          }}
+                          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-9 h-9 rounded-full bg-surface-dark/90 border border-white/10 shadow-lg flex items-center justify-center text-white opacity-0 group-hover/section:opacity-100 transition-all hover:bg-brand-primary hover:border-brand-primary hover:text-bg-dark hover:scale-110"
+                          aria-label="Siguiente"
+                        >
+                          <ChevronLeft className="w-4 h-4 rotate-180" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Row: Artistas que escuchas */}
+                  {topArtists.length > 0 && (
+                    <div className="space-y-4 animate-fade-in">
+                      <h3 className="text-lg font-bold text-text-primary border-l-4 border-brand-primary pl-2 flex items-center gap-2">
+                        <User className="w-4 h-4 text-brand-primary" /> {T("artists_you_listen_to")}
+                      </h3>
+                      <div className="relative group/section">
+                        {/* Left arrow */}
+                        <button
+                          onClick={() => {
+                            const el = sectionScrollRefs.current[1001];
+                            if (el) el.scrollBy({ left: -440, behavior: "smooth" });
+                          }}
+                          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-9 h-9 rounded-full bg-surface-dark/90 border border-white/10 shadow-lg flex items-center justify-center text-white opacity-0 group-hover/section:opacity-100 transition-all hover:bg-brand-primary hover:border-brand-primary hover:text-bg-dark hover:scale-110"
+                          aria-label="Anterior"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </button>
+
+                        {/* Scrollable container */}
+                        <div
+                          ref={(el) => { sectionScrollRefs.current[1001] = el; }}
+                          className="flex gap-6 pb-2 overflow-x-auto items-center"
+                          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                        >
+                          {topArtists.map((artist) => (
+                            <div
+                              key={artist.artistName}
+                              onClick={() => {
+                                if (artist.artistId) {
+                                  loadArtistProfile(artist.artistId);
+                                } else {
+                                  setQuery(artist.artistName);
+                                  navigateTo("buscar");
+                                  invoke<string>("buscar_cancion", { query: artist.artistName }).then((res) => {
+                                    const parsed = JSON.parse(res);
+                                    const items = Array.isArray(parsed) ? parsed : (parsed.results || parsed.tracks || []);
+                                    const match = items.find((item: any) => item.type === "artist" || item.type?.toLowerCase().includes("artist"));
+                                    if (match && (match.id || match.browseId)) {
+                                      loadArtistProfile(match.id || match.browseId);
+                                    }
+                                  });
+                                }
+                              }}
+                              className="flex flex-col items-center gap-2 cursor-pointer group flex-shrink-0 animate-fade-in"
+                            >
+                              <div className="w-24 h-24 rounded-full overflow-hidden object-cover border-2 border-white/10 group-hover:border-brand-primary group-hover:scale-105 transition-all duration-300 relative bg-black/20 shadow-lg">
+                                <img
+                                  src={artist.thumbnail || "https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=300"}
+                                  alt={artist.artistName}
+                                  onError={handleImageError}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                              <span className="text-xs font-semibold text-text-primary group-hover:text-brand-primary transition truncate w-24 text-center">
+                                {artist.artistName}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Right arrow */}
+                        <button
+                          onClick={() => {
+                            const el = sectionScrollRefs.current[1001];
+                            if (el) el.scrollBy({ left: 440, behavior: "smooth" });
+                          }}
+                          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-9 h-9 rounded-full bg-surface-dark/90 border border-white/10 shadow-lg flex items-center justify-center text-white opacity-0 group-hover/section:opacity-100 transition-all hover:bg-brand-primary hover:border-brand-primary hover:text-bg-dark hover:scale-110"
+                          aria-label="Siguiente"
+                        >
+                          <ChevronLeft className="w-4 h-4 rotate-180" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Remaining sections - Netflix-style arrow navigation */}
                   {homeSections.map((section, idx) => (
                   <div key={idx} className="space-y-4 animate-fade-in">
@@ -2472,9 +2758,17 @@ function App() {
                   ))}
                 </>
               ) : (
-                <div className="h-64 flex flex-col items-center justify-center gap-3">
-                  <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
-                  <p className="text-sm text-text-secondary">Cargando recomendaciones...</p>
+                <div className="space-y-8 animate-fade-in">
+                  {[1, 2].map((rowIdx) => (
+                    <div key={rowIdx} className="space-y-4">
+                      <div className="h-6 w-48 rounded bg-white/5 skeleton-shimmer" />
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {[1, 2, 3, 4].map((cardIdx) => (
+                          <SkeletonCard key={cardIdx} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -2690,8 +2984,33 @@ function App() {
                 </button>
               </div>
               {loadingArtist ? (
-                <div className="h-64 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
+                <div className="space-y-8 animate-pulse">
+                  {/* Banner Skeleton */}
+                  <div className="relative rounded-3xl overflow-hidden h-64 bg-surface-dark/30 border border-white/5 flex items-end p-8">
+                    <div className="absolute inset-0 skeleton-shimmer opacity-20" />
+                    <div className="relative z-10 flex items-center gap-6 w-full">
+                      <div className="w-24 h-24 rounded-full skeleton-shimmer flex-shrink-0" />
+                      <div className="flex-1 space-y-3">
+                        <div className="h-8 w-1/3 rounded bg-white/5 skeleton-shimmer" />
+                        <div className="h-4 w-1/2 rounded bg-white/5 skeleton-shimmer" />
+                      </div>
+                    </div>
+                  </div>
+                  {/* Rows Skeleton */}
+                  <div className="space-y-4">
+                    <div className="h-6 w-36 rounded bg-white/5 skeleton-shimmer" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="p-3 bg-surface-dark/30 rounded-xl border border-white/5 flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg skeleton-shimmer flex-shrink-0" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 w-2/3 rounded bg-white/5 skeleton-shimmer" />
+                            <div className="h-3 w-1/2 rounded bg-white/5 skeleton-shimmer" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ) : artistData ? (
                 <div className="space-y-8">
@@ -2900,25 +3219,59 @@ function App() {
 
               {libTab === "downloads" && (
                 <div className="space-y-4">
+                  <div className="flex justify-between items-center bg-white/5 p-3 rounded-2xl border border-white/5">
+                    <span className="text-xs font-semibold text-text-secondary">
+                      {downloadedMetadata.length} canciones descargadas
+                    </span>
+                    {downloadedMetadata.length > 0 && (
+                      <button 
+                        onClick={() => invoke("abrir_carpeta_descargas")}
+                        className="px-3.5 py-1.5 bg-brand-primary text-bg-dark rounded-xl text-xs font-bold hover:scale-105 transition flex items-center gap-1.5"
+                      >
+                        <FolderOpen className="w-3.5 h-3.5" /> Abrir carpeta
+                      </button>
+                    )}
+                  </div>
                   {downloadedMetadata.length > 0 ? (
                     <div className="flex flex-col gap-2 w-full">
                       {downloadedMetadata.map((track, idx) => (
                         <div 
                           key={track.id}
                           draggable={!showSelectionMode}
-                          onDragStart={() => { if (!showSelectionMode) setDragIndex(idx); }}
-                          onDragOver={(e) => { if (!showSelectionMode) { e.preventDefault(); setDragOverIndex(idx); } }}
+                          onDragStart={() => {
+                            if (!showSelectionMode) {
+                              setDownloadDragIndex(idx);
+                              downloadDragIndexRef.current = idx;
+                            }
+                          }}
+                          onDragOver={(e) => {
+                            if (!showSelectionMode) {
+                              e.preventDefault();
+                              setDownloadDragOverIndex(idx);
+                            }
+                          }}
                           onDrop={() => {
-                            if (showSelectionMode || dragIndex === null || dragIndex === idx) { setDragIndex(null); setDragOverIndex(null); return; }
+                            const startIdx = downloadDragIndexRef.current;
+                            if (showSelectionMode || startIdx === null || startIdx === idx) {
+                              setDownloadDragIndex(null);
+                              setDownloadDragOverIndex(null);
+                              downloadDragIndexRef.current = null;
+                              return;
+                            }
                             const newMetadata = [...downloadedMetadata];
-                            const [removed] = newMetadata.splice(dragIndex, 1);
+                            const [removed] = newMetadata.splice(startIdx, 1);
                             newMetadata.splice(idx, 0, removed);
                             setDownloadedMetadata(newMetadata);
                             localStorage.setItem("opentune_downloaded_metadata", JSON.stringify(newMetadata));
-                            setDragIndex(null);
-                            setDragOverIndex(null);
+                            setDownloadDragIndex(null);
+                            setDownloadDragOverIndex(null);
+                            downloadDragIndexRef.current = null;
                           }}
-                          onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+                          onDragEnd={() => {
+                            setDownloadDragIndex(null);
+                            setDownloadDragOverIndex(null);
+                            downloadDragIndexRef.current = null;
+                          }}
                           onContextMenu={(e) => openContextMenu(e, track.id)}
                           onClick={() => {
                             if (showSelectionMode) {
@@ -2929,7 +3282,7 @@ function App() {
                           }}
                           className={`p-3.5 bg-surface-dark/30 hover:bg-surface-dark/70 rounded-xl flex items-center justify-between border w-full transition duration-150 cursor-pointer ${
                             selectedTrackIds.has(track.id) ? "border-brand-primary/40 bg-brand-primary/5" : "border-white/5"
-                          } ${!showSelectionMode && dragIndex === idx ? "dragging-queue-item" : ""} ${!showSelectionMode && dragOverIndex === idx ? "drag-over-queue-item" : ""}`}
+                          } ${!showSelectionMode && downloadDragIndex === idx ? "dragging-queue-item" : ""} ${!showSelectionMode && downloadDragOverIndex === idx ? "drag-over-queue-item" : ""}`}
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
                             {!showSelectionMode && (
@@ -3499,8 +3852,10 @@ function App() {
                   ))}
                 </div>
               ) : (
-                <div className="h-48 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
+                <div className="flex flex-col gap-2 w-full">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <SkeletonRow key={i} />
+                  ))}
                 </div>
               )}
             </div>
@@ -3729,6 +4084,69 @@ function App() {
                 </div>
 
                 {/* Custom Interactive Theme Dropdown */}
+                {/* Custom Searchable Language Dropdown */}
+                <div className="flex items-center justify-between border-b border-white/5 pb-4 relative z-40">
+                  <div>
+                    <h3 className="font-semibold text-sm text-text-primary flex items-center gap-2">
+                      <Languages className="w-4 h-4 text-brand-primary" /> {T("select_language")}
+                    </h3>
+                    <p className="text-xs text-text-secondary mt-1">Elige el idioma de la interfaz.</p>
+                  </div>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowLangDropdown(!showLangDropdown)}
+                      className="glass px-4 py-2 rounded-xl text-xs font-semibold text-text-primary flex items-center gap-2 hover:scale-105 active:scale-95 transition border border-white/10"
+                    >
+                      <span>{LOCALE_NAMES[locale]}</span>
+                      <ChevronLeft className={`w-3 h-3 transition-transform duration-200 ${showLangDropdown ? "-rotate-90" : "rotate-180"}`} />
+                    </button>
+                    {showLangDropdown && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => { setShowLangDropdown(false); setLangSearchQuery(""); }} />
+                        <div className="absolute right-0 mt-2 w-56 glass rounded-2xl p-2 shadow-2xl z-20 flex flex-col border border-white/10">
+                          {/* Search bar */}
+                          <div className="p-1">
+                            <input 
+                              type="text" 
+                              placeholder="Buscar idioma..." 
+                              value={langSearchQuery} 
+                              onChange={(e) => setLangSearchQuery(e.target.value)} 
+                              className="w-full px-2.5 py-1.5 text-xs bg-neutral-100 dark:bg-white/5 border border-neutral-300 dark:border-white/10 rounded-lg text-text-primary placeholder-text-secondary focus:outline-none focus:border-brand-primary"
+                            />
+                          </div>
+                          
+                          {/* Options container with scrolling */}
+                          <div className="max-h-48 overflow-y-auto space-y-0.5 mt-1 pr-0.5">
+                            {Object.entries(LOCALE_NAMES)
+                              .filter(([, name]) => name.toLowerCase().includes(langSearchQuery.toLowerCase()))
+                              .map(([code, name]) => (
+                                <button
+                                  key={code}
+                                  onClick={() => {
+                                    setLocale(code as Locale);
+                                    localStorage.setItem("capi_locale", code);
+                                    setShowLangDropdown(false);
+                                    setLangSearchQuery("");
+                                    showToast(`Idioma: ${name}`);
+                                  }}
+                                  className={`w-full text-left px-3 py-2 text-xs rounded-xl transition flex items-center justify-between ${
+                                    locale === code ? "bg-brand-primary text-bg-dark font-bold" : "text-text-primary hover:bg-white/5"
+                                  }`}
+                                >
+                                  <span>{name}</span>
+                                  {locale === code && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+                                </button>
+                              ))}
+                            {Object.entries(LOCALE_NAMES).filter(([, name]) => name.toLowerCase().includes(langSearchQuery.toLowerCase())).length === 0 && (
+                              <div className="text-[10px] text-text-secondary text-center py-2">Sin resultados</div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between border-b border-white/5 pb-4 relative z-30">
                   <div>
                     <h3 className="font-semibold text-sm text-text-primary">Tema Visual</h3>
@@ -4154,25 +4572,38 @@ function App() {
                 <p className="text-sm text-text-secondary">Descubre la música más reciente lanzada al mercado.</p>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {NEW_RELEASES.map((release) => (
-                  <div 
-                    key={release.id}
-                    className="p-4 bg-surface-dark/40 hover:bg-surface-dark rounded-2xl border border-white/5 transition duration-300 group flex flex-col justify-between"
-                  >
-                    <div>
-                      <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-black/20 shadow-md">
-                        <img 
-                          src={release.thumbnail} 
-                          alt={release.title} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
-                        />
+                {newReleases.length > 0 ? (
+                  newReleases.map((release) => (
+                    <div 
+                      key={release.id}
+                      onClick={() => playTrack(release, newReleases)}
+                      onContextMenu={(e) => openContextMenu(e, release.id)}
+                      className="p-4 bg-surface-dark/40 hover:bg-surface-dark rounded-2xl border border-white/5 transition duration-300 group flex flex-col justify-between cursor-pointer"
+                    >
+                      <div>
+                        <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-black/20 shadow-md">
+                          <img 
+                            src={getHighQualityThumbnail(release.thumbnail)} 
+                            alt={release.title} 
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                            <Play className="w-8 h-8 text-brand-primary fill-current" />
+                          </div>
+                        </div>
+                        <h4 className="font-bold text-sm truncate text-white">{release.title}</h4>
+                        <p className="text-xs text-text-secondary truncate mt-0.5">{release.artist}</p>
                       </div>
-                      <h4 className="font-bold text-sm truncate text-white">{release.title}</h4>
-                      <p className="text-xs text-text-secondary truncate mt-0.5">{release.artist}</p>
+                      <p className="text-[10px] text-brand-primary font-semibold mt-3 uppercase tracking-wider">
+                        {release.album ? release.album : "Lanzamiento"}
+                      </p>
                     </div>
-                    <p className="text-[10px] text-brand-primary font-semibold mt-3 uppercase tracking-wider">{release.releaseDate}</p>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  Array.from({ length: 8 }).map((_, idx) => (
+                    <SkeletonCard key={idx} />
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -4433,7 +4864,7 @@ function App() {
               onClick={() => setIsPlayerExpanded(false)}
               className="fixed top-6 right-6 p-3 bg-white/5 hover:bg-white/10 text-white rounded-full transition z-40"
             >
-              <X className="w-6 h-6" />
+              <ChevronDown className="w-6 h-6" />
             </button>
 
             {/* Ambient Blurred Background Art */}
@@ -4594,7 +5025,6 @@ function App() {
                             const nextVal = !lyricsScrollLocked;
                             setLyricsScrollLocked(nextVal);
                             if (nextVal) {
-                              setUserScrolled(false);
                               setTimeout(() => {
                                 syncLyricsScroll(true);
                               }, 50);
@@ -4653,8 +5083,7 @@ function App() {
                     </div>
                     <div 
                       ref={lyricsContainerRef} 
-                      onScroll={handleLyricsScroll}
-                      className={`flex-1 ${lyricsScrollLocked ? "overflow-hidden" : "overflow-y-auto"} p-6 scroll-smooth space-y-6 text-center text-text-secondary`}
+                      className={`flex-1 ${lyricsScrollLocked ? "overflow-hidden" : "overflow-y-auto"} p-6 space-y-6 text-center text-text-secondary`}
                     >
                       {(() => {
                         const displayLyrics = showTranslation && translatedLyrics ? translatedLyrics : parsedLyrics;
@@ -4741,6 +5170,34 @@ function App() {
               >
                 <Play className="w-4 h-4" /> Reproducir ahora
               </button>
+              <button 
+                onClick={() => { playTrackNext(contextMenuTrack); setContextMenuTrack(null); }}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <SkipForward className="w-4 h-4" /> Reproducir siguiente
+              </button>
+              <button 
+                onClick={() => { addToQueue(contextMenuTrack); setContextMenuTrack(null); }}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <ListPlus className="w-4 h-4" /> Añadir a la cola
+              </button>
+              {contextMenuTrack.artistId && (
+                <button 
+                  onClick={() => { loadArtistProfile(contextMenuTrack.artistId!); setContextMenuTrack(null); }}
+                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+                >
+                  <User className="w-4 h-4" /> Ver artista
+                </button>
+              )}
+              {contextMenuTrack.album && (
+                <button 
+                  onClick={() => { viewAlbumFromTrack(contextMenuTrack); setContextMenuTrack(null); }}
+                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+                >
+                  <Disc3 className="w-4 h-4" /> Ver álbum
+                </button>
+              )}
               <button 
                 onClick={() => { toggleFavorite(contextMenuTrack); setContextMenuTrack(null); }}
                 className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"

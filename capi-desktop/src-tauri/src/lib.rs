@@ -4,7 +4,7 @@ use std::io::Write;
 use tauri::{Manager, Emitter};
 use futures_util::StreamExt;
 use std::net::TcpListener;
-use std::io::{Read, Seek};
+use std::io::Read;
 use std::fs::File;
 use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
 
@@ -722,6 +722,17 @@ fn listar_archivos_locales(ruta: String) -> Result<Vec<LocalTrack>, String> {
     Ok(tracks)
 }
 
+#[tauri::command]
+async fn abrir_carpeta_descargas(app: tauri::AppHandle) -> Result<(), String> {
+    let dir = app.path().app_data_dir()
+        .map_err(|e| e.to_string())?
+        .join("Opentune");
+    if !dir.exists() {
+        std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    }
+    open::that(&dir).map_err(|e| format!("No se pudo abrir: {}", e))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -791,7 +802,8 @@ pub fn run() {
             discord_update,
             discord_disconnect,
             seleccionar_carpeta,
-            listar_archivos_locales
+            listar_archivos_locales,
+            abrir_carpeta_descargas
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
