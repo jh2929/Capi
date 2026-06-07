@@ -6,9 +6,14 @@ use futures_util::StreamExt;
 use std::net::TcpListener;
 use std::io::{Read, Seek};
 use std::fs::File;
+use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
 
 struct LocalServerState {
     port: u16,
+}
+
+pub struct DiscordState {
+    pub client: Mutex<Option<DiscordIpcClient>>,
 }
 
 fn start_local_server(opentune_dir: PathBuf) -> u16 {
@@ -110,10 +115,19 @@ fn start_local_server(opentune_dir: PathBuf) -> u16 {
                                     Err(_) => encoded_path.to_string(),
                                 };
                                 let file_path = std::path::Path::new(&decoded_str);
+                                let is_audio_ext = file_path.extension()
+                                    .and_then(|ext| ext.to_str())
+                                    .map(|ext| {
+                                        let ext_lower = ext.to_lowercase();
+                                        ext_lower == "mp3" || ext_lower == "wav" || ext_lower == "ogg" ||
+                                        ext_lower == "m4a" || ext_lower == "flac" || ext_lower == "aac"
+                                    })
+                                    .unwrap_or(false);
                                 let is_allowed = file_path.exists() && file_path.is_file() && (
                                     file_path.starts_with(&opentune_dir) ||
                                     file_path.to_string_lossy().contains("/Música/Opentune/") ||
-                                    file_path.to_string_lossy().contains("/Music/Opentune/")
+                                    file_path.to_string_lossy().contains("/Music/Opentune/") ||
+                                    is_audio_ext
                                 );
                                 if is_allowed {
                                     if let Ok(mut file) = File::open(&file_path) {
@@ -528,6 +542,77 @@ fn obtener_local_port(state: tauri::State<'_, LocalServerState>) -> u16 {
     state.port
 }
 
+#[tauri::command]
+async fn discord_connect(state: tauri::State<'_, DiscordState>) -> Result<bool, String> {
+    let mut client_guard = state.client.lock().map_err(|e| e.to_string())?;
+    if client_guard.is_some() {
+        return Ok(true);
+    }
+    let mut client = DiscordIpcClient::new("1249392288333889638").map_err(|e| e.to_string())?;
+    client.connect().map_err(|e| format!("Discord no está abierto: {}", e))?;
+    *client_guard = Some(client);
+    Ok(true)
+}
+
+#[tauri::command]
+async fn discord_update(
+    state: tauri::State<'_, DiscordState>,
+    title: String,
+    artist: String,
+    thumbnail: String,
+    elapsed: i64,
+    duration: i64,
+    is_playing: bool,
+) -> Result<(), String> {
+    let mut client_guard = state.client.lock().map_err(|e| e.to_string())?;
+    if let Some(client) = client_guard.as_mut() {
+        if !is_playing {
+            let _ = client.clear_activity();
+            return Ok(());
+        }
+
+        let mut assets = activity::Assets::new()
+            .large_text(&title);
+        
+        if !thumbnail.is_empty() {
+            assets = assets.large_image(&thumbnail);
+        } else {
+            assets = assets.large_image("logo");
+        }
+
+        let mut act = activity::Activity::new()
+            .state(&artist)
+            .details(&title)
+            .assets(assets);
+
+        if duration > 0 {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs() as i64;
+            let start = now - elapsed;
+            let end = start + duration;
+            let timestamps = activity::Timestamps::new()
+                .start(start)
+                .end(end);
+            act = act.timestamps(timestamps);
+        }
+
+        let _ = client.set_activity(act);
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn discord_disconnect(state: tauri::State<'_, DiscordState>) -> Result<(), String> {
+    let mut client_guard = state.client.lock().map_err(|e| e.to_string())?;
+    if let Some(mut client) = client_guard.take() {
+        let _ = client.clear_activity();
+        let _ = client.close();
+    }
+    Ok(())
+}
+
 fn get_po_tokens_from_docker() -> Option<(String, String)> {
     let _ = Command::new("docker").args(["rm", "-f", "opentune-pot"]).output();
     let run_res = Command::new("docker")
@@ -571,6 +656,70 @@ fn get_po_tokens_from_docker() -> Option<(String, String)> {
 
     eprintln!("[RUST] Failed to fetch poToken from Docker sidecar");
     None
+}
+
+#[derive(serde::Serialize, Debug)]
+struct LocalTrack {
+    id: String,
+    title: String,
+    artist: String,
+    thumbnail: String,
+    duration: u32,
+}
+
+#[tauri::command]
+fn seleccionar_carpeta() -> Option<String> {
+    let result = rfd::FileDialog::new()
+        .pick_folder();
+    result.map(|path| path.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+fn listar_archivos_locales(ruta: String) -> Result<Vec<LocalTrack>, String> {
+    let dir_path = std::path::Path::new(&ruta);
+    if !dir_path.exists() || !dir_path.is_dir() {
+        return Err("La ruta no existe o no es un directorio".to_string());
+    }
+
+    let mut tracks = Vec::new();
+    let entries = std::fs::read_dir(dir_path).map_err(|e| e.to_string())?;
+
+    for entry in entries {
+        if let Ok(entry) = entry {
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                    let ext_lower = ext.to_lowercase();
+                    if ext_lower == "mp3" || ext_lower == "wav" || ext_lower == "m4a" || 
+                       ext_lower == "ogg" || ext_lower == "flac" || ext_lower == "aac" {
+                        
+                        let file_name = path.file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("Audio Local")
+                            .to_string();
+                        
+                        let title = path.file_stem()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or(&file_name)
+                            .to_string();
+
+                        let path_str = path.to_string_lossy().into_owned();
+                        let id = format!("local://{}", path_str);
+
+                        tracks.push(LocalTrack {
+                            id,
+                            title,
+                            artist: "Archivo Local".to_string(),
+                            thumbnail: "".to_string(),
+                            duration: 0,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(tracks)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -622,6 +771,7 @@ pub fn run() {
             }
             let local_port = start_local_server(opentune_dir);
             app.manage(LocalServerState { port: local_port });
+            app.manage(DiscordState { client: Mutex::new(None) });
 
             Ok(())
         })
@@ -636,7 +786,12 @@ pub fn run() {
             obtener_explorar,
             obtener_letras,
             obtener_sugerencias,
-            obtener_local_port
+            obtener_local_port,
+            discord_connect,
+            discord_update,
+            discord_disconnect,
+            seleccionar_carpeta,
+            listar_archivos_locales
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

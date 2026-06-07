@@ -7,12 +7,13 @@ import {
   ListMusic, Heart, Loader2, Sparkles, ChevronLeft,
   Trash2, Home, Library, Download, Shuffle, 
   MoreVertical, X, Sparkle, GripVertical, Copy, RefreshCw,
-  User, Radio, Mic2, LayoutGrid, List, Plus, Bell
+  User, Radio, Mic2, LayoutGrid, List, Plus, Bell,
+  Moon, Timer, BarChart3, Languages, Palette, RotateCcw, Trophy, Users, Repeat, Repeat1, Lock, Unlock, Upload
 } from "lucide-react";
 import "./App.css";
 
 interface NavState {
-  tab: "home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos" | "download_manager";
+  tab: "home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos" | "download_manager" | "stats";
   artistId?: string;
   artistData?: any;
   currentAlbum?: any;
@@ -182,8 +183,12 @@ const getSectionIcon = (title: string) => {
 };
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos" | "download_manager">("home");
+  const [activeTab, setActiveTab] = useState<"home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos" | "download_manager" | "stats">("home");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const savedDefault = localStorage.getItem("capi_default_sidebar_collapsed");
+    if (savedDefault !== null) {
+      return savedDefault === "true";
+    }
     return localStorage.getItem("opentune_sidebar_collapsed") === "true";
   });
   
@@ -227,6 +232,7 @@ function App() {
     { tab: "home" }
   ]);
   const [navIndex, setNavIndex] = useState<number>(0);
+  const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
 
   const [preMuteVolume, setPreMuteVolume] = useState<number>(0.8);
   const [contextMenuPlaylist, setContextMenuPlaylist] = useState<Playlist | null>(null);
@@ -254,6 +260,7 @@ function App() {
   };
 
   const navigateTo = useCallback((tab: NavState["tab"], extra: Partial<NavState> = {}) => {
+    setIsPlayerExpanded(false);
     if (tab === "explore") {
       setTracks([]);
     }
@@ -278,7 +285,7 @@ function App() {
       return nextHist;
     });
     applyNavState(newState);
-  }, [navIndex]);
+  }, [navIndex, setIsPlayerExpanded]);
 
   const goBack = () => {
     if (navIndex > 0) {
@@ -329,12 +336,11 @@ function App() {
   });
   
   // Library views
-  const [libTab, setLibTab] = useState<"downloads" | "history">("downloads");
+  const [libTab, setLibTab] = useState<"downloads" | "history" | "local">("downloads");
   const [selectedTrackIds, setSelectedTrackIds] = useState<Set<string>>(new Set());
   const [showSelectionMode, setShowSelectionMode] = useState(false);
 
   // Player expansions and context menus
-  const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
   const [contextMenuTrack, setContextMenuTrack] = useState<Track | null>(null);
   const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({});
   const [capiUsername, setCapiUsername] = useState<string>(() => localStorage.getItem("capi_username") || "");
@@ -422,6 +428,171 @@ function App() {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
+  // ═══════════════════════════════════════════════════════════════
+  // FEATURE 4: Sleep Timer
+  // ═══════════════════════════════════════════════════════════════
+  const [sleepTimerSeconds, setSleepTimerSeconds] = useState<number | null>(null);
+  const [showSleepTimerMenu, setShowSleepTimerMenu] = useState(false);
+  const [sleepMode, setSleepMode] = useState<"time" | "endOfTrack" | null>(null);
+  const sleepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ═══════════════════════════════════════════════════════════════
+  // FEATURE 5: Dynamic Themes from album art
+  // ═══════════════════════════════════════════════════════════════
+  const [dynamicThemeEnabled, setDynamicThemeEnabled] = useState<boolean>(() =>
+    localStorage.getItem("capi_dynamic_theme") === "true"
+  );
+  const [extractedColors, setExtractedColors] = useState<{primary: string; secondary: string; tertiary: string} | null>(null);
+
+  // ═══════════════════════════════════════════════════════════════
+  // FEATURE 11: Usage Statistics / Wrapped
+  // ═══════════════════════════════════════════════════════════════
+  const [listeningStats, setListeningStats] = useState<{
+    totalMinutes: number;
+    trackPlays: Record<string, { track: Track; plays: number }>;
+    artistMinutes: Record<string, number>;
+    dailyMinutes: Record<string, number>;
+  }>(() => {
+    const saved = localStorage.getItem("capi_listening_stats");
+    return saved ? JSON.parse(saved) : { totalMinutes: 0, trackPlays: {}, artistMinutes: {}, dailyMinutes: {} };
+  });
+  const statsTrackingRef = useRef<{ trackId: string | null; startTime: number | null; counted: boolean }>({ trackId: null, startTime: null, counted: false });
+
+  // ═══════════════════════════════════════════════════════════════
+  // FEATURE 15: Lyrics Translation
+  // ═══════════════════════════════════════════════════════════════
+  const [translatedLyrics, setTranslatedLyrics] = useState<LyricLine[] | null>(null);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [translationLang, setTranslationLang] = useState<string>(() =>
+    localStorage.getItem("capi_translation_lang") || "es"
+  );
+  const [translating, setTranslating] = useState(false);
+  const [showLangSelector, setShowLangSelector] = useState(false);
+
+  // ═══════════════════════════════════════════════════════════════
+  // FEATURE 9: Discord Rich Presence
+  // ═══════════════════════════════════════════════════════════════
+  const [discordEnabled, setDiscordEnabled] = useState<boolean>(() =>
+    localStorage.getItem("capi_discord_rpc") === "true"
+  );
+  const [discordConnected, setDiscordConnected] = useState(false);
+
+  // Repeat mode and manual lyrics scroll states
+  const [repeatMode, setRepeatMode] = useState<"none" | "one" | "all">("none");
+  const [userScrolled, setUserScrolled] = useState(false);
+  const ignoreNextScrollRef = useRef(false);
+  const [lyricsScrollLocked, setLyricsScrollLocked] = useState(true);
+
+  // Global Confirmation Dialog State
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
+
+  const triggerConfirm = (title: string, message: string, onConfirm: () => void, doubleConfirm = false, doubleConfirmMessage = "") => {
+    setConfirmDialog({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => {
+        if (doubleConfirm) {
+          setConfirmDialog({
+            isOpen: true,
+            title: "Confirmación Definitiva",
+            message: doubleConfirmMessage || "¿Estás completamente seguro? Esta acción no se puede deshacer.",
+            onConfirm: () => {
+              onConfirm();
+              setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+            }
+          });
+        } else {
+          onConfirm();
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
+
+  // Local folder music states
+  const [localFolder, setLocalFolder] = useState<string>(() => localStorage.getItem("capi_local_music_folder") || "");
+  const [localTracks, setLocalTracks] = useState<Track[]>([]);
+  const [localLoading, setLocalLoading] = useState(false);
+
+  const loadLocalTracks = useCallback(async (folderPath: string) => {
+    if (!folderPath) return;
+    setLocalLoading(true);
+    try {
+      const filesJson = await invoke<Track[]>("listar_archivos_locales", { ruta: folderPath });
+      setLocalTracks(filesJson);
+    } catch (err: any) {
+      console.error("Error al cargar archivos locales:", err);
+      showToast("Error al cargar la carpeta local: " + err);
+    } finally {
+      setLocalLoading(false);
+    }
+  }, []);
+
+  const selectLocalFolder = async () => {
+    try {
+      const selected = await invoke<string | null>("seleccionar_carpeta");
+      if (selected) {
+        setLocalFolder(selected);
+        localStorage.setItem("capi_local_music_folder", selected);
+        showToast("Carpeta local seleccionada");
+      }
+    } catch (err: any) {
+      console.error("Error al seleccionar carpeta:", err);
+      showToast("Error al seleccionar carpeta: " + err);
+    }
+  };
+
+  useEffect(() => {
+    if (localFolder) {
+      loadLocalTracks(localFolder);
+    }
+  }, [localFolder, loadLocalTracks]);
+
+  // Export / Import Stats helpers
+  const exportStats = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(listeningStats, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href",     dataStr);
+    downloadAnchor.setAttribute("download", `capi_stats_export_${new Date().toISOString().split('T')[0]}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    showToast("Estadísticas exportadas correctamente");
+  };
+
+  const importStats = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (typeof parsed.totalMinutes === 'number' && parsed.trackPlays && parsed.artistMinutes && parsed.dailyMinutes) {
+          setListeningStats(parsed);
+          localStorage.setItem("capi_listening_stats", JSON.stringify(parsed));
+          showToast("Estadísticas importadas correctamente");
+        } else {
+          showToast("Error: El archivo no tiene el formato de estadísticas válido");
+        }
+      } catch (err) {
+        showToast("Error al procesar el archivo JSON");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
   useEffect(() => {
     const unlisten = listen<{ track_id: string; progress: number }>("download-progress", (event) => {
       const trackId = event.payload.track_id;
@@ -460,9 +631,14 @@ function App() {
     return () => clearInterval(interval);
   }, [activeTab]);
 
-  // ESC key to close expanded player or clear track if folded
+  // ESC, Space, and Arrow shortcuts
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.getAttribute("contenteditable") === "true")) {
+        return;
+      }
+
       if (e.key === "Escape") {
         if (isPlayerExpanded) {
           setIsPlayerExpanded(false);
@@ -478,15 +654,52 @@ function App() {
             audioRef.current.src = "";
           }
         }
+      } else if (e.key === " ") {
+        e.preventDefault();
+        togglePlay();
+      } else if (isPlayerExpanded) {
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          if (audioRef.current) {
+            const newTime = Math.min(audioRef.current.currentTime + 5, audioRef.current.duration || 0);
+            audioRef.current.currentTime = newTime;
+            setCurrentTime(newTime);
+          }
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          if (audioRef.current) {
+            const newTime = Math.max(audioRef.current.currentTime - 5, 0);
+            audioRef.current.currentTime = newTime;
+            setCurrentTime(newTime);
+          }
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setVolume(prev => {
+            const newVol = Math.min(prev + 0.05, 1);
+            if (audioRef.current) audioRef.current.volume = newVol;
+            return newVol;
+          });
+        } else if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setVolume(prev => {
+            const newVol = Math.max(prev - 0.05, 0);
+            if (audioRef.current) audioRef.current.volume = newVol;
+            return newVol;
+          });
+        }
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [isPlayerExpanded]);
+  }, [isPlayerExpanded, isPlaying, streamUrl]);
 
   const getNextTrackToPlay = useCallback((): Track | null => {
     if (activeQueue.length === 0) return null;
     
+    if (repeatMode === "one" && currentTrack) {
+      return currentTrack;
+    }
+
     if (isShuffle) {
       if (nextRandomIndexRef.current === null || nextRandomIndexRef.current >= activeQueue.length) {
         nextRandomIndexRef.current = Math.floor(Math.random() * activeQueue.length);
@@ -497,17 +710,18 @@ function App() {
     const currentIndex = activeQueue.findIndex(t => t.id === currentTrack?.id);
     if (currentIndex !== -1 && currentIndex < activeQueue.length - 1) {
       return activeQueue[currentIndex + 1];
-    } else {
+    } else if (repeatMode === "all") {
       return activeQueue[0];
     }
-  }, [activeQueue, currentTrack, isShuffle]);
+    return null;
+  }, [activeQueue, currentTrack, isShuffle, repeatMode]);
 
   // Preload the next track's stream URL in background
   useEffect(() => {
     if (!currentTrack) return;
     const nextTrack = getNextTrackToPlay();
     // Skip preload for playlist/radio IDs - they need playlist resolution first
-    const isPlaylistId = nextTrack && (nextTrack.id.startsWith('RDCLAK') || nextTrack.id.startsWith('OLAK') || nextTrack.id.startsWith('PL'));
+    const isPlaylistId = nextTrack && (nextTrack.id.startsWith('RDCLAK') || nextTrack.id.startsWith('OLAK') || nextTrack.id.startsWith('PL') || nextTrack.id.startsWith('local://'));
     if (nextTrack && !isPlaylistId && !downloads[nextTrack.id] && !streamCacheRef.current[nextTrack.id]) {
       invoke<string>("obtener_stream", { id: nextTrack.id }).then(resultJson => {
         let stream = resultJson;
@@ -533,24 +747,58 @@ function App() {
   // Load Homepage dynamic recommendations
   useEffect(() => { fetchHomeData(); }, []);
 
-  // Synchronized lyrics updater
-  useEffect(() => {
+  const autoScrollTimeoutRef = useRef<number | null>(null);
+
+  const syncLyricsScroll = useCallback((force = false) => {
     if (parsedLyrics.length === 0) return;
     const index = parsedLyrics.findIndex((line, i) => {
       const nextLine = parsedLyrics[i + 1];
       return currentTime >= line.time && (!nextLine || currentTime < nextLine.time);
     });
-    if (index !== -1 && index !== currentLyricIndex) {
+    if (index !== -1) {
       setCurrentLyricIndex(index);
-      const activeEl = document.getElementById(`lyric-line-${index}`);
-      if (activeEl && lyricsContainerRef.current) {
-        lyricsContainerRef.current.scrollTo({
-          top: activeEl.offsetTop - lyricsContainerRef.current.clientHeight / 2 + activeEl.clientHeight / 2,
-          behavior: "smooth"
-        });
+      if (lyricsScrollLocked || force) {
+        const activeEl = document.getElementById(`lyric-line-${index}`);
+        if (activeEl && lyricsContainerRef.current) {
+          ignoreNextScrollRef.current = true;
+          if (autoScrollTimeoutRef.current) {
+            window.clearTimeout(autoScrollTimeoutRef.current);
+          }
+          autoScrollTimeoutRef.current = window.setTimeout(() => {
+            ignoreNextScrollRef.current = false;
+          }, 800);
+
+          lyricsContainerRef.current.scrollTo({
+            top: activeEl.offsetTop - lyricsContainerRef.current.clientHeight / 2 + activeEl.clientHeight / 2,
+            behavior: "smooth"
+          });
+        }
+        if (force || lyricsScrollLocked) {
+          setUserScrolled(false);
+        }
       }
     }
-  }, [currentTime, parsedLyrics]);
+  }, [currentTime, parsedLyrics, userScrolled, lyricsScrollLocked]);
+
+  const handleLyricsScroll = () => {
+    if (ignoreNextScrollRef.current) return;
+    setUserScrolled(true);
+  };
+
+  // Synchronized lyrics updater
+  useEffect(() => {
+    syncLyricsScroll(false);
+  }, [currentTime, parsedLyrics, syncLyricsScroll]);
+
+  // Auto-sync lyrics scroll when player is expanded or tab is set to lyrics
+  useEffect(() => {
+    if (isPlayerExpanded && playerTab === "lyrics") {
+      const timer = setTimeout(() => {
+        syncLyricsScroll(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isPlayerExpanded, playerTab, syncLyricsScroll]);
 
   // Fetch lyrics when track changes
   useEffect(() => {
@@ -726,6 +974,381 @@ function App() {
     }
   };
 
+  // ═══════════════════════════════════════════════════════════════
+  // FEATURE 4: Sleep Timer Logic
+  // ═══════════════════════════════════════════════════════════════
+  const startSleepTimer = (minutes: number) => {
+    cancelSleepTimer();
+    setSleepMode("time");
+    setSleepTimerSeconds(minutes * 60);
+    showToast(`Sleep Timer: ${minutes} minutos`);
+    setShowSleepTimerMenu(false);
+  };
+
+  const startSleepEndOfTrack = () => {
+    cancelSleepTimer();
+    setSleepMode("endOfTrack");
+    setSleepTimerSeconds(null);
+    showToast("Sleep Timer: Fin de canción actual");
+    setShowSleepTimerMenu(false);
+  };
+
+  const cancelSleepTimer = () => {
+    if (sleepTimerRef.current) {
+      clearInterval(sleepTimerRef.current);
+      sleepTimerRef.current = null;
+    }
+    setSleepTimerSeconds(null);
+    setSleepMode(null);
+  };
+
+  // Sleep timer countdown effect
+  useEffect(() => {
+    if (sleepMode === "time" && sleepTimerSeconds !== null && sleepTimerSeconds > 0) {
+      sleepTimerRef.current = setInterval(() => {
+        setSleepTimerSeconds(prev => {
+          if (prev === null || prev <= 1) {
+            // Time's up, pause music
+            if (audioRef.current) {
+              audioRef.current.pause();
+              setIsPlaying(false);
+            }
+            cancelSleepTimer();
+            showToast("Sleep Timer finalizado — música pausada");
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => {
+        if (sleepTimerRef.current) clearInterval(sleepTimerRef.current);
+      };
+    }
+  }, [sleepMode]);
+
+  const formatSleepTimer = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // FEATURE 5: Dynamic Theme Color Extraction
+  // ═══════════════════════════════════════════════════════════════
+  const extractColorsFromImage = useCallback((imageUrl: string) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const size = 48;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, size, size);
+        const data = ctx.getImageData(0, 0, size, size).data;
+        
+        // Simple dominant color extraction using color bucketing
+        const colorBuckets: Record<string, { r: number; g: number; b: number; count: number }> = {};
+        for (let i = 0; i < data.length; i += 4) {
+          const r = Math.round(data[i] / 32) * 32;
+          const g = Math.round(data[i + 1] / 32) * 32;
+          const b = Math.round(data[i + 2] / 32) * 32;
+          // Skip very dark and very light colors
+          const brightness = (r + g + b) / 3;
+          if (brightness < 30 || brightness > 230) continue;
+          // Skip very gray colors
+          const maxC = Math.max(r, g, b);
+          const minC = Math.min(r, g, b);
+          if (maxC - minC < 20) continue;
+          
+          const key = `${r}-${g}-${b}`;
+          if (!colorBuckets[key]) {
+            colorBuckets[key] = { r, g, b, count: 0 };
+          }
+          colorBuckets[key].count++;
+        }
+        
+        const sorted = Object.values(colorBuckets).sort((a, b) => b.count - a.count);
+        if (sorted.length === 0) return;
+        
+        const toHex = (c: { r: number; g: number; b: number }) =>
+          `#${c.r.toString(16).padStart(2, '0')}${c.g.toString(16).padStart(2, '0')}${c.b.toString(16).padStart(2, '0')}`;
+        
+        // Pick 3 distinct colors
+        const primary = sorted[0];
+        const secondary = sorted.length > 1 ? sorted[1] : primary;
+        const tertiary = sorted.length > 2 ? sorted[2] : secondary;
+        
+        setExtractedColors({
+          primary: toHex(primary),
+          secondary: toHex(secondary),
+          tertiary: toHex(tertiary),
+        });
+      } catch {
+        // CORS or canvas error — silently ignore
+      }
+    };
+    img.onerror = () => {
+      // Can't load image, keep current colors
+    };
+    img.src = imageUrl;
+  }, []);
+
+
+
+  // Extract colors when track changes
+  useEffect(() => {
+    if (dynamicThemeEnabled && currentTrack) {
+      extractColorsFromImage(getHighQualityThumbnail(currentTrack.thumbnail));
+    }
+  }, [currentTrack?.id, dynamicThemeEnabled]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // FEATURE 11: Usage Statistics Tracking
+  // ═══════════════════════════════════════════════════════════════
+  // Track play counts & listening time
+  useEffect(() => {
+    if (currentTrack && isPlaying) {
+      const ref = statsTrackingRef.current;
+      if (ref.trackId !== currentTrack.id) {
+        ref.trackId = currentTrack.id;
+        ref.startTime = Date.now();
+        ref.counted = false;
+      }
+    }
+  }, [currentTrack?.id, isPlaying]);
+
+  // Record stats after 30s of playback
+  useEffect(() => {
+    if (!isPlaying || !currentTrack) return;
+    const interval = setInterval(() => {
+      const ref = statsTrackingRef.current;
+      if (ref.trackId === currentTrack.id && ref.startTime && !ref.counted) {
+        const elapsed = (Date.now() - ref.startTime) / 1000;
+        if (elapsed >= 30) {
+          ref.counted = true;
+          setListeningStats(prev => {
+            const today = new Date().toISOString().split('T')[0];
+            const trackDuration = currentTrack.duration || 180;
+            const minutesPlayed = Math.round(trackDuration / 60);
+            const newStats = {
+              ...prev,
+              totalMinutes: prev.totalMinutes + minutesPlayed,
+              trackPlays: {
+                ...prev.trackPlays,
+                [currentTrack.id]: {
+                  track: currentTrack,
+                  plays: (prev.trackPlays[currentTrack.id]?.plays || 0) + 1,
+                },
+              },
+              artistMinutes: {
+                ...prev.artistMinutes,
+                [currentTrack.artist]: (prev.artistMinutes[currentTrack.artist] || 0) + minutesPlayed,
+              },
+              dailyMinutes: {
+                ...prev.dailyMinutes,
+                [today]: (prev.dailyMinutes[today] || 0) + minutesPlayed,
+              },
+            };
+            localStorage.setItem("capi_listening_stats", JSON.stringify(newStats));
+            return newStats;
+          });
+        }
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isPlaying, currentTrack?.id]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // FEATURE 9: Discord Rich Presence Logic
+  // ═══════════════════════════════════════════════════════════════
+  useEffect(() => {
+    localStorage.setItem("capi_discord_rpc", String(discordEnabled));
+    if (discordEnabled) {
+      invoke("discord_connect")
+        .then(() => {
+          setDiscordConnected(true);
+        })
+        .catch((err) => {
+          console.error("Error connecting to Discord:", err);
+          setDiscordConnected(false);
+        });
+    } else {
+      invoke("discord_disconnect")
+        .then(() => {
+          setDiscordConnected(false);
+        })
+        .catch((err) => {
+          console.error("Error disconnecting from Discord:", err);
+        });
+    }
+    return () => {
+      invoke("discord_disconnect").catch(() => {});
+    };
+  }, [discordEnabled]);
+
+  // Update Discord activity when song changes or plays/pauses
+  useEffect(() => {
+    if (!discordEnabled || !discordConnected) return;
+    const title = currentTrack ? currentTrack.title : "";
+    const artist = currentTrack ? currentTrack.artist : "";
+    const thumbnail = currentTrack ? getHighQualityThumbnail(currentTrack.thumbnail) : "";
+    const duration = currentTrack ? (currentTrack.duration || 0) : 0;
+    const elapsed = audioRef.current ? Math.round(audioRef.current.currentTime) : 0;
+
+    invoke("discord_update", {
+      title,
+      artist,
+      thumbnail,
+      elapsed,
+      duration,
+      isPlaying: isPlaying && !!currentTrack,
+    }).catch((err) => {
+      console.error("Error updating Discord status:", err);
+    });
+  }, [currentTrack?.id, isPlaying, discordEnabled, discordConnected]);
+
+  // Periodically update progress/elapsed time on Discord
+  useEffect(() => {
+    if (!discordEnabled || !discordConnected || !isPlaying || !currentTrack) return;
+    const interval = setInterval(() => {
+      const title = currentTrack.title;
+      const artist = currentTrack.artist;
+      const thumbnail = getHighQualityThumbnail(currentTrack.thumbnail);
+      const duration = currentTrack.duration || 0;
+      const elapsed = audioRef.current ? Math.round(audioRef.current.currentTime) : 0;
+
+      invoke("discord_update", {
+        title,
+        artist,
+        thumbnail,
+        elapsed,
+        duration,
+        isPlaying: true,
+      }).catch((err) => {
+        console.error("Error periodic updating Discord status:", err);
+      });
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [currentTrack?.id, isPlaying, discordEnabled, discordConnected]);
+
+  const getTopTracks = () => {
+    return Object.values(listeningStats.trackPlays)
+      .sort((a, b) => b.plays - a.plays)
+      .slice(0, 5);
+  };
+
+  const getTopArtists = () => {
+    return Object.entries(listeningStats.artistMinutes)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([name, minutes]) => ({ name, minutes }));
+  };
+
+  const getWeeklyActivity = () => {
+    const days: { label: string; minutes: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+      days.push({ label: dayNames[d.getDay()], minutes: listeningStats.dailyMinutes[key] || 0 });
+    }
+    return days;
+  };
+
+  const getStreakDays = () => {
+    let streak = 0;
+    const d = new Date();
+    while (true) {
+      const key = d.toISOString().split('T')[0];
+      if (listeningStats.dailyMinutes[key] && listeningStats.dailyMinutes[key] > 0) {
+        streak++;
+        d.setDate(d.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+    return streak;
+  };
+
+  const resetStats = () => {
+    const emptyStats = { totalMinutes: 0, trackPlays: {}, artistMinutes: {}, dailyMinutes: {} };
+    setListeningStats(emptyStats);
+    localStorage.setItem("capi_listening_stats", JSON.stringify(emptyStats));
+    showToast("Estadísticas reiniciadas");
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // FEATURE 15: Lyrics Translation
+  // ═══════════════════════════════════════════════════════════════
+  const TRANSLATION_LANGS = [
+    { code: "es", name: "Español" },
+    { code: "en", name: "English" },
+    { code: "pt", name: "Português" },
+    { code: "fr", name: "Français" },
+    { code: "de", name: "Deutsch" },
+    { code: "it", name: "Italiano" },
+    { code: "ja", name: "日本語" },
+    { code: "ko", name: "한국어" },
+  ];
+
+  const translateLyrics = async (targetLang: string = translationLang) => {
+    if (parsedLyrics.length === 0 && !lyricsText) return;
+    setTranslating(true);
+    setLyricsMenuOpen(false);
+    try {
+      const lines = parsedLyrics.length > 0
+        ? parsedLyrics.map(l => l.text).filter(t => t.trim())
+        : lyricsText.split("\n").filter(l => l.trim());
+      
+      // Translate in chunks of 10 lines to avoid API limits
+      const translatedLines: string[] = [];
+      for (let i = 0; i < lines.length; i += 10) {
+        const chunk = lines.slice(i, i + 10).join("\n");
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=autodetect|${targetLang}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.responseData?.translatedText) {
+          translatedLines.push(...data.responseData.translatedText.split("\n"));
+        } else {
+          translatedLines.push(...lines.slice(i, i + 10));
+        }
+      }
+
+      // Map back to LyricLine with original timestamps
+      if (parsedLyrics.length > 0) {
+        const mapped: LyricLine[] = [];
+        let tIdx = 0;
+        for (const original of parsedLyrics) {
+          if (original.text.trim()) {
+            mapped.push({ time: original.time, text: translatedLines[tIdx] || original.text });
+            tIdx++;
+          } else {
+            mapped.push(original);
+          }
+        }
+        setTranslatedLyrics(mapped);
+      } else {
+        setTranslatedLyrics(translatedLines.map((t, i) => ({ time: i * 5, text: t })));
+      }
+      setShowTranslation(true);
+      showToast(`Letras traducidas a ${TRANSLATION_LANGS.find(l => l.code === targetLang)?.name || targetLang}`);
+    } catch (e) {
+      console.error("Translation error:", e);
+      showToast("Error al traducir las letras");
+    }
+    setTranslating(false);
+  };
+
+  // Reset translation when track changes
+  useEffect(() => {
+    setTranslatedLyrics(null);
+    setShowTranslation(false);
+  }, [currentTrack?.id]);
+
   const playTrack = async (track: Track, queueList: Track[] = []) => {
     try {
       // Detect playlist/radio IDs and resolve them into actual songs first
@@ -779,7 +1402,11 @@ function App() {
       });
       
       let stream: string;
-      if (downloads[track.id]) {
+      if (track.id.startsWith("local://")) {
+        const path = track.id.replace("local://", "");
+        stream = `http://127.0.0.1:${localPort}/play?path=${encodeURIComponent(path)}`;
+        console.timeLog(`[PLAY-TIMING] ${track.title}`, 'using local custom folder file');
+      } else if (downloads[track.id]) {
         const path = downloads[track.id];
         stream = `http://127.0.0.1:${localPort}/play?path=${encodeURIComponent(path)}`;
         console.timeLog(`[PLAY-TIMING] ${track.title}`, 'using downloaded file');
@@ -847,7 +1474,7 @@ function App() {
     if (tracksToPlay.length === 0) return;
     setIsShuffle(true);
     const shuffled = [...tracksToPlay].sort(() => Math.random() - 0.5);
-    playTrack(shuffled[0], tracksToPlay);
+    playTrack(shuffled[0], shuffled);
   };
 
   const handleCustomColorChange = (color: string) => {
@@ -1343,9 +1970,32 @@ function App() {
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => { setIsPlaying(false); setBuffering(false); }}
         onWaiting={() => setBuffering(true)}
         onPlaying={() => setBuffering(false)}
-        onEnded={playNext}
+        onSeeking={() => setBuffering(true)}
+        onSeeked={() => setBuffering(false)}
+        onCanPlay={() => setBuffering(false)}
+        onStalled={() => setBuffering(false)}
+        onSuspend={() => setBuffering(false)}
+        onEmptied={() => setBuffering(false)}
+        onError={() => setBuffering(false)}
+        onEnded={() => {
+          if (sleepMode === "endOfTrack") {
+            if (audioRef.current) { audioRef.current.pause(); }
+            setIsPlaying(false);
+            cancelSleepTimer();
+            showToast("Sleep Timer finalizado — música pausada");
+          } else if (repeatMode === "one") {
+            if (audioRef.current) {
+              audioRef.current.currentTime = 0;
+              audioRef.current.play().catch(() => {});
+            }
+          } else {
+            playNext();
+          }
+        }}
       />
 
       {/* Sidebar Navigation */}
@@ -1388,6 +2038,7 @@ function App() {
               { tab: "biblioteca" as const, icon: <Library className="w-5 h-5 min-w-5" />, label: "Biblioteca" },
               { tab: "playlists" as const, icon: <ListMusic className="w-5 h-5 min-w-5" />, label: "Playlists" },
               { tab: "favoritos" as const, icon: <Heart className="w-5 h-5 min-w-5" />, label: "Favoritos" },
+              { tab: "stats" as const, icon: <BarChart3 className="w-5 h-5 min-w-5" />, label: "Estadísticas" },
             ].map(({ tab, icon, label }) => (
               <button
                 key={tab}
@@ -1476,43 +2127,63 @@ function App() {
             </div>
             {/* Search dropdown: suggestions + history */}
             {showSearchDropdown && searchFocused && visibleSuggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-surface-dark border border-white/10 rounded-2xl shadow-2xl z-50 suggestions-dropdown overflow-hidden max-h-80 overflow-y-auto">
-                <div className="px-4 py-2 text-xs text-text-secondary font-semibold uppercase tracking-wider">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-surface-dark border border-white/10 rounded-2xl shadow-2xl z-50 suggestions-dropdown overflow-hidden flex flex-col max-h-80">
+                <div className="px-4 py-2 text-xs text-text-secondary font-semibold uppercase tracking-wider flex-shrink-0">
                   {query.trim() === "" ? "Historial" : "Sugerencias"}
                 </div>
-                {visibleSuggestions.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex items-center justify-between px-4 py-2.5 cursor-pointer transition ${
-                      activeSuggestionIndex === idx ? "bg-white/10" : "hover:bg-white/5"
-                    }`}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                    }}
-                    onClick={() => {
-                      setQuery(item);
-                      setShowSearchDropdown(false);
-                      performSearchWithQuery(item);
-                    }}
-                  >
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <Search className="w-3.5 h-3.5 text-text-secondary" />
-                      <span className="text-sm text-text-primary truncate">{item}</span>
+                <div className="overflow-y-auto flex-1">
+                  {visibleSuggestions.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex items-center justify-between px-4 py-2.5 cursor-pointer transition ${
+                        activeSuggestionIndex === idx ? "bg-white/10" : "hover:bg-white/5"
+                      }`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                      }}
+                      onClick={() => {
+                        setQuery(item);
+                        setShowSearchDropdown(false);
+                        performSearchWithQuery(item);
+                      }}
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Search className="w-3.5 h-3.5 text-text-secondary" />
+                        <span className="text-sm text-text-primary truncate">{item}</span>
+                      </div>
+                      {query.trim() === "" && (
+                        <button
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSearchHistory(prev => prev.filter(h => h !== item));
+                          }}
+                          className="p-1 text-text-secondary hover:text-red-400 transition"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
-                    {query.trim() === "" && (
-                      <button
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSearchHistory(prev => prev.filter(h => h !== item));
-                        }}
-                        className="p-1 text-text-secondary hover:text-red-400 transition"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                  ))}
+                </div>
+                {query.trim() === "" && searchHistory.length > 0 && (
+                  <div className="border-t border-white/5 p-2 bg-surface-dark flex justify-end flex-shrink-0 sticky bottom-0">
+                    <button
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        triggerConfirm(
+                          "Vaciar Historial de Búsquedas",
+                          "¿Estás seguro de que quieres eliminar todo el historial de búsquedas recientes?",
+                          () => setSearchHistory([])
+                        );
+                      }}
+                      className="px-3 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-white/5 rounded-xl transition flex items-center gap-1.5 w-full justify-center"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Vaciar historial de búsqueda
+                    </button>
                   </div>
-                ))}
+                )}
               </div>
             )}
           </form>
@@ -1524,7 +2195,8 @@ function App() {
                 className="p-2.5 text-brand-primary hover:text-white rounded-xl hover:bg-white/5 transition relative animate-fade-in"
                 title="Descargas activas"
               >
-                <Download className="w-5 h-5 animate-pulse-rotate" />
+                {/* LineMdDownloadingLoop animate loop SVG */}
+                <svg className="w-5 h-5 text-brand-primary" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path stroke-dasharray="32" d="M12 21c-4.97 0 -9 -4.03 -9 -9c0 -4.97 4.03 -9 9 -9"><animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="32;0"/></path><path stroke-dasharray="2 4" stroke-dashoffset="6" d="M12 3c4.97 0 9 4.03 9 9c0 4.97 -4.03 9 -9 9" opacity="0"><set fill="freeze" attributeName="opacity" begin="0.45s" to="1"/><animateTransform fill="freeze" attributeName="transform" begin="0.45s" dur="0.6s" type="rotate" values="-180 12 12;0 12 12"/><animate attributeName="stroke-dashoffset" begin="0.85s" dur="0.6s" repeatCount="indefinite" to="0"/></path><path stroke-dasharray="10" stroke-dashoffset="10" d="M12 8v7.5"><animate fill="freeze" attributeName="stroke-dashoffset" begin="0.85s" dur="0.2s" to="0"/></path><path stroke-dasharray="8" stroke-dashoffset="8" d="M12 15.5l3.5 -3.5M12 15.5l-3.5 -3.5"><animate fill="freeze" attributeName="stroke-dashoffset" begin="1.05s" dur="0.2s" to="0"/></path></g></svg>
               </button>
             )}
             <button
@@ -1866,7 +2538,14 @@ function App() {
                         <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" />
                         <div className="min-w-0 flex-1">
                           <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-text-primary"}`}>{track.title}</p>
-                          <p className="text-xs text-black dark:text-neutral-300 font-semibold truncate mt-0.5">{track.artist}</p>
+                          <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
+                            <p className="text-xs text-black dark:text-neutral-300 font-semibold truncate">{track.artist}</p>
+                            {downloads[track.id] && (
+                              <span className="flex-shrink-0 text-brand-primary" title="Descargado localmente">
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="M12 7v8M12 15l-3-3M12 15l3-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" className="text-bg-dark"/></svg>
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div className="text-xs text-text-secondary hidden md:block w-1/4 truncate">
                           {track.album || "Sencillo"}
@@ -2082,6 +2761,35 @@ function App() {
                   >
                     Historial
                   </button>
+                  <button 
+                    onClick={() => setLibTab("local")}
+                    className={`px-4 py-2 rounded-xl text-sm font-semibold transition ${
+                      libTab === "local" ? "bg-brand-primary text-bg-dark" : "bg-white/5 hover:bg-white/10"
+                    }`}
+                  >
+                    Local
+                  </button>
+                  {libTab === "history" && history.length > 0 && (
+                    <button
+                      onClick={() => {
+                        triggerConfirm(
+                          "Vaciar Historial de Reproducción",
+                          "¿Estás seguro de que quieres vaciar todo el historial de reproducción de Capi?",
+                          () => {
+                            setHistory([]);
+                            localStorage.removeItem("opentune_history");
+                          }
+                        );
+                      }}
+                      className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-xl transition hover:scale-105 active:scale-95 flex items-center justify-center relative group"
+                      title="Vaciar historial"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span className="absolute bottom-full mb-2 hidden group-hover:block bg-black/80 text-white text-[10px] rounded py-1 px-2 whitespace-nowrap z-10 pointer-events-none">
+                        Vaciar historial
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -2150,7 +2858,14 @@ function App() {
                             <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" />
                             <div className="min-w-0 flex-1 ml-1">
                               <p className="font-semibold text-sm truncate text-text-primary">{track.title}</p>
-                              <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
+                              <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
+                                <p className="text-xs text-text-secondary truncate">{track.artist}</p>
+                                {downloads[track.id] && (
+                                  <span className="flex-shrink-0 text-brand-primary" title="Descargado localmente">
+                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="M12 7v8M12 15l-3-3M12 15l3-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" className="text-bg-dark"/></svg>
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -2225,7 +2940,14 @@ function App() {
                             <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" />
                             <div className="min-w-0 flex-1 ml-1">
                               <p className="font-semibold text-sm truncate text-text-primary">{track.title}</p>
-                              <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
+                              <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
+                                <p className="text-xs text-text-secondary truncate">{track.artist}</p>
+                                {downloads[track.id] && (
+                                  <span className="flex-shrink-0 text-brand-primary" title="Descargado localmente">
+                                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="M12 7v8M12 15l-3-3M12 15l3-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" className="text-bg-dark"/></svg>
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
@@ -2259,6 +2981,88 @@ function App() {
                     <div className="p-12 text-center bg-white/5 rounded-2xl border border-white/5">
                       <p className="text-sm text-text-secondary">El historial de reproducción está vacío.</p>
                     </div>
+                  )}
+                </div>
+              )}
+
+              {libTab === "local" && (
+                <div className="space-y-4 animate-fade-in">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface-dark/40 border border-white/5 p-5 rounded-2xl">
+                    <div className="space-y-1">
+                      <h3 className="font-semibold text-sm text-text-primary">Música Local</h3>
+                      <p className="text-xs text-text-secondary leading-relaxed">
+                        {localFolder ? `Carpeta activa: ${localFolder}` : "Selecciona una carpeta del sistema para reproducir tus archivos locales en Capi."}
+                      </p>
+                    </div>
+                    <button
+                      onClick={selectLocalFolder}
+                      className="px-4 py-2 bg-brand-primary text-bg-dark text-xs font-bold rounded-xl hover:scale-105 active:scale-95 transition whitespace-nowrap"
+                    >
+                      {localFolder ? "Cambiar Carpeta" : "Seleccionar Carpeta"}
+                    </button>
+                  </div>
+
+                  {localLoading ? (
+                    <div className="p-12 text-center">
+                      <Loader2 className="w-8 h-8 text-brand-primary animate-spin mx-auto" />
+                      <p className="text-xs text-text-secondary mt-3">Escaneando archivos de audio...</p>
+                    </div>
+                  ) : localTracks.length > 0 ? (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center px-1">
+                        <span className="text-xs text-text-secondary font-semibold">{localTracks.length} archivos de audio encontrados</span>
+                        <button
+                          onClick={() => playShuffleQueue(localTracks)}
+                          className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition"
+                        >
+                          <Shuffle className="w-3.5 h-3.5" /> Aleatorio
+                        </button>
+                      </div>
+                      <div className="flex flex-col gap-2 w-full">
+                        {localTracks.map((track) => (
+                          <div
+                            key={track.id}
+                            onClick={() => playTrack(track, localTracks)}
+                            className="p-3.5 bg-surface-dark/30 hover:bg-surface-dark/70 rounded-xl flex items-center justify-between border border-white/5 w-full transition duration-150 cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                              <div className="w-11 h-11 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary flex-shrink-0">
+                                <Music className="w-5 h-5" />
+                              </div>
+                              <div className="min-w-0 flex-1 ml-1">
+                                <p className="font-semibold text-sm truncate text-text-primary">{track.title}</p>
+                                <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (currentTrack?.id === track.id) {
+                                    togglePlay();
+                                  } else {
+                                    playTrack(track, localTracks);
+                                  }
+                                }}
+                                className="p-2 bg-brand-primary text-bg-dark rounded-full shadow hover:scale-105 transition"
+                              >
+                                {currentTrack?.id === track.id && isPlaying ? (
+                                  <Pause className="w-3.5 h-3.5 fill-current" />
+                                ) : (
+                                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    localFolder && (
+                      <div className="p-12 text-center bg-white/5 rounded-2xl border border-white/5">
+                        <p className="text-sm text-text-secondary">No se encontraron archivos de audio compatibles (.mp3, .wav, .m4a, .ogg, .flac, .aac) en esta carpeta.</p>
+                      </div>
+                    )
                   )}
                 </div>
               )}
@@ -2435,7 +3239,14 @@ function App() {
                         <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" />
                         <div className="min-w-0 flex-1 ml-1">
                           <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-text-primary"}`}>{track.title}</p>
-                          <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
+                          <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
+                            <p className="text-xs text-text-secondary truncate">{track.artist}</p>
+                            {downloads[track.id] && (
+                              <span className="flex-shrink-0 text-brand-primary" title="Descargado localmente">
+                                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="M12 7v8M12 15l-3-3M12 15l3-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" className="text-bg-dark"/></svg>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -2548,7 +3359,14 @@ function App() {
                       <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-text-primary"}`}>{track.title}</p>
-                        <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
+                        <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
+                          <p className="text-xs text-text-secondary truncate">{track.artist}</p>
+                          {downloads[track.id] && (
+                            <span className="flex-shrink-0 text-brand-primary" title="Descargado localmente">
+                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="M12 7v8M12 15l-3-3M12 15l3-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" className="text-bg-dark"/></svg>
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <span className="text-xs text-text-secondary hidden sm:block w-16 text-right mr-2">{formatTime(track.duration)}</span>
                       <div className="flex items-center gap-2">
@@ -2584,6 +3402,188 @@ function App() {
                   <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
                 </div>
               )}
+            </div>
+          )}
+
+          {/* STATISTICS / WRAPPED VIEW */}
+          {activeTab === "stats" && (
+            <div className="space-y-6 w-full animate-fade-in text-left">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight mb-1">Estadísticas</h2>
+                  <p className="text-sm text-text-secondary">Tu actividad musical en Capi</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const saved = localStorage.getItem("capi_listening_stats");
+                      if (saved) {
+                        setListeningStats(JSON.parse(saved));
+                      }
+                      showToast("Estadísticas actualizadas");
+                    }}
+                    className="p-3 bg-white/5 hover:bg-white/10 text-text-secondary hover:text-text-primary rounded-xl transition duration-150 hover:scale-105 active:scale-95 flex items-center justify-center relative group border border-white/5"
+                    title="Actualizar estadísticas"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                    <span className="absolute bottom-full mb-2 hidden group-hover:block bg-black/80 text-white text-[10px] rounded py-1 px-2 whitespace-nowrap z-10 pointer-events-none">
+                      Actualizar estadísticas
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      triggerConfirm(
+                        "Reiniciar Estadísticas",
+                        "¿Estás seguro de que quieres borrar de forma permanente todas tus estadísticas de escucha?",
+                        () => resetStats(),
+                        true,
+                        "¡ÚLTIMA ADVERTENCIA! Se eliminará toda tu actividad histórica de reproducción. ¿Confirmas el borrado definitivo?"
+                      );
+                    }}
+                    className="p-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-xl transition duration-150 hover:scale-105 active:scale-95 flex items-center justify-center relative group"
+                    title="Reiniciar estadísticas"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                    <span className="absolute bottom-full mb-2 hidden group-hover:block bg-black/80 text-white text-[10px] rounded py-1 px-2 whitespace-nowrap z-10 pointer-events-none">
+                      Reiniciar estadísticas
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Summary Cards Row */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gradient-to-br from-brand-primary/20 to-brand-primary/5 border border-brand-primary/20 rounded-2xl p-5 text-center">
+                  <p className="text-3xl font-black text-brand-primary">{listeningStats.totalMinutes.toLocaleString()}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-text-secondary mt-1 font-bold">Minutos escuchados</p>
+                </div>
+                <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-5 text-center">
+                  <p className="text-3xl font-black text-text-primary">{Object.keys(listeningStats.trackPlays).length}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-text-secondary mt-1 font-bold">Canciones únicas</p>
+                </div>
+                <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-5 text-center">
+                  <p className="text-3xl font-black text-text-primary">{Object.keys(listeningStats.artistMinutes).length}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-text-secondary mt-1 font-bold">Artistas</p>
+                </div>
+                <div className="bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/20 rounded-2xl p-5 text-center">
+                  <p className="text-3xl font-black text-amber-400">{getStreakDays()}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-text-secondary mt-1 font-bold">Días seguidos</p>
+                </div>
+              </div>
+
+              {/* Weekly Activity */}
+              <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-6">
+                <h3 className="text-xs uppercase font-bold tracking-wider text-text-secondary mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-brand-primary" /> Actividad semanal
+                </h3>
+                <div className="flex items-end justify-between gap-2 h-32">
+                  {getWeeklyActivity().map((day, i) => {
+                    const maxMin = Math.max(...getWeeklyActivity().map(d => d.minutes), 1);
+                    const height = (day.minutes / maxMin) * 100;
+                    return (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                        <span className="text-[10px] text-text-secondary font-semibold">{day.minutes}m</span>
+                        <div className="w-full rounded-t-lg bg-white/5 relative overflow-hidden" style={{ height: '100px' }}>
+                          <div
+                            className="absolute bottom-0 w-full rounded-t-lg bg-gradient-to-t from-brand-primary to-brand-primary/60 transition-all duration-500"
+                            style={{ height: `${Math.max(height, 2)}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] font-bold text-text-secondary">{day.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Top 5 Tracks */}
+                <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-6">
+                  <h3 className="text-xs uppercase font-bold tracking-wider text-text-secondary mb-4 flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-brand-primary" /> Top canciones
+                  </h3>
+                  <div className="space-y-3">
+                    {getTopTracks().length === 0 ? (
+                      <p className="text-sm text-text-secondary text-center py-6">Escucha música para ver estadísticas</p>
+                    ) : (
+                      getTopTracks().map((item, i) => (
+                        <div key={item.track.id} className="flex items-center gap-3">
+                          <span className="text-xs font-black text-brand-primary w-5 text-center flex-shrink-0">{i + 1}</span>
+                          <img
+                            src={item.track.thumbnail}
+                            alt=""
+                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                            onError={handleImageError}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-text-primary truncate">{item.track.title}</p>
+                            <p className="text-xs text-text-secondary truncate">{item.track.artist}</p>
+                          </div>
+                          <span className="text-xs font-bold text-brand-primary bg-brand-primary/10 px-2 py-1 rounded-full flex-shrink-0">{item.plays}×</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Top 5 Artists */}
+                <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-6">
+                  <h3 className="text-xs uppercase font-bold tracking-wider text-text-secondary mb-4 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-brand-primary" /> Top artistas
+                  </h3>
+                  <div className="space-y-3">
+                    {getTopArtists().length === 0 ? (
+                      <p className="text-sm text-text-secondary text-center py-6">Escucha música para ver estadísticas</p>
+                    ) : (
+                      getTopArtists().map((artist, i) => {
+                        const maxArtMin = Math.max(...getTopArtists().map(a => a.minutes), 1);
+                        // Scale the percentage so the top artist only fills up to 75%
+                        const percentage = (artist.minutes / maxArtMin) * 75;
+                        return (
+                          <div key={artist.name} className="space-y-1">
+                            <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <span className="text-xs font-black text-brand-primary w-5 text-center flex-shrink-0">{i + 1}</span>
+                                <span className="text-sm font-semibold text-text-primary truncate">{artist.name}</span>
+                              </div>
+                              <span className="text-xs text-text-secondary font-medium flex-shrink-0">{artist.minutes} min</span>
+                            </div>
+                            <div className="pl-7 w-full">
+                              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-gradient-to-r from-brand-primary to-brand-tertiary rounded-full transition-all duration-500"
+                                  style={{ width: `${percentage}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional KPI metrics */}
+              <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-6">
+                <h3 className="text-xs uppercase font-bold tracking-wider text-text-secondary mb-4 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-brand-primary" /> Indicadores adicionales
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-4 bg-white/5 rounded-xl border border-white/5 flex flex-col justify-center">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-text-secondary">Artista Preferido</span>
+                    <span className="text-sm font-semibold text-text-primary mt-1 truncate">{getTopArtists().length > 0 ? getTopArtists()[0].name : "Ninguno"}</span>
+                  </div>
+                  <div className="p-4 bg-white/5 rounded-xl border border-white/5 flex flex-col justify-center">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-text-secondary">Canción Preferida</span>
+                    <span className="text-sm font-semibold text-text-primary mt-1 truncate">{getTopTracks().length > 0 ? getTopTracks()[0].track.title : "Ninguna"}</span>
+                  </div>
+                  <div className="p-4 bg-white/5 rounded-xl border border-white/5 flex flex-col justify-center">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-text-secondary">Horas Escuchadas</span>
+                    <span className="text-sm font-semibold text-text-primary mt-1">{(listeningStats.totalMinutes / 60).toFixed(1)} h</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -2772,6 +3772,80 @@ function App() {
                   </div>
                 </div>
 
+                {/* Dynamic Theme Toggle */}
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div>
+                    <h3 className="font-semibold text-sm text-text-primary flex items-center gap-2">
+                      <Palette className="w-4 h-4 text-brand-primary" /> Tema dinámico
+                    </h3>
+                    <p className="text-xs text-text-secondary mt-1">Extrae los colores dominantes de la portada del álbum y los aplica como tema automáticamente.</p>
+                    {dynamicThemeEnabled && extractedColors && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[10px] text-text-secondary uppercase tracking-wider">Colores activos:</span>
+                        <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: extractedColors.primary }} />
+                        <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: extractedColors.secondary }} />
+                        <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: extractedColors.tertiary }} />
+                      </div>
+                    )}
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={dynamicThemeEnabled} 
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        setDynamicThemeEnabled(val);
+                        localStorage.setItem("capi_dynamic_theme", String(val));
+                        if (!val) {
+                          // Re-apply manual accent color
+                          setExtractedColors(null);
+                          const root = document.documentElement;
+                          if (accentColor === "custom") {
+                            const customColor = localStorage.getItem("capi_custom_accent_color") || "#7c3aed";
+                            root.style.setProperty('--brand-primary', customColor);
+                            root.style.setProperty('--brand-secondary', customColor + "dd");
+                            root.style.setProperty('--brand-tertiary', customColor + "aa");
+                          } else {
+                            const isLight = theme === "light-mode";
+                            const colorObj = ACCENT_COLORS.find(c => c.id === accentColor) || ACCENT_COLORS[0];
+                            root.style.setProperty('--brand-primary', isLight ? colorObj.light : colorObj.dark);
+                            root.style.setProperty('--brand-secondary', isLight ? colorObj.lightSec : colorObj.darkSec);
+                            root.style.setProperty('--brand-tertiary', isLight ? colorObj.lightTert : colorObj.darkTert);
+                          }
+                        } else if (currentTrack) {
+                          extractColorsFromImage(getHighQualityThumbnail(currentTrack.thumbnail));
+                        }
+                      }}
+                      className="sr-only peer" 
+                    />
+                    <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                  </label>
+                </div>
+
+                {/* Discord Rich Presence Toggle */}
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div>
+                    <h3 className="font-semibold text-sm text-text-primary flex items-center gap-2">
+                      Discord Rich Presence
+                      {discordEnabled && (
+                        <span className={`inline-block w-2 h-2 rounded-full ${discordConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} title={discordConnected ? "Conectado a Discord" : "Buscando/Cargando Discord"} />
+                      )}
+                    </h3>
+                    <p className="text-xs text-text-secondary mt-1">Muestra la canción que estás escuchando en tu estado de Discord en tiempo real.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={discordEnabled} 
+                      onChange={(e) => {
+                        setDiscordEnabled(e.target.checked);
+                      }}
+                      className="sr-only peer" 
+                    />
+                    <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                  </label>
+                </div>
+
                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
                   <div>
                     <h3 className="font-semibold text-sm text-text-primary">Ocultar acceso directo de ajustes de la barra lateral</h3>
@@ -2788,8 +3862,81 @@ function App() {
                       }}
                       className="sr-only peer" 
                     />
-                    <div className="w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                    <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
                   </label>
+                </div>
+
+                {/* Default Sidebar State on Startup */}
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div>
+                    <h3 className="font-semibold text-sm text-text-primary">Colapsar barra lateral por defecto</h3>
+                    <p className="text-xs text-text-secondary mt-1">Si está activado, la barra lateral iniciará minimizada al abrir la aplicación.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={(() => {
+                        const savedDefault = localStorage.getItem("capi_default_sidebar_collapsed");
+                        return savedDefault === "true";
+                      })()} 
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        localStorage.setItem("capi_default_sidebar_collapsed", String(val));
+                        showToast(`Preferencia guardada: Barra lateral ${val ? "colapsada" : "expandida"} por defecto`);
+                      }}
+                      className="sr-only peer" 
+                    />
+                    <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                  </label>
+                </div>
+
+                {/* Auto-start application on system boot switch */}
+                <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                  <div>
+                    <h3 className="font-semibold text-sm text-text-primary">Iniciar Capi al arrancar el sistema</h3>
+                    <p className="text-xs text-text-secondary mt-1">Activa o desactiva que la aplicación se ejecute automáticamente al encender tu equipo.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={(() => {
+                        const savedBoot = localStorage.getItem("capi_start_on_boot");
+                        return savedBoot === "true";
+                      })()} 
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        localStorage.setItem("capi_start_on_boot", String(val));
+                        showToast(`Preferencia guardada: Iniciar al arrancar ${val ? "activado" : "desactivado"}`);
+                      }}
+                      className="sr-only peer" 
+                    />
+                    <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                  </label>
+                </div>
+
+                {/* Import / Export Statistics */}
+                <div className="flex flex-col gap-3 border-b border-white/5 pb-4">
+                  <div>
+                    <h3 className="font-semibold text-sm text-text-primary">Gestión de Datos y Estadísticas</h3>
+                    <p className="text-xs text-text-secondary mt-1">Copia de seguridad y restauración de tus estadísticas de reproducción de Capi.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-3 pt-1">
+                    <button
+                      onClick={exportStats}
+                      className="px-4 py-2 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary text-xs font-semibold rounded-xl transition hover:scale-105 active:scale-95 flex items-center gap-1.5"
+                    >
+                      <Download className="w-3.5 h-3.5" /> Exportar estadísticas
+                    </button>
+                    <label className="px-4 py-2 bg-white/5 hover:bg-white/10 text-text-primary text-xs font-semibold rounded-xl transition hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer">
+                      <Upload className="w-3.5 h-3.5" /> Importar estadísticas
+                      <input 
+                        type="file" 
+                        accept=".json" 
+                        onChange={importStats} 
+                        className="hidden" 
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 {/* Profile Edit Fields moved inside Settings */}
@@ -2999,11 +4146,15 @@ function App() {
         </section>
 
         {/* BOTTOM PLAYER BAR - full width */}
-        <footer className="h-24 bg-surface-dark/80 backdrop-blur-md border-t border-white/5 flex items-center justify-between px-8 absolute bottom-0 left-0 right-0 z-20 shadow-2xl">
+        <footer 
+          onClick={() => currentTrack && setIsPlayerExpanded(true)}
+          style={dynamicThemeEnabled && extractedColors ? { background: `linear-gradient(to right, ${extractedColors.primary}15, ${extractedColors.secondary}08)`, borderTopColor: `${extractedColors.primary}22` } : {}}
+          className="h-24 bg-surface-dark/80 backdrop-blur-md border-t border-white/5 flex items-center justify-between px-8 absolute bottom-0 left-0 right-0 z-20 shadow-2xl cursor-pointer"
+        >
           {/* Left: Info */}
           <div 
-            onClick={() => currentTrack && setIsPlayerExpanded(true)} 
-            className="w-1/3 flex items-center gap-3 min-w-0 cursor-pointer group"
+            onClick={(e) => { e.stopPropagation(); currentTrack && setIsPlayerExpanded(true); }} 
+            className="w-1/3 flex items-center gap-3 min-w-0 group"
           >
             {currentTrack ? (
               <>
@@ -3011,7 +4162,7 @@ function App() {
                   <img src={getHighQualityThumbnail(currentTrack.thumbnail)} alt={currentTrack.title} onError={handleImageError} className="w-full h-full object-cover group-hover:scale-105 transition" />
                 </div>
                 <div className="min-w-0">
-                  <h4 className="text-sm font-semibold truncate group-hover:text-brand-primary transition">{currentTrack.title}</h4>
+                  <h4 className="text-sm font-semibold truncate group-hover:text-brand-primary transition text-text-primary">{currentTrack.title}</h4>
                   <p className="text-xs text-text-secondary truncate mt-0.5">{currentTrack.artist}</p>
                 </div>
               </>
@@ -3028,25 +4179,33 @@ function App() {
           </div>
 
           {/* Center Controls & Seeker */}
-          <div className="w-1/3 flex flex-col items-center gap-2">
+          <div className="w-1/3 flex flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-5">
               <button
-                onClick={() => setIsShuffle(!isShuffle)}
+                onClick={(e) => { e.stopPropagation(); setIsShuffle(!isShuffle); }}
                 className={`transition ${isShuffle ? "text-brand-primary" : "text-text-secondary hover:text-text-primary"}`}
               >
                 <Shuffle className="w-4 h-4" />
               </button>
-              <button onClick={playPrev} disabled={activeQueue.length === 0} className="text-text-secondary hover:text-text-primary disabled:opacity-40 transition duration-150">
+              <button 
+                onClick={(e) => { e.stopPropagation(); playPrev(); }} 
+                disabled={activeQueue.length === 0} 
+                className="text-text-secondary hover:text-text-primary disabled:opacity-40 transition duration-150"
+              >
                 <SkipBack className="w-5 h-5" />
               </button>
               <button
-                onClick={togglePlay}
-                disabled={!streamUrl || buffering}
+                onClick={(e) => { e.stopPropagation(); togglePlay(); }}
+                disabled={!streamUrl}
                 className="w-11 h-11 rounded-full bg-brand-primary text-bg-dark flex items-center justify-center hover:scale-105 active:scale-95 disabled:opacity-50 transition duration-200"
               >
                 {buffering ? <Loader2 className="w-5 h-5 animate-spin" /> : isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
               </button>
-              <button onClick={playNext} disabled={activeQueue.length === 0} className="text-text-secondary hover:text-text-primary disabled:opacity-40 transition duration-150">
+              <button 
+                onClick={(e) => { e.stopPropagation(); playNext(); }} 
+                disabled={activeQueue.length === 0} 
+                className="text-text-secondary hover:text-text-primary disabled:opacity-40 transition duration-150"
+              >
                 <SkipForward className="w-5 h-5" />
               </button>
               <button
@@ -3059,14 +4218,19 @@ function App() {
             </div>
             <div className="w-full flex items-center gap-3">
               <span className="text-[10px] text-text-secondary w-8 text-right">{formatTime(currentTime)}</span>
-              <input type="range" min="0" max={duration || 100} value={currentTime} onChange={handleSeek} disabled={!streamUrl}
-                className="flex-1 accent-brand-primary h-1 rounded-full bg-white/10 appearance-none cursor-pointer" />
+              <input 
+                type="range" min="0" max={duration || 100} value={currentTime} onChange={handleSeek} disabled={!streamUrl}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                className="flex-1 accent-brand-primary h-1 rounded-full bg-white/10 appearance-none cursor-pointer" 
+              />
               <span className="text-[10px] text-text-secondary w-8 text-left">{formatTime(duration)}</span>
             </div>
           </div>
 
-          {/* Right Volume + 3-dots */}
-          <div className="w-1/3 flex items-center justify-end gap-3">
+          {/* Right Volume + Sleep Timer + 3-dots */}
+          <div className="w-1/3 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
             {currentTrack && (
               <button 
                 onClick={(e) => { e.stopPropagation(); setContextMenuTrack(currentTrack); }} 
@@ -3075,8 +4239,74 @@ function App() {
                 <MoreVertical className="w-4 h-4" />
               </button>
             )}
+
+            {/* Repeat Mode Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setRepeatMode(prev => prev === "none" ? "all" : prev === "all" ? "one" : "none");
+              }}
+              className={`p-2 transition ${repeatMode !== "none" ? "text-brand-primary" : "text-text-secondary hover:text-text-primary"}`}
+              title={repeatMode === "none" ? "Repetición: Desactivada" : repeatMode === "one" ? "Repetición: Una canción" : "Repetición: Todo"}
+            >
+              {repeatMode === "one" ? <Repeat1 className="w-4 h-4" /> : <Repeat className="w-4 h-4" />}
+            </button>
+
+            {/* Sleep Timer Button */}
+            <div className="relative">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowSleepTimerMenu(!showSleepTimerMenu); }}
+                className={`p-2 transition relative ${sleepMode ? "text-brand-primary" : "text-text-secondary hover:text-text-primary"}`}
+                title="Sleep Timer"
+              >
+                <Moon className="w-4 h-4" />
+                {sleepMode === "time" && sleepTimerSeconds !== null && (
+                  <span className="absolute -top-1 -right-1 text-[8px] bg-brand-primary text-bg-dark rounded-full px-1 font-bold min-w-[18px] text-center leading-[14px]">
+                    {formatSleepTimer(sleepTimerSeconds)}
+                  </span>
+                )}
+                {sleepMode === "endOfTrack" && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-brand-primary rounded-full animate-pulse" />
+                )}
+              </button>
+              {showSleepTimerMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setShowSleepTimerMenu(false); }} />
+                  <div className="absolute bottom-full right-0 mb-2 w-48 glass rounded-2xl p-1.5 shadow-2xl z-50 space-y-0.5 border border-white/10" onClick={(e) => e.stopPropagation()}>
+                    <p className="text-[10px] uppercase font-bold tracking-wider text-text-secondary px-3 py-1.5">Sleep Timer</p>
+                    {[15, 30, 45, 60].map(m => (
+                      <button
+                        key={m}
+                        onClick={(e) => { e.stopPropagation(); startSleepTimer(m); }}
+                        className="w-full text-left px-3 py-2 text-xs rounded-xl transition hover:bg-brand-primary hover:text-bg-dark text-text-primary flex items-center gap-2"
+                      >
+                        <Timer className="w-3.5 h-3.5" /> {m} minutos
+                      </button>
+                    ))}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); startSleepEndOfTrack(); }}
+                      className="w-full text-left px-3 py-2 text-xs rounded-xl transition hover:bg-brand-primary hover:text-bg-dark text-text-primary flex items-center gap-2"
+                    >
+                      <Music className="w-3.5 h-3.5" /> Fin de canción actual
+                    </button>
+                    {sleepMode && (
+                      <>
+                        <div className="border-t border-white/5 my-1" />
+                        <button
+                          onClick={(e) => { e.stopPropagation(); cancelSleepTimer(); showToast("Sleep Timer cancelado"); setShowSleepTimerMenu(false); }}
+                          className="w-full text-left px-3 py-2 text-xs rounded-xl transition hover:bg-red-500/20 text-red-400 flex items-center gap-2"
+                        >
+                          <X className="w-3.5 h-3.5" /> Cancelar timer
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
             <button 
-              onClick={toggleMute}
+              onClick={(e) => { e.stopPropagation(); toggleMute(); }}
               className="text-text-secondary hover:text-text-primary transition"
             >
               {volume === 0 ? <VolumeX className="w-4 h-4 text-brand-primary" /> : <Volume2 className="w-4 h-4" />}
@@ -3084,6 +4314,9 @@ function App() {
             <input
               type="range" min="0" max="1" step="0.01" value={volume}
               onChange={(e) => setVolume(parseFloat(e.target.value))}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               className="w-24 accent-brand-secondary h-1 rounded-full bg-white/10 appearance-none cursor-pointer"
             />
           </div>
@@ -3091,7 +4324,10 @@ function App() {
 
         {/* EXPANDED FULLSCREEN PLAYER */}
         {isPlayerExpanded && currentTrack && (
-          <div className="absolute inset-0 bg-bg-dark/95 z-30 flex flex-col md:flex-row p-8 gap-8 items-center justify-start md:justify-center overflow-y-auto md:overflow-y-hidden animate-fade-in backdrop-blur-lg">
+          <div 
+            style={dynamicThemeEnabled && extractedColors ? { background: `radial-gradient(circle at center, ${extractedColors.primary}25 0%, #0c0a0f 100%)` } : {}}
+            className="absolute inset-0 bg-bg-dark/95 z-30 flex flex-col md:flex-row p-8 gap-8 items-center justify-start md:justify-center overflow-y-auto md:overflow-y-hidden animate-fade-in backdrop-blur-lg"
+          >
             <button 
               onClick={() => setIsPlayerExpanded(false)}
               className="fixed top-6 right-6 p-3 bg-white/5 hover:bg-white/10 text-white rounded-full transition z-40"
@@ -3124,6 +4360,13 @@ function App() {
 
               {/* Controls */}
               <div className="flex items-center justify-center gap-6 w-full">
+                <button
+                  onClick={() => setRepeatMode(prev => prev === "none" ? "all" : prev === "all" ? "one" : "none")}
+                  className={`p-2 transition ${repeatMode !== "none" ? "text-brand-primary" : "text-text-secondary hover:text-white"}`}
+                  title={repeatMode === "none" ? "Repetición: Desactivada" : repeatMode === "one" ? "Repetición: Una canción" : "Repetición: Todo"}
+                >
+                  {repeatMode === "one" ? <Repeat1 className="w-5 h-5" /> : <Repeat className="w-5 h-5" />}
+                </button>
                 <button onClick={() => setIsShuffle(!isShuffle)} className={`p-2 transition ${isShuffle ? "text-brand-primary" : "text-text-secondary hover:text-white"}`}>
                   <Shuffle className="w-5 h-5" />
                 </button>
@@ -3138,6 +4381,16 @@ function App() {
                 </button>
                 <button onClick={() => toggleFavorite(currentTrack)} className="p-2 text-text-secondary hover:text-brand-primary transition">
                   <Heart className={`w-5 h-5 ${isFavorite(currentTrack) ? "fill-brand-primary text-brand-primary" : ""}`} />
+                </button>
+                <button 
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    setContextMenuTrack(currentTrack); 
+                  }} 
+                  className="p-2 text-text-secondary hover:text-white transition"
+                  title="Más opciones"
+                >
+                  <MoreVertical className="w-5 h-5" />
                 </button>
               </div>
 
@@ -3173,7 +4426,6 @@ function App() {
 
               {/* Tab content */}
               <div className="flex-1 overflow-y-auto">
-                {/* QUEUE TAB */}
                 {playerTab === "queue" && (
                   <div className="p-4 space-y-1">
                     {activeQueue.length > 0 ? (
@@ -3194,7 +4446,14 @@ function App() {
                           <img src={track.thumbnail} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
                           <div className="min-w-0 flex-1">
                             <p className={`text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary font-semibold" : "font-medium"}`}>{track.title}</p>
-                            <p className="text-xs text-text-secondary truncate">{track.artist}</p>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <p className="text-xs text-text-secondary truncate">{track.artist}</p>
+                              {downloads[track.id] && (
+                                <span className="flex-shrink-0 text-brand-primary" title="Descargado localmente">
+                                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="M12 7v8M12 15l-3-3M12 15l3-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" className="text-bg-dark"/></svg>
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <span className="text-xs text-text-secondary">{formatTime(track.duration)}</span>
                         </div>
@@ -3207,52 +4466,121 @@ function App() {
 
                 {/* LYRICS TAB */}
                 {playerTab === "lyrics" && (
-                  <div className="flex flex-col h-full">
+                  <div className="flex flex-col h-full relative">
                     <div className="px-4 pt-3 pb-1 flex items-center justify-between">
-                      <span className="text-xs uppercase font-bold tracking-wider text-brand-primary">Letras de Canción</span>
-                      <div className="relative">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs uppercase font-bold tracking-wider text-brand-primary">Letras de Canción</span>
+                        {showTranslation && (
+                          <span className="text-[9px] bg-brand-primary/20 text-brand-primary px-1.5 py-0.5 rounded-full font-bold uppercase">
+                            {TRANSLATION_LANGS.find(l => l.code === translationLang)?.name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative flex items-center gap-1">
+                        {/* Translation toggle */}
+                        {translatedLyrics && (
+                          <button
+                            onClick={() => setShowTranslation(!showTranslation)}
+                            className={`p-1.5 transition text-xs font-bold rounded-lg ${showTranslation ? "text-brand-primary bg-brand-primary/10" : "text-text-secondary hover:text-brand-primary"}`}
+                            title={showTranslation ? "Ver original" : "Ver traducción"}
+                          >
+                            <Languages className="w-4 h-4" />
+                          </button>
+                        )}
+                        {/* Scroll lock toggle */}
+                        <button
+                          onClick={() => {
+                            const nextVal = !lyricsScrollLocked;
+                            setLyricsScrollLocked(nextVal);
+                            if (nextVal) {
+                              setUserScrolled(false);
+                              setTimeout(() => {
+                                syncLyricsScroll(true);
+                              }, 50);
+                            }
+                          }}
+                          className={`p-1.5 transition text-xs font-bold rounded-lg ${lyricsScrollLocked ? "text-brand-primary bg-brand-primary/10" : "text-text-secondary hover:text-brand-primary"}`}
+                          title={lyricsScrollLocked ? "Desbloquear scroll" : "Bloquear scroll en letra activa"}
+                        >
+                          {lyricsScrollLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                        </button>
+                        {translating && (
+                          <Loader2 className="w-4 h-4 text-brand-primary animate-spin" />
+                        )}
                         <button onClick={() => setLyricsMenuOpen(!lyricsMenuOpen)} className="p-1.5 text-text-secondary hover:text-brand-primary transition">
                           <MoreVertical className="w-4 h-4" />
                         </button>
                         {lyricsMenuOpen && (
-                          <div className="absolute right-0 top-full mt-1 bg-surface-dark border border-white/10 rounded-xl shadow-2xl z-10 w-44 py-1 modal-content">
+                          <div className="absolute right-0 top-full mt-1 bg-surface-dark border border-white/10 rounded-xl shadow-2xl z-10 w-52 py-1 modal-content">
                             <button onClick={copyLyrics} className="w-full text-left px-3 py-2 text-xs hover:bg-brand-primary hover:text-bg-dark rounded-lg transition flex items-center gap-2">
                               <Copy className="w-3.5 h-3.5" /> Copiar toda la letra
                             </button>
                             <button onClick={() => { if (currentTrack) fetchLyrics(currentTrack); setLyricsMenuOpen(false); }} className="w-full text-left px-3 py-2 text-xs hover:bg-brand-primary hover:text-bg-dark rounded-lg transition flex items-center gap-2">
                               <RefreshCw className="w-3.5 h-3.5" /> Recargar letras
                             </button>
+                            <div className="border-t border-white/5 my-1" />
+                            <button
+                              onClick={() => { setShowLangSelector(!showLangSelector); }}
+                              className="w-full text-left px-3 py-2 text-xs hover:bg-brand-primary hover:text-bg-dark rounded-lg transition flex items-center gap-2"
+                            >
+                              <Languages className="w-3.5 h-3.5" /> Traducir letras
+                            </button>
+                            {showLangSelector && (
+                              <div className="px-2 py-1 space-y-0.5">
+                                {TRANSLATION_LANGS.map(lang => (
+                                  <button
+                                    key={lang.code}
+                                    onClick={() => {
+                                      setTranslationLang(lang.code);
+                                      localStorage.setItem("capi_translation_lang", lang.code);
+                                      setShowLangSelector(false);
+                                      translateLyrics(lang.code);
+                                    }}
+                                    className={`w-full text-left px-3 py-1.5 text-xs rounded-lg transition flex items-center justify-between ${
+                                      translationLang === lang.code ? "bg-brand-primary/10 text-brand-primary font-bold" : "text-text-secondary hover:bg-white/5 hover:text-text-primary"
+                                    }`}
+                                  >
+                                    <span>{lang.name}</span>
+                                    {translationLang === lang.code && <span className="w-1.5 h-1.5 rounded-full bg-brand-primary" />}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
                     </div>
                     <div 
                       ref={lyricsContainerRef} 
-                      className="flex-1 overflow-y-auto p-6 scroll-smooth space-y-6 text-center text-text-secondary"
+                      onScroll={handleLyricsScroll}
+                      className={`flex-1 ${lyricsScrollLocked ? "overflow-hidden" : "overflow-y-auto"} p-6 scroll-smooth space-y-6 text-center text-text-secondary`}
                     >
-                      {parsedLyrics.length > 0 ? (
-                        parsedLyrics.map((line, idx) => (
-                          <p
-                            key={idx}
-                            id={`lyric-line-${idx}`}
-                            className={`text-lg font-bold transition duration-300 ${
-                              idx === currentLyricIndex 
-                                ? "text-brand-primary scale-105 font-extrabold" 
-                                : "opacity-40 hover:opacity-80 cursor-pointer"
-                            }`}
-                            onClick={() => {
-                              if (line.time >= 0 && audioRef.current) {
-                                audioRef.current.currentTime = line.time;
-                                setCurrentTime(line.time);
-                              }
-                            }}
-                          >
-                            {line.text || "•••"}
-                          </p>
-                        ))
-                      ) : (
-                        <p className="text-sm py-12">{lyricsText}</p>
-                      )}
+                      {(() => {
+                        const displayLyrics = showTranslation && translatedLyrics ? translatedLyrics : parsedLyrics;
+                        return displayLyrics.length > 0 ? (
+                          displayLyrics.map((line, idx) => (
+                            <p
+                              key={idx}
+                              id={`lyric-line-${idx}`}
+                              className={`text-lg font-bold transition duration-300 ${
+                                idx === currentLyricIndex 
+                                  ? "text-brand-primary scale-105 font-extrabold" 
+                                  : "opacity-40 hover:opacity-80 cursor-pointer"
+                              }`}
+                              onClick={() => {
+                                if (line.time >= 0 && audioRef.current) {
+                                  audioRef.current.currentTime = line.time;
+                                  setCurrentTime(line.time);
+                                }
+                              }}
+                            >
+                              {line.text || "•••"}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-sm py-12">{lyricsText}</p>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
@@ -3503,6 +4831,34 @@ function App() {
       {toastMessage && (
         <div className="fixed bottom-28 left-1/2 -translate-x-1/2 bg-brand-primary text-bg-dark px-6 py-3 rounded-full font-bold text-sm shadow-2xl flex items-center gap-2 z-[70] animate-fade-in border border-white/10">
           <span>{toastMessage}</span>
+        </div>
+      )}
+
+      {/* GLOBAL CONFIRMATION MODAL */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[70] modal-overlay" onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}>
+          <div className="glass p-6 rounded-2xl max-w-sm w-full border border-white/10 shadow-2xl mx-4 modal-content text-left space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-brand-primary" /> {confirmDialog.title}
+            </h3>
+            <p className="text-sm text-text-secondary leading-relaxed">
+              {confirmDialog.message}
+            </p>
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-xs font-semibold rounded-xl transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmDialog.onConfirm}
+                className="px-4 py-2 bg-brand-primary text-bg-dark hover:scale-105 active:scale-95 text-xs font-bold rounded-xl transition shadow-lg shadow-brand-primary/20"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

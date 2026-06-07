@@ -138,21 +138,27 @@ body {
 
 /* Custom scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
   background: transparent;
+  border: none;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(208, 188, 255, 0.2);
+  background: color-mix(in srgb, var(--brand-primary, #7c3aed) 20%, transparent);
   border-radius: 9999px;
+  border: none;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(208, 188, 255, 0.4);
+  background: color-mix(in srgb, var(--brand-primary, #7c3aed) 40%, transparent);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Drag handle for queue items */
