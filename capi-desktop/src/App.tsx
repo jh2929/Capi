@@ -428,6 +428,14 @@ function App() {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
+  // Seek/Volume accumulation refs for arrow-key toasts
+  const seekAccumRef = useRef<number>(0);
+  const seekAccumTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const volumeToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Netflix-style section scroll refs
+  const sectionScrollRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
   // ═══════════════════════════════════════════════════════════════
   // FEATURE 4: Sleep Timer
   // ═══════════════════════════════════════════════════════════════
@@ -661,22 +669,51 @@ function App() {
         if (e.key === "ArrowRight") {
           e.preventDefault();
           if (audioRef.current) {
-            const newTime = Math.min(audioRef.current.currentTime + 5, audioRef.current.duration || 0);
+            const STEP = 5;
+            const newTime = Math.min(audioRef.current.currentTime + STEP, audioRef.current.duration || 0);
             audioRef.current.currentTime = newTime;
             setCurrentTime(newTime);
+            // Accumulate seek
+            seekAccumRef.current += STEP;
+            if (seekAccumTimerRef.current) clearTimeout(seekAccumTimerRef.current);
+            const accumulated = seekAccumRef.current;
+            setToastMessage(`⏩ Adelantado ${accumulated}s`);
+            seekAccumTimerRef.current = setTimeout(() => {
+              seekAccumRef.current = 0;
+              setToastMessage(prev => (prev?.startsWith("⏩") ? null : prev));
+            }, 1500);
           }
         } else if (e.key === "ArrowLeft") {
           e.preventDefault();
           if (audioRef.current) {
-            const newTime = Math.max(audioRef.current.currentTime - 5, 0);
+            const STEP = 5;
+            const newTime = Math.max(audioRef.current.currentTime - STEP, 0);
             audioRef.current.currentTime = newTime;
             setCurrentTime(newTime);
+            // Accumulate seek
+            seekAccumRef.current -= STEP;
+            if (seekAccumTimerRef.current) clearTimeout(seekAccumTimerRef.current);
+            const accumulated = Math.abs(seekAccumRef.current);
+            setToastMessage(`⏪ Retrocedido ${accumulated}s`);
+            seekAccumTimerRef.current = setTimeout(() => {
+              seekAccumRef.current = 0;
+              setToastMessage(prev => (prev?.startsWith("⏪") ? null : prev));
+            }, 1500);
           }
         } else if (e.key === "ArrowUp") {
           e.preventDefault();
           setVolume(prev => {
             const newVol = Math.min(prev + 0.05, 1);
             if (audioRef.current) audioRef.current.volume = newVol;
+            const pct = Math.round(newVol * 100);
+            const bars = Math.round(newVol * 10);
+            const filled = "█".repeat(bars);
+            const empty = "░".repeat(10 - bars);
+            if (volumeToastTimerRef.current) clearTimeout(volumeToastTimerRef.current);
+            setToastMessage(`🔊 ${filled}${empty} ${pct}%`);
+            volumeToastTimerRef.current = setTimeout(() => {
+              setToastMessage(prev => (prev?.startsWith("🔊") || prev?.startsWith("🔇") ? null : prev));
+            }, 1500);
             return newVol;
           });
         } else if (e.key === "ArrowDown") {
@@ -684,6 +721,16 @@ function App() {
           setVolume(prev => {
             const newVol = Math.max(prev - 0.05, 0);
             if (audioRef.current) audioRef.current.volume = newVol;
+            const pct = Math.round(newVol * 100);
+            const emoji = newVol === 0 ? "🔇" : "🔊";
+            const bars = Math.round(newVol * 10);
+            const filled = "█".repeat(bars);
+            const empty = "░".repeat(10 - bars);
+            if (volumeToastTimerRef.current) clearTimeout(volumeToastTimerRef.current);
+            setToastMessage(`${emoji} ${filled}${empty} ${pct}%`);
+            volumeToastTimerRef.current = setTimeout(() => {
+              setToastMessage(prev => (prev?.startsWith("🔊") || prev?.startsWith("🔇") ? null : prev));
+            }, 1500);
             return newVol;
           });
         }
@@ -2337,59 +2384,97 @@ function App() {
                     </div>
                   )}
 
-                  {/* Remaining sections */}
+                  {/* Remaining sections - Netflix-style arrow navigation */}
                   {homeSections.map((section, idx) => (
                   <div key={idx} className="space-y-4 animate-fade-in">
                     <h3 className="text-lg font-bold text-text-primary border-l-4 border-brand-primary pl-2 flex items-center gap-2">
                       {getSectionIcon(section.title)} {section.title}
                     </h3>
-                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
-                      {section.items.map((item: any, i: number) => {
-                        const track = convertYTItemToTrack(item);
-                        return (
-                          <div 
-                            key={i} 
-                            onContextMenu={(e) => openContextMenu(e, track.id)}
-                            className="min-w-[200px] w-[200px] p-4 bg-surface-dark/40 hover:bg-surface-dark rounded-2xl transition border border-white/5 flex flex-col justify-between group relative"
-                          >
-                            <div>
-                              <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-black/20 shadow-md">
-                                <img src={getHighQualityThumbnail(track.thumbnail)} alt={track.title} onError={handleImageError} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-                                  <button 
-                                    onClick={() => {
-                                      if (currentTrack?.id === track.id) {
-                                        togglePlay();
-                                      } else {
-                                        playTrack(track, section.items.map(convertYTItemToTrack));
-                                      }
-                                    }}
-                                    className="w-10 h-10 rounded-full bg-brand-primary flex items-center justify-center text-bg-dark shadow hover:scale-105 transition"
+                    <div className="relative group/section">
+                      {/* Left arrow */}
+                      <button
+                        onClick={() => {
+                          const el = sectionScrollRefs.current[idx];
+                          if (el) el.scrollBy({ left: -440, behavior: "smooth" });
+                        }}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-3 z-10 w-9 h-9 rounded-full bg-surface-dark/90 border border-white/10 shadow-lg flex items-center justify-center text-white opacity-0 group-hover/section:opacity-100 transition-all hover:bg-brand-primary hover:border-brand-primary hover:text-bg-dark hover:scale-110"
+                        aria-label="Anterior"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+
+                      {/* Scrollable container (hidden scrollbar) */}
+                      <div
+                        ref={(el) => { sectionScrollRefs.current[idx] = el; }}
+                        className="flex gap-4 pb-2 overflow-x-auto"
+                        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                      >
+                        {section.items.map((item: any, i: number) => {
+                          const track = convertYTItemToTrack(item);
+                          return (
+                            <div 
+                              key={i} 
+                              onContextMenu={(e) => openContextMenu(e, track.id)}
+                              className="min-w-[200px] w-[200px] p-4 bg-surface-dark/40 hover:bg-surface-dark rounded-2xl transition border border-white/5 flex flex-col justify-between group relative"
+                            >
+                              <div>
+                                <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-black/20 shadow-md">
+                                  <img src={getHighQualityThumbnail(track.thumbnail)} alt={track.title} onError={handleImageError} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
+                                    <button 
+                                      onClick={() => {
+                                        if (currentTrack?.id === track.id) {
+                                          togglePlay();
+                                        } else {
+                                          playTrack(track, section.items.map(convertYTItemToTrack));
+                                        }
+                                      }}
+                                      className="w-10 h-10 rounded-full bg-brand-primary flex items-center justify-center text-bg-dark shadow hover:scale-105 transition"
+                                    >
+                                      {currentTrack?.id === track.id && isPlaying ? (
+                                        <Pause className="w-4 h-4 fill-current animate-fade-in" />
+                                      ) : (
+                                        <Play className="w-4 h-4 fill-current ml-0.5 animate-fade-in" />
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                                <h4 className="font-semibold text-sm truncate">{track.title}</h4>
+                                <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
+                                  <p 
+                                    onClick={() => item.artists?.[0]?.id && loadArtistProfile(item.artists[0].id)} 
+                                    className="text-xs text-text-secondary truncate cursor-pointer hover:underline"
                                   >
-                                    {currentTrack?.id === track.id && isPlaying ? (
-                                      <Pause className="w-4 h-4 fill-current animate-fade-in" />
-                                    ) : (
-                                      <Play className="w-4 h-4 fill-current ml-0.5 animate-fade-in" />
-                                    )}
-                                  </button>
+                                    {track.artist}
+                                  </p>
+                                  {downloads[track.id] && (
+                                    <span className="flex-shrink-0 text-brand-primary" title="Descargado localmente">
+                                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="M12 7v8M12 15l-3-3M12 15l3-3" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" className="text-bg-dark"/></svg>
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                              <h4 className="font-semibold text-sm truncate">{track.title}</h4>
-                              <p 
-                                onClick={() => item.artists?.[0]?.id && loadArtistProfile(item.artists[0].id)} 
-                                className="text-xs text-text-secondary truncate mt-0.5 cursor-pointer hover:underline"
-                              >
-                                {track.artist}
-                              </p>
+                              <div className="flex justify-end items-center mt-3 pt-2 border-t border-white/5">
+                                <button onClick={(e) => openContextMenu(e, track.id)} className="p-1.5 text-text-secondary hover:text-brand-primary rounded-lg transition">
+                                  <MoreVertical className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex justify-end items-center mt-3 pt-2 border-t border-white/5">
-                              <button onClick={(e) => openContextMenu(e, track.id)} className="p-1.5 text-text-secondary hover:text-brand-primary rounded-lg transition">
-                                <MoreVertical className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
+
+                      {/* Right arrow */}
+                      <button
+                        onClick={() => {
+                          const el = sectionScrollRefs.current[idx];
+                          if (el) el.scrollBy({ left: 440, behavior: "smooth" });
+                        }}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-3 z-10 w-9 h-9 rounded-full bg-surface-dark/90 border border-white/10 shadow-lg flex items-center justify-center text-white opacity-0 group-hover/section:opacity-100 transition-all hover:bg-brand-primary hover:border-brand-primary hover:text-bg-dark hover:scale-110"
+                        aria-label="Siguiente"
+                      >
+                        <ChevronLeft className="w-4 h-4 rotate-180" />
+                      </button>
                     </div>
                   </div>
                   ))}
@@ -2825,9 +2910,23 @@ function App() {
                 <div className="space-y-4">
                   {downloadedMetadata.length > 0 ? (
                     <div className="flex flex-col gap-2 w-full">
-                      {downloadedMetadata.map((track) => (
+                      {downloadedMetadata.map((track, idx) => (
                         <div 
                           key={track.id}
+                          draggable={!showSelectionMode}
+                          onDragStart={() => { if (!showSelectionMode) setDragIndex(idx); }}
+                          onDragOver={(e) => { if (!showSelectionMode) { e.preventDefault(); setDragOverIndex(idx); } }}
+                          onDrop={() => {
+                            if (showSelectionMode || dragIndex === null || dragIndex === idx) { setDragIndex(null); setDragOverIndex(null); return; }
+                            const newMetadata = [...downloadedMetadata];
+                            const [removed] = newMetadata.splice(dragIndex, 1);
+                            newMetadata.splice(idx, 0, removed);
+                            setDownloadedMetadata(newMetadata);
+                            localStorage.setItem("opentune_downloaded_metadata", JSON.stringify(newMetadata));
+                            setDragIndex(null);
+                            setDragOverIndex(null);
+                          }}
+                          onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
                           onContextMenu={(e) => openContextMenu(e, track.id)}
                           onClick={() => {
                             if (showSelectionMode) {
@@ -2838,9 +2937,12 @@ function App() {
                           }}
                           className={`p-3.5 bg-surface-dark/30 hover:bg-surface-dark/70 rounded-xl flex items-center justify-between border w-full transition duration-150 cursor-pointer ${
                             selectedTrackIds.has(track.id) ? "border-brand-primary/40 bg-brand-primary/5" : "border-white/5"
-                          }`}
+                          } ${!showSelectionMode && dragIndex === idx ? "dragging-queue-item" : ""} ${!showSelectionMode && dragOverIndex === idx ? "drag-over-queue-item" : ""}`}
                         >
                           <div className="flex items-center gap-3 min-w-0 flex-1">
+                            {!showSelectionMode && (
+                              <GripVertical className="w-4 h-4 text-text-secondary/50 drag-handle flex-shrink-0" />
+                            )}
                             {showSelectionMode && (
                               <div 
                                 onClick={(e) => { e.stopPropagation(); handleSelectTrack(track.id); }}
@@ -3134,7 +3236,14 @@ function App() {
                                   <img src={getHighQualityThumbnail(track.thumbnail)} className="w-10 h-10 rounded-lg object-cover" />
                                   <div className="min-w-0">
                                     <p className="font-semibold text-sm truncate">{track.title}</p>
-                                    <p className="text-xs text-text-secondary truncate">{track.artist}</p>
+                                    <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
+                                      <p className="text-xs text-text-secondary truncate">{track.artist}</p>
+                                      {downloads[track.id] && (
+                                        <span className="flex-shrink-0 text-brand-primary" title="Descargado localmente">
+                                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="M12 7v8M12 15l-3-3M12 15l3-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" className="text-bg-dark"/></svg>
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
