@@ -20,10 +20,10 @@ El desarrollo comenzó con una meta ambiciosa. Gracias a una arquitectura limpia
 
 | Característica / Función | Capi 🐾 | Spotify 🟢 | YouTube Music (Web) 🔴 | Deezer 🟣 |
 | :--- | :---: | :---: | :---: | :---: |
-| **Consumo de Memoria RAM** | **Muy bajo (<80MB)** | Alto (>300MB) | Alto (pestaña de navegador) | Alto (>250MB) |
+| **Consumo de Memoria RAM** | **Muy bajo (<130MB)** | Alto (>300MB) | Alto (pestaña de navegador) | Alto (>250MB) |
 | **Bloqueo Automático de Anuncios** | **Sí (Nativo)** | No (Requiere Premium) | No (Requiere Premium) | No (Requiere Premium) |
 | **Descarga Física Directa (M4A)** | **Sí (Gratuito/Nativo)** | Solo Caché Encriptado | Solo Móvil / Encriptado | Solo Encriptado |
-| **Bypass de Restricciones (PO-Tokens)** | **Sí (Docker Sidecar)** | N/A | No | N/A |
+| **Bypass de Restricciones (PO-Tokens)** | **Sí (Integrado/Automático)** | N/A | No | N/A |
 | **Temas Visuales Ilimitados** | **Sí (Ultra Dark, Midnight, etc.)** | No | No (Solo Oscuro) | Limitado |
 | **Letras Sincronizadas en Tiempo Real** | **Sí (Integración LrcLib)** | Sí | Sí | Sí |
 | **Comunidad y Código Abierto** | **Sí (GPL-3.0)** | No (Propietario) | No (Propietario) | No (Propietario) |
@@ -33,45 +33,29 @@ El desarrollo comenzó con una meta ambiciosa. Gracias a una arquitectura limpia
 
 ## 🎨 Características Principales
 
-* **Reproducción Instantánea y Caché Inteligente**: Proxy TCP integrado en Rust para entregar el stream de audio sin problemas de TLS o bloqueos del navegador.
-* **Carrusel de Novedades y Quick Picks**: Un banner animado en la pantalla de inicio con transiciones fluidas de 4 segundos y control gestual para acceder rápidamente a lo destacado del momento.
-* **Gestor de Descargas Avanzado**: Descarga tus canciones favoritas directamente a formato M4A. Cancela, monitorea el porcentaje y gestiona el ancho de banda desde una pestaña dedicada con un botón animado en el Header.
-* **Letras Dinámicas**: Integración automática con servidores de letras para mostrar textos sincronizados mientras escuchas tus canciones.
-* **Navegación Histórica Localizada**: Botones de retroceso y avance dinámicos que aparecen únicamente cuando navegas en sub-secciones (como álbumes o perfiles de artistas).
-* **Temas CSS Personalizados**: Cambia al instante la apariencia de la app desde los ajustes a temas como *Ultra Dark* (negro puro), *Light Mode* (claro limpio), *Midnight Blue* (azul medianoche) o *Forest Green* (verde bosque).
-* **Perfil de Usuario**: Sube tu propia foto de perfil (se procesa y almacena localmente en Base64 en el almacenamiento seguro de tu sistema) y define tu nombre de usuario personalizado.
-* **Buscador Inteligente**: Barra de búsqueda predictiva que admite navegación a través de flechas de dirección y teclado, con limpieza instantánea al clicar la "X".
-* **Compartir Enlaces**: Copia directamente al portapapeles el enlace de la canción para compartirlo con un solo clic desde el menú contextual.
+*   **Reproducción Instantánea y Caché Inteligente**: Proxy TCP integrado en Rust para entregar el stream de audio sin problemas de TLS o bloqueos del navegador.
+*   **Modo Biblioteca Local**: Escaneo y reproducción directa de directorios locales desde el explorador de archivos nativo para formatos de audio `.mp3`, `.wav`, `.m4a`, `.ogg`, `.flac` y `.aac`.
+*   **Gestor de Descargas Avanzado**: Descarga tus canciones favoritas directamente a formato M4A. Cancela, monitorea el progreso en tiempo real y gestiona tus pistas desde una pestaña dedicada con un botón animado en el Header.
+*   **Letras Dinámicas con Traducción**: Integración automática con servidores de letras para mostrar textos sincronizados y opción de traducción en tiempo real, junto con un candado de bloqueo/desbloqueo de scroll manual.
+*   **Estadísticas de Escucha e Historial**: Tarjetas visuales de uso, gráfico de Top Artistas no completado en su totalidad para mejor estética, y opción de exportación/importación en formato JSON.
+*   **Confirmaciones Modales Globales**: Modales modernos e integrados que reemplazan los clásicos cuadros de confirmación del navegador para vaciar historiales o resetear datos.
+*   **Temas CSS Personalizados**: Cambia al instante la apariencia de la app desde los ajustes a temas como *Ultra Dark* (negro puro), *Light Mode* (claro limpio), *Midnight Blue* (azul medianoche) o *Forest Green* (verde bosque).
+*   **Perfil de Usuario**: Sube tu propia foto de perfil (se procesa y almacena localmente en Base64) y define tu nombre de usuario personalizado.
+*   **Buscador Inteligente**: Barra de búsqueda predictiva que admite navegación a través de flechas de dirección con botón sticky integrado para vaciar el historial.
+*   **Inicio de Sistema (Boot Option)**: Switch en configuraciones para permitir que Capi inicie de manera automática al arrancar el equipo.
 
 ---
 
-## 🚀 Requisitos e Instalación
+## 🚀 Descarga e Instalación
 
-### Requisitos previos
-* **Rust & Cargo** (v1.75 o superior)
-* **Node.js & npm**
-* **Java JDK 21** (GraalVM recomendado para compilar el daemon nativo)
-* **Docker** (opcional, para el sidecar de generación de PO-Tokens genuinos)
+**No necesitas realizar ninguna compilación técnica, instalar Java ni usar comandos de Docker.** Capi se distribuye como una aplicación compilada lista para usar.
 
-### Instrucciones de ejecución
-
-1. Clona este repositorio:
+1. Descarga el archivo ejecutable correspondiente a tu sistema operativo (Linux, Windows o macOS) desde la sección de **Releases** en este repositorio.
+2. Si estás en Linux, otorga permisos de ejecución al binario:
    ```bash
-   git clone https://github.com/jh2929/Capi.git
-   cd Capi
+   chmod +x Capi-Desktop
    ```
-
-2. Compila el daemon de Kotlin:
-   ```bash
-   ./gradlew :capi-core:installDist
-   ```
-
-3. Ejecuta la aplicación en modo desarrollo:
-   ```bash
-   cd capi-desktop
-   npm install
-   npm run tauri dev
-   ```
+3. Haz doble clic en el archivo ejecutable y ¡disfruta de tu música!
 
 ---
 
