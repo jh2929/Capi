@@ -365,7 +365,14 @@ function App() {
   const [downloads, setDownloads] = useState<Record<string, string>>(() => {
     migrateKey("opentune_downloads", "capi_downloads");
     const saved = localStorage.getItem("capi_downloads");
-    return saved ? JSON.parse(saved) : {};
+    if (!saved) return {};
+    const parsed: Record<string, string> = JSON.parse(saved);
+    // Migrate old paths from Opentune/ to Capi/
+    for (const key of Object.keys(parsed)) {
+      parsed[key] = parsed[key].replace("/Opentune/", "/Capi/");
+    }
+    localStorage.setItem("capi_downloads", JSON.stringify(parsed));
+    return parsed;
   });
   const [downloadedMetadata, setDownloadedMetadata] = useState<Track[]>(() => {
     migrateKey("opentune_downloaded_metadata", "capi_downloaded_metadata");
@@ -533,6 +540,8 @@ function App() {
 
   // Repeat mode and manual lyrics scroll states
   const [repeatMode, setRepeatMode] = useState<"none" | "one" | "all">("none");
+  const [settingsCategory, setSettingsCategory] = useState<string>("apariencia");
+  const [showPayPalModal, setShowPayPalModal] = useState(false);
   const ignoreNextScrollRef = useRef(false);
   const [lyricsScrollLocked, setLyricsScrollLocked] = useState(true);
   const [downloadDragIndex, setDownloadDragIndex] = useState<number | null>(null);
@@ -652,6 +661,99 @@ function App() {
     e.target.value = "";
   };
 
+  const exportGlobalBackup = () => {
+    const payload: Record<string, string> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("capi_")) {
+        payload[key] = localStorage.getItem(key)!;
+      }
+    }
+    const data = { version: 1, exportedAt: new Date().toISOString(), data: payload };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `capi_backup_${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("Copia de seguridad exportada correctamente");
+  };
+
+  const importGlobalBackup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (!parsed.data) {
+          showToast("Error: Archivo de copia no válido");
+          return;
+        }
+
+        let tracksToDownload: Track[] = [];
+        if (parsed.data["capi_downloaded_metadata"]) {
+          try { tracksToDownload = JSON.parse(parsed.data["capi_downloaded_metadata"]) as Track[]; } catch (e) {}
+        }
+
+        for (const [key, value] of Object.entries(parsed.data)) {
+          localStorage.setItem(key as string, value as string);
+        }
+
+        if (parsed.data["capi_favorites"]) {
+          try { setFavorites(JSON.parse(parsed.data["capi_favorites"])); } catch (e) {}
+        }
+        if (parsed.data["capi_playlists"]) {
+          try { setPlaylists(JSON.parse(parsed.data["capi_playlists"])); } catch (e) {}
+        }
+        if (parsed.data["capi_history"]) {
+          try { setHistory(JSON.parse(parsed.data["capi_history"])); } catch (e) {}
+        }
+        if (parsed.data["capi_listening_stats"]) {
+          try { setListeningStats(JSON.parse(parsed.data["capi_listening_stats"])); } catch (e) {}
+        }
+        if (parsed.data["capi_downloaded_metadata"]) {
+          try { setDownloadedMetadata(JSON.parse(parsed.data["capi_downloaded_metadata"])); } catch (e) {}
+        }
+        if (parsed.data["capi_theme"]) {
+          setTheme(parsed.data["capi_theme"] as string);
+        }
+        if (parsed.data["capi_locale"]) {
+          setLocale(parsed.data["capi_locale"] as Locale);
+        }
+        if (parsed.data["capi_accent_color"]) {
+          setAccentColor(parsed.data["capi_accent_color"] as string);
+        }
+        if (parsed.data["capi_username"]) {
+          setCapiUsername(parsed.data["capi_username"] as string);
+        }
+        if (parsed.data["capi_user_avatar"]) {
+          setCapiAvatar(parsed.data["capi_user_avatar"] as string);
+        }
+
+        setDownloads({});
+        setDownloadedMetadata(tracksToDownload);
+
+        if (tracksToDownload.length > 0) {
+          showToast(`Restaurando copia. Re-descargando ${tracksToDownload.length} canciones...`);
+          for (let i = 0; i < tracksToDownload.length; i++) {
+            await downloadTrack(tracksToDownload[i]);
+          }
+          showToast("Copia restaurada y descargas completadas");
+        } else {
+          showToast("Copia de seguridad restaurada correctamente");
+        }
+      } catch (err) {
+        showToast("Error al procesar el archivo JSON");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
   useEffect(() => {
     const unlisten = listen<{ track_id: string; progress: number }>("download-progress", (event) => {
       const trackId = event.payload.track_id;
@@ -734,7 +836,10 @@ function App() {
         togglePlay();
       }
 
-      if (e.shiftKey && e.key === "ArrowRight") {
+      if (e.shiftKey && e.key === "ArrowUp") {
+        e.preventDefault();
+        setIsPlayerExpanded(true);
+      } else if (e.shiftKey && e.key === "ArrowRight") {
         e.preventDefault();
         playNext();
       } else if (e.shiftKey && e.key === "ArrowLeft") {
@@ -2262,9 +2367,19 @@ function App() {
   };
 
   // Queue drag and drop handlers
-  const handleDragStart = (idx: number) => { setDragIndex(idx); };
-  const handleDragOver = (e: React.DragEvent, idx: number) => { e.preventDefault(); setDragOverIndex(idx); };
-  const handleDrop = (idx: number) => {
+  const handleDragStart = (e: React.DragEvent, idx: number) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(idx));
+    setDragIndex(idx);
+  };
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(idx);
+  };
+  const handleDrop = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (dragIndex === null || dragIndex === idx) { setDragIndex(null); setDragOverIndex(null); return; }
     const newQueue = [...activeQueue];
     const [removed] = newQueue.splice(dragIndex, 1);
@@ -3509,8 +3624,10 @@ function App() {
                         <div 
                           key={track.id}
                           draggable={!showSelectionMode}
-                          onDragStart={() => {
+                          onDragStart={(e) => {
                             if (!showSelectionMode) {
+                              e.dataTransfer.effectAllowed = 'move';
+                              e.dataTransfer.setData('text/plain', String(idx));
                               setDownloadDragIndex(idx);
                               downloadDragIndexRef.current = idx;
                             }
@@ -3518,10 +3635,13 @@ function App() {
                           onDragOver={(e) => {
                             if (!showSelectionMode) {
                               e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
                               setDownloadDragOverIndex(idx);
                             }
                           }}
-                          onDrop={() => {
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             const startIdx = downloadDragIndexRef.current;
                             if (showSelectionMode || startIdx === null || startIdx === idx) {
                               setDownloadDragIndex(null);
@@ -4468,474 +4588,630 @@ function App() {
 
           {/* CONFIGURATION / SETTINGS VIEW */}
           {activeTab === "settings" && (
-            <div className="space-y-6 max-w-2xl animate-fade-in text-left">
-              <div>
+            <div className="animate-fade-in text-left h-full flex flex-col">
+              <div className="mb-6 flex-shrink-0">
                 <h2 className="text-2xl font-bold tracking-tight mb-2">Configuración</h2>
                 <p className="text-sm text-text-secondary">Personaliza el comportamiento y visualización de la aplicación.</p>
               </div>
 
-              <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-6 space-y-6">
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <div>
-                    <h3 className="font-semibold text-sm text-text-primary">Modo de búsqueda por defecto</h3>
-                    <p className="text-xs text-text-secondary mt-1">Elige cómo se muestran los resultados al realizar una búsqueda.</p>
-                  </div>
-                  <div className="flex bg-white/5 p-1 rounded-xl">
+              <div className="flex-1 grid grid-cols-[200px_1fr] gap-6 overflow-hidden min-h-0">
+                {/* Left sidebar — category navigation */}
+                <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-2 space-y-1 h-fit sticky top-0">
+                  {[
+                    { id: "apariencia", label: "Apariencia" },
+                    { id: "reproduccion", label: "Reproducción" },
+                    { id: "general", label: "General" },
+                    { id: "datos", label: "Datos" },
+                    { id: "acerca-de", label: "Acerca de" },
+                  ].map((cat) => (
                     <button
-                      onClick={() => {
-                        setSearchViewMode("list");
-                        localStorage.setItem("capi_default_search_view", "list");
-                      }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                        searchViewMode === "list" ? "bg-brand-primary text-bg-dark" : "text-text-secondary hover:text-text-primary"
+                      key={cat.id}
+                      onClick={() => setSettingsCategory(cat.id)}
+                      className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition flex items-center gap-2 ${
+                        settingsCategory === cat.id
+                          ? "bg-brand-primary/20 text-brand-primary"
+                          : "text-text-secondary hover:text-text-primary hover:bg-white/5"
                       }`}
                     >
-                      Lista
+                      {cat.label}
                     </button>
-                    <button
-                      onClick={() => {
-                        setSearchViewMode("grid");
-                        localStorage.setItem("capi_default_search_view", "grid");
-                      }}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                        searchViewMode === "grid" ? "bg-brand-primary text-bg-dark" : "text-text-secondary hover:text-text-primary"
-                      }`}
-                    >
-                      Cuadrícula
-                    </button>
-                  </div>
+                  ))}
                 </div>
 
-                {/* Custom Interactive Theme Dropdown */}
-                {/* Custom Searchable Language Dropdown */}
-                <div className="flex items-center justify-between border-b border-white/5 pb-4 relative z-40">
-                  <div>
-                    <h3 className="font-semibold text-sm text-text-primary flex items-center gap-2">
-                      <Languages className="w-4 h-4 text-brand-primary" /> {T("select_language")}
-                    </h3>
-                    <p className="text-xs text-text-secondary mt-1">Elige el idioma de la interfaz.</p>
-                  </div>
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowLangDropdown(!showLangDropdown)}
-                      className="glass px-4 py-2 rounded-xl text-xs font-semibold text-text-primary flex items-center gap-2 hover:scale-105 active:scale-95 transition border border-white/10"
-                    >
-                      <span>{LOCALE_NAMES[locale]}</span>
-                      <ChevronLeft className={`w-3 h-3 transition-transform duration-200 ${showLangDropdown ? "-rotate-90" : "rotate-180"}`} />
-                    </button>
-                    {showLangDropdown && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => { setShowLangDropdown(false); setLangSearchQuery(""); }} />
-                        <div className="absolute right-0 mt-2 w-56 glass rounded-2xl p-2 shadow-2xl z-20 flex flex-col border border-white/10">
-                          {/* Search bar */}
-                          <div className="p-1">
-                            <input 
-                              type="text" 
-                              placeholder="Buscar idioma..." 
-                              value={langSearchQuery} 
-                              onChange={(e) => setLangSearchQuery(e.target.value)} 
-                              className="w-full px-2.5 py-1.5 text-xs bg-neutral-100 dark:bg-white/5 border border-neutral-300 dark:border-white/10 rounded-lg text-text-primary placeholder-text-secondary focus:outline-none focus:border-brand-primary"
-                            />
-                          </div>
-                          
-                          {/* Options container with scrolling */}
-                          <div className="max-h-48 overflow-y-auto space-y-0.5 mt-1 pr-0.5">
-                            {Object.entries(LOCALE_NAMES)
-                              .filter(([, name]) => name.toLowerCase().includes(langSearchQuery.toLowerCase()))
-                              .map(([code, name]) => (
-                                <button
-                                  key={code}
-                                  onClick={() => {
-                                    setLocale(code as Locale);
-                                    localStorage.setItem("capi_locale", code);
-                                    setShowLangDropdown(false);
-                                    setLangSearchQuery("");
-                                    showToast(`Idioma: ${name}`);
-                                  }}
-                                  className={`w-full text-left px-3 py-2 text-xs rounded-xl transition flex items-center justify-between ${
-                                    locale === code ? "bg-brand-primary text-bg-dark font-bold" : "text-text-primary hover:bg-white/5"
-                                  }`}
-                                >
-                                  <span>{name}</span>
-                                  {locale === code && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
-                                </button>
-                              ))}
-                            {Object.entries(LOCALE_NAMES).filter(([, name]) => name.toLowerCase().includes(langSearchQuery.toLowerCase())).length === 0 && (
-                              <div className="text-[10px] text-text-secondary text-center py-2">Sin resultados</div>
-                            )}
-                          </div>
+                {/* Right panel — category content */}
+                <div className="bg-surface-dark/40 border border-white/5 rounded-2xl p-6 space-y-6 overflow-y-auto">
+                  {/* === APARIENCIA === */}
+                  {settingsCategory === "apariencia" && (
+                    <>
+                      {/* Language */}
+                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div>
+                          <h3 className="font-semibold text-sm text-text-primary flex items-center gap-2">
+                            <Languages className="w-4 h-4 text-brand-primary" /> {T("select_language")}
+                          </h3>
+                          <p className="text-xs text-text-secondary mt-1">Elige el idioma de la interfaz.</p>
                         </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between border-b border-white/5 pb-4 relative z-30">
-                  <div>
-                    <h3 className="font-semibold text-sm text-text-primary">Tema Visual</h3>
-                    <p className="text-xs text-text-secondary mt-1">Elige el tema de colores para la interfaz de Capi.</p>
-                  </div>
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowThemeDropdown(!showThemeDropdown)}
-                      className="glass px-4 py-2 rounded-xl text-xs font-semibold text-text-primary flex items-center gap-2 hover:scale-105 active:scale-95 transition border border-white/10"
-                    >
-                      {theme === "capi-default" && "Capi Default"}
-                      {theme === "ultra-dark" && "Ultra Dark"}
-                      {theme === "light-mode" && "Light Mode"}
-                      {theme === "midnight-blue" && "Midnight Blue"}
-                      {theme === "forest-green" && "Forest Green"}
-                      <ChevronLeft className={`w-3 h-3 transition-transform duration-200 ${showThemeDropdown ? "-rotate-90" : "rotate-180"}`} />
-                    </button>
-                    {showThemeDropdown && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => setShowThemeDropdown(false)} />
-                        <div className="absolute right-0 mt-2 w-48 glass rounded-2xl p-1.5 shadow-2xl z-20 space-y-0.5 border border-white/10">
-                          {[
-                            { id: "capi-default", name: "Capi Default" },
-                            { id: "ultra-dark", name: "Ultra Dark" },
-                            { id: "light-mode", name: "Light Mode" },
-                            { id: "midnight-blue", name: "Midnight Blue" },
-                            { id: "forest-green", name: "Forest Green" }
-                          ].map((t) => (
-                            <button
-                              key={t.id}
-                              onClick={() => {
-                                setTheme(t.id);
-                                localStorage.setItem("capi_theme", t.id);
-                                setShowThemeDropdown(false);
-                              }}
-                              className={`w-full text-left px-3 py-2 text-xs rounded-xl transition flex items-center justify-between ${
-                                theme === t.id ? "bg-brand-primary text-bg-dark font-bold" : "text-text-primary hover:bg-white/5"
-                              }`}
-                            >
-                              <span>{t.name}</span>
-                              {theme === t.id && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
-                            </button>
-                          ))}
+                        <div className="relative">
+                          <button
+                            onClick={() => setShowLangDropdown(!showLangDropdown)}
+                            className="glass px-4 py-2 rounded-xl text-xs font-semibold text-text-primary flex items-center gap-2 hover:scale-105 active:scale-95 transition border border-white/10"
+                          >
+                            <span>{LOCALE_NAMES[locale]}</span>
+                            <ChevronLeft className={`w-3 h-3 transition-transform duration-200 ${showLangDropdown ? "-rotate-90" : "rotate-180"}`} />
+                          </button>
+                          {showLangDropdown && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={() => { setShowLangDropdown(false); setLangSearchQuery(""); }} />
+                              <div className="absolute right-0 mt-2 w-56 glass rounded-2xl p-2 shadow-2xl z-20 flex flex-col border border-white/10">
+                                <div className="p-1">
+                                  <input 
+                                    type="text" 
+                                    placeholder="Buscar idioma..." 
+                                    value={langSearchQuery} 
+                                    onChange={(e) => setLangSearchQuery(e.target.value)} 
+                                    className="w-full px-2.5 py-1.5 text-xs bg-neutral-100 dark:bg-white/5 border border-neutral-300 dark:border-white/10 rounded-lg text-text-primary placeholder-text-secondary focus:outline-none focus:border-brand-primary"
+                                  />
+                                </div>
+                                <div className="max-h-48 overflow-y-auto space-y-0.5 mt-1 pr-0.5">
+                                  {Object.entries(LOCALE_NAMES)
+                                    .filter(([, name]) => name.toLowerCase().includes(langSearchQuery.toLowerCase()))
+                                    .map(([code, name]) => (
+                                      <button
+                                        key={code}
+                                        onClick={() => {
+                                          setLocale(code as Locale);
+                                          localStorage.setItem("capi_locale", code);
+                                          setShowLangDropdown(false);
+                                          setLangSearchQuery("");
+                                          showToast(`Idioma: ${name}`);
+                                        }}
+                                        className={`w-full text-left px-3 py-2 text-xs rounded-xl transition flex items-center justify-between ${
+                                          locale === code ? "bg-brand-primary text-bg-dark font-bold" : "text-text-primary hover:bg-white/5"
+                                        }`}
+                                      >
+                                        <span>{name}</span>
+                                        {locale === code && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+                                      </button>
+                                    ))}
+                                  {Object.entries(LOCALE_NAMES).filter(([, name]) => name.toLowerCase().includes(langSearchQuery.toLowerCase())).length === 0 && (
+                                    <div className="text-[10px] text-text-secondary text-center py-2">Sin resultados</div>
+                                  )}
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Custom Accent Color Dropdown */}
-                <div className="flex items-center justify-between border-b border-white/5 pb-4 relative z-20">
-                  <div>
-                    <h3 className="font-semibold text-sm text-text-primary">Color de Acento</h3>
-                    <p className="text-xs text-text-secondary mt-1">Elige un color de acento personalizado para la interfaz.</p>
-                  </div>
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowAccentDropdown(!showAccentDropdown)}
-                      className="glass px-4 py-2 rounded-xl text-xs font-semibold text-text-primary flex items-center gap-2 hover:scale-105 active:scale-95 transition border border-white/10"
-                    >
-                      <span 
-                        className="w-3.5 h-3.5 rounded-full inline-block border border-white/10"
-                        style={{ backgroundColor: accentColor === "custom" ? (localStorage.getItem("capi_custom_accent_color") || "#7c3aed") : (theme === "light-mode" ? 
-                          (ACCENT_COLORS.find(c => c.id === accentColor)?.light || ACCENT_COLORS[0].light) : 
-                          (ACCENT_COLORS.find(c => c.id === accentColor)?.dark || ACCENT_COLORS[0].dark) 
-                        )}}
-                      />
-                      <span>{accentColor === "custom" ? "Custom" : (ACCENT_COLORS.find(c => c.id === accentColor)?.name || "Púrpura")}</span>
-                      <ChevronLeft className={`w-3 h-3 transition-transform duration-200 ${showAccentDropdown ? "-rotate-90" : "rotate-180"}`} />
-                    </button>
-                    {showAccentDropdown && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => { setShowAccentDropdown(false); setAccentSearchQuery(""); }} />
-                        <div className="absolute right-0 mt-2 w-56 glass rounded-2xl p-2 shadow-2xl z-20 flex flex-col border border-white/10">
-                          {/* Search bar */}
-                          <div className="p-1">
-                            <input 
-                              type="text" 
-                              placeholder="Buscar color..." 
-                              value={accentSearchQuery} 
-                              onChange={(e) => setAccentSearchQuery(e.target.value)} 
-                              className="w-full px-2.5 py-1.5 text-xs bg-neutral-100 dark:bg-white/5 border border-neutral-300 dark:border-white/10 rounded-lg text-text-primary placeholder-text-secondary focus:outline-none focus:border-brand-primary"
-                            />
-                          </div>
-                          
-                          {/* Options container with scrolling */}
-                          <div className="max-h-48 overflow-y-auto space-y-0.5 mt-1 pr-0.5">
-                            {ACCENT_COLORS.filter(c => c.name.toLowerCase().includes(accentSearchQuery.toLowerCase())).map((c) => (
-                              <button
-                                key={c.id}
-                                onClick={() => {
-                                  setAccentColor(c.id);
-                                  localStorage.setItem("capi_accent_color", c.id);
-                                  setShowAccentDropdown(false);
-                                  setAccentSearchQuery("");
-                                }}
-                                className={`w-full text-left px-3 py-2 text-xs rounded-xl transition flex items-center gap-3 ${
-                                  accentColor === c.id ? "bg-brand-primary text-bg-dark font-bold" : "text-text-primary hover:bg-white/5"
-                                }`}
-                              >
-                                <span 
-                                  className="w-3.5 h-3.5 rounded-full border border-white/10 flex-shrink-0"
-                                  style={{ backgroundColor: theme === "light-mode" ? c.light : c.dark }}
-                                />
-                                <span className="flex-1">{c.name}</span>
-                                {accentColor === c.id && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
-                              </button>
-                            ))}
-                            {ACCENT_COLORS.filter(c => c.name.toLowerCase().includes(accentSearchQuery.toLowerCase())).length === 0 && (
-                              <div className="text-[10px] text-text-secondary text-center py-2">Sin resultados</div>
-                            )}
-                          </div>
-                          
-                          {/* Elegir Custom option */}
-                          <div className="border-t border-white/10 mt-1.5 pt-1.5">
-                            <button
-                              onClick={() => {
-                                colorInputRef.current?.click();
-                                setShowAccentDropdown(false);
-                                setAccentSearchQuery("");
-                              }}
-                              className={`w-full text-left px-3 py-2 text-xs rounded-xl transition flex items-center gap-3 ${
-                                accentColor === "custom" ? "bg-brand-primary text-bg-dark font-bold" : "text-text-primary hover:bg-white/5"
-                              }`}
-                            >
-                              <span 
-                                className="w-3.5 h-3.5 rounded-full border border-white/10 flex-shrink-0 bg-gradient-to-tr from-red-500 via-green-500 to-blue-500"
-                              />
-                              <span className="flex-1">Elegir Custom...</span>
-                              {accentColor === "custom" && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                    <input 
-                      type="color" 
-                      ref={colorInputRef} 
-                      className="absolute opacity-0 pointer-events-none w-0 h-0" 
-                      onChange={(e) => handleCustomColorChange(e.target.value)} 
-                    />
-                  </div>
-                </div>
-
-                {/* Dynamic Theme Toggle */}
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <div>
-                    <h3 className="font-semibold text-sm text-text-primary flex items-center gap-2">
-                      <Palette className="w-4 h-4 text-brand-primary" /> Tema dinámico
-                    </h3>
-                    <p className="text-xs text-text-secondary mt-1">Extrae los colores dominantes de la portada del álbum y los aplica como tema automáticamente.</p>
-                    {dynamicThemeEnabled && extractedColors && (
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className="text-[10px] text-text-secondary uppercase tracking-wider">Colores activos:</span>
-                        <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: extractedColors.primary }} />
-                        <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: extractedColors.secondary }} />
-                        <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: extractedColors.tertiary }} />
                       </div>
-                    )}
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={dynamicThemeEnabled} 
-                      onChange={(e) => {
-                        const val = e.target.checked;
-                        setDynamicThemeEnabled(val);
-                        localStorage.setItem("capi_dynamic_theme", String(val));
-                        if (!val) {
-                          // Re-apply manual accent color
-                          setExtractedColors(null);
-                          const root = document.documentElement;
-                          if (accentColor === "custom") {
-                            const customColor = localStorage.getItem("capi_custom_accent_color") || "#7c3aed";
-                            root.style.setProperty('--brand-primary', customColor);
-                            root.style.setProperty('--brand-secondary', customColor + "dd");
-                            root.style.setProperty('--brand-tertiary', customColor + "aa");
-                          } else {
-                            const isLight = theme === "light-mode";
-                            const colorObj = ACCENT_COLORS.find(c => c.id === accentColor) || ACCENT_COLORS[0];
-                            root.style.setProperty('--brand-primary', isLight ? colorObj.light : colorObj.dark);
-                            root.style.setProperty('--brand-secondary', isLight ? colorObj.lightSec : colorObj.darkSec);
-                            root.style.setProperty('--brand-tertiary', isLight ? colorObj.lightTert : colorObj.darkTert);
-                          }
-                        } else if (currentTrack) {
-                          extractColorsFromImage(getHighQualityThumbnail(currentTrack.thumbnail));
-                        }
-                      }}
-                      className="sr-only peer" 
-                    />
-                    <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
-                  </label>
-                </div>
 
-                {/* Discord Rich Presence Toggle */}
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <div>
-                    <h3 className="font-semibold text-sm text-text-primary flex items-center gap-2">
-                      Discord Rich Presence
-                      {discordEnabled && (
-                        <span className={`inline-block w-2 h-2 rounded-full ${discordConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} title={discordConnected ? "Conectado a Discord" : "Buscando/Cargando Discord"} />
-                      )}
-                    </h3>
-                    <p className="text-xs text-text-secondary mt-1">Muestra la canción que estás escuchando en tu estado de Discord en tiempo real.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={discordEnabled} 
-                      onChange={(e) => {
-                        setDiscordEnabled(e.target.checked);
-                      }}
-                      className="sr-only peer" 
-                    />
-                    <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
-                  </label>
-                </div>
+                      {/* Theme */}
+                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div>
+                          <h3 className="font-semibold text-sm text-text-primary">Tema Visual</h3>
+                          <p className="text-xs text-text-secondary mt-1">Elige el tema de colores para la interfaz de Capi.</p>
+                        </div>
+                        <div className="relative">
+                          <button
+                            onClick={() => setShowThemeDropdown(!showThemeDropdown)}
+                            className="glass px-4 py-2 rounded-xl text-xs font-semibold text-text-primary flex items-center gap-2 hover:scale-105 active:scale-95 transition border border-white/10"
+                          >
+                            {theme === "capi-default" && "Capi Default"}
+                            {theme === "ultra-dark" && "Ultra Dark"}
+                            {theme === "light-mode" && "Light Mode"}
+                            {theme === "midnight-blue" && "Midnight Blue"}
+                            {theme === "forest-green" && "Forest Green"}
+                            <ChevronLeft className={`w-3 h-3 transition-transform duration-200 ${showThemeDropdown ? "-rotate-90" : "rotate-180"}`} />
+                          </button>
+                          {showThemeDropdown && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={() => setShowThemeDropdown(false)} />
+                              <div className="absolute right-0 mt-2 w-48 glass rounded-2xl p-1.5 shadow-2xl z-20 space-y-0.5 border border-white/10">
+                                {[
+                                  { id: "capi-default", name: "Capi Default" },
+                                  { id: "ultra-dark", name: "Ultra Dark" },
+                                  { id: "light-mode", name: "Light Mode" },
+                                  { id: "midnight-blue", name: "Midnight Blue" },
+                                  { id: "forest-green", name: "Forest Green" }
+                                ].map((t) => (
+                                  <button
+                                    key={t.id}
+                                    onClick={() => {
+                                      setTheme(t.id);
+                                      localStorage.setItem("capi_theme", t.id);
+                                      setShowThemeDropdown(false);
+                                    }}
+                                    className={`w-full text-left px-3 py-2 text-xs rounded-xl transition flex items-center justify-between ${
+                                      theme === t.id ? "bg-brand-primary text-bg-dark font-bold" : "text-text-primary hover:bg-white/5"
+                                    }`}
+                                  >
+                                    <span>{t.name}</span>
+                                    {theme === t.id && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+                                  </button>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
 
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <div>
-                    <h3 className="font-semibold text-sm text-text-primary">Ocultar acceso directo de ajustes de la barra lateral</h3>
-                    <p className="text-xs text-text-secondary mt-1">Oculta el botón de configuración de la barra lateral, manteniendo el del perfil visible.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={!showSidebarSettings} 
-                      onChange={(e) => {
-                        const val = !e.target.checked;
-                        setShowSidebarSettings(val);
-                        localStorage.setItem("capi_show_sidebar_settings", String(val));
-                      }}
-                      className="sr-only peer" 
-                    />
-                    <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
-                  </label>
-                </div>
+                      {/* Accent Color */}
+                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div>
+                          <h3 className="font-semibold text-sm text-text-primary">Color de Acento</h3>
+                          <p className="text-xs text-text-secondary mt-1">Elige un color de acento personalizado para la interfaz.</p>
+                        </div>
+                        <div className="relative">
+                          <button
+                            onClick={() => setShowAccentDropdown(!showAccentDropdown)}
+                            className="glass px-4 py-2 rounded-xl text-xs font-semibold text-text-primary flex items-center gap-2 hover:scale-105 active:scale-95 transition border border-white/10"
+                          >
+                            <span 
+                              className="w-3.5 h-3.5 rounded-full inline-block border border-white/10"
+                              style={{ backgroundColor: accentColor === "custom" ? (localStorage.getItem("capi_custom_accent_color") || "#7c3aed") : (theme === "light-mode" ? 
+                                (ACCENT_COLORS.find(c => c.id === accentColor)?.light || ACCENT_COLORS[0].light) : 
+                                (ACCENT_COLORS.find(c => c.id === accentColor)?.dark || ACCENT_COLORS[0].dark) 
+                              )}}
+                            />
+                            <span>{accentColor === "custom" ? "Custom" : (ACCENT_COLORS.find(c => c.id === accentColor)?.name || "Púrpura")}</span>
+                            <ChevronLeft className={`w-3 h-3 transition-transform duration-200 ${showAccentDropdown ? "-rotate-90" : "rotate-180"}`} />
+                          </button>
+                          {showAccentDropdown && (
+                            <>
+                              <div className="fixed inset-0 z-10" onClick={() => { setShowAccentDropdown(false); setAccentSearchQuery(""); }} />
+                              <div className="absolute right-0 mt-2 w-56 glass rounded-2xl p-2 shadow-2xl z-20 flex flex-col border border-white/10">
+                                <div className="p-1">
+                                  <input 
+                                    type="text" 
+                                    placeholder="Buscar color..." 
+                                    value={accentSearchQuery} 
+                                    onChange={(e) => setAccentSearchQuery(e.target.value)} 
+                                    className="w-full px-2.5 py-1.5 text-xs bg-neutral-100 dark:bg-white/5 border border-neutral-300 dark:border-white/10 rounded-lg text-text-primary placeholder-text-secondary focus:outline-none focus:border-brand-primary"
+                                  />
+                                </div>
+                                <div className="max-h-48 overflow-y-auto space-y-0.5 mt-1 pr-0.5">
+                                  {ACCENT_COLORS.filter(c => c.name.toLowerCase().includes(accentSearchQuery.toLowerCase())).map((c) => (
+                                    <button
+                                      key={c.id}
+                                      onClick={() => {
+                                        setAccentColor(c.id);
+                                        localStorage.setItem("capi_accent_color", c.id);
+                                        setShowAccentDropdown(false);
+                                        setAccentSearchQuery("");
+                                      }}
+                                      className={`w-full text-left px-3 py-2 text-xs rounded-xl transition flex items-center gap-3 ${
+                                        accentColor === c.id ? "bg-brand-primary text-bg-dark font-bold" : "text-text-primary hover:bg-white/5"
+                                      }`}
+                                    >
+                                      <span 
+                                        className="w-3.5 h-3.5 rounded-full border border-white/10 flex-shrink-0"
+                                        style={{ backgroundColor: theme === "light-mode" ? c.light : c.dark }}
+                                      />
+                                      <span className="flex-1">{c.name}</span>
+                                      {accentColor === c.id && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+                                    </button>
+                                  ))}
+                                  {ACCENT_COLORS.filter(c => c.name.toLowerCase().includes(accentSearchQuery.toLowerCase())).length === 0 && (
+                                    <div className="text-[10px] text-text-secondary text-center py-2">Sin resultados</div>
+                                  )}
+                                </div>
+                                <div className="border-t border-white/10 mt-1.5 pt-1.5">
+                                  <button
+                                    onClick={() => {
+                                      colorInputRef.current?.click();
+                                      setShowAccentDropdown(false);
+                                      setAccentSearchQuery("");
+                                    }}
+                                    className={`w-full text-left px-3 py-2 text-xs rounded-xl transition flex items-center gap-3 ${
+                                      accentColor === "custom" ? "bg-brand-primary text-bg-dark font-bold" : "text-text-primary hover:bg-white/5"
+                                    }`}
+                                  >
+                                    <span 
+                                      className="w-3.5 h-3.5 rounded-full border border-white/10 flex-shrink-0 bg-gradient-to-tr from-red-500 via-green-500 to-blue-500"
+                                    />
+                                    <span className="flex-1">Elegir Custom...</span>
+                                    {accentColor === "custom" && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+                                  </button>
+                                </div>
+                              </div>
+                            </>
+                          )}
+                          <input 
+                            type="color" 
+                            ref={colorInputRef} 
+                            className="absolute opacity-0 pointer-events-none w-0 h-0" 
+                            onChange={(e) => handleCustomColorChange(e.target.value)} 
+                          />
+                        </div>
+                      </div>
 
-                {/* Default Sidebar State on Startup */}
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <div>
-                    <h3 className="font-semibold text-sm text-text-primary">Colapsar barra lateral por defecto</h3>
-                    <p className="text-xs text-text-secondary mt-1">Si está activado, la barra lateral iniciará minimizada al abrir la aplicación.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={(() => {
-                        const savedDefault = localStorage.getItem("capi_default_sidebar_collapsed");
-                        return savedDefault === "true";
-                      })()} 
-                      onChange={(e) => {
-                        const val = e.target.checked;
-                        localStorage.setItem("capi_default_sidebar_collapsed", String(val));
-                        showToast(`Preferencia guardada: Barra lateral ${val ? "colapsada" : "expandida"} por defecto`);
-                      }}
-                      className="sr-only peer" 
-                    />
-                    <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
-                  </label>
-                </div>
+                      {/* Dynamic Theme */}
+                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div>
+                          <h3 className="font-semibold text-sm text-text-primary flex items-center gap-2">
+                            <Palette className="w-4 h-4 text-brand-primary" /> Tema dinámico
+                          </h3>
+                          <p className="text-xs text-text-secondary mt-1">Extrae los colores dominantes de la portada del álbum y los aplica como tema automáticamente.</p>
+                          {dynamicThemeEnabled && extractedColors && (
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="text-[10px] text-text-secondary uppercase tracking-wider">Colores activos:</span>
+                              <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: extractedColors.primary }} />
+                              <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: extractedColors.secondary }} />
+                              <div className="w-4 h-4 rounded-full border border-white/20" style={{ backgroundColor: extractedColors.tertiary }} />
+                            </div>
+                          )}
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={dynamicThemeEnabled} 
+                            onChange={(e) => {
+                              const val = e.target.checked;
+                              setDynamicThemeEnabled(val);
+                              localStorage.setItem("capi_dynamic_theme", String(val));
+                              if (!val) {
+                                setExtractedColors(null);
+                                const root = document.documentElement;
+                                if (accentColor === "custom") {
+                                  const customColor = localStorage.getItem("capi_custom_accent_color") || "#7c3aed";
+                                  root.style.setProperty('--brand-primary', customColor);
+                                  root.style.setProperty('--brand-secondary', customColor + "dd");
+                                  root.style.setProperty('--brand-tertiary', customColor + "aa");
+                                } else {
+                                  const isLight = theme === "light-mode";
+                                  const colorObj = ACCENT_COLORS.find(c => c.id === accentColor) || ACCENT_COLORS[0];
+                                  root.style.setProperty('--brand-primary', isLight ? colorObj.light : colorObj.dark);
+                                  root.style.setProperty('--brand-secondary', isLight ? colorObj.lightSec : colorObj.darkSec);
+                                  root.style.setProperty('--brand-tertiary', isLight ? colorObj.lightTert : colorObj.darkTert);
+                                }
+                              } else if (currentTrack) {
+                                extractColorsFromImage(getHighQualityThumbnail(currentTrack.thumbnail));
+                              }
+                            }}
+                            className="sr-only peer" 
+                          />
+                          <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                        </label>
+                      </div>
+                    </>
+                  )}
 
-                {/* Auto-start application on system boot switch */}
-                <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                  <div>
-                    <h3 className="font-semibold text-sm text-text-primary">Iniciar Capi al arrancar el sistema</h3>
-                    <p className="text-xs text-text-secondary mt-1">Activa o desactiva que la aplicación se ejecute automáticamente al encender tu equipo.</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={(() => {
-                        const savedBoot = localStorage.getItem("capi_start_on_boot");
-                        return savedBoot === "true";
-                      })()} 
-                      onChange={(e) => {
-                        const val = e.target.checked;
-                        localStorage.setItem("capi_start_on_boot", String(val));
-                        showToast(`Preferencia guardada: Iniciar al arrancar ${val ? "activado" : "desactivado"}`);
-                      }}
-                      className="sr-only peer" 
-                    />
-                    <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
-                  </label>
-                </div>
-
-                {/* Import / Export Statistics */}
-                <div className="flex flex-col gap-3 border-b border-white/5 pb-4">
-                  <div>
-                    <h3 className="font-semibold text-sm text-text-primary">Gestión de Datos y Estadísticas</h3>
-                    <p className="text-xs text-text-secondary mt-1">Copia de seguridad y restauración de tus estadísticas de reproducción de Capi.</p>
-                  </div>
-                  <div className="flex flex-wrap gap-3 pt-1">
-                    <button
-                      onClick={exportStats}
-                      className="px-4 py-2 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary text-xs font-semibold rounded-xl transition hover:scale-105 active:scale-95 flex items-center gap-1.5"
-                    >
-                      <Download className="w-3.5 h-3.5" /> Exportar estadísticas
-                    </button>
-                    <label className="px-4 py-2 bg-white/5 hover:bg-white/10 text-text-primary text-xs font-semibold rounded-xl transition hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer">
-                      <Upload className="w-3.5 h-3.5" /> Importar estadísticas
-                      <input 
-                        type="file" 
-                        accept=".json" 
-                        onChange={importStats} 
-                        className="hidden" 
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                {/* Profile Edit Fields moved inside Settings */}
-                <div className="space-y-4 pt-2">
-                  <h3 className="font-semibold text-sm text-text-primary">Editar Perfil</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Nombre de Usuario</label>
-                      <input
-                        type="text"
-                        value={capiUsername}
-                        onChange={(e) => {
-                          const newName = e.target.value;
-                          setCapiUsername(newName);
-                          localStorage.setItem("capi_username", newName);
-                        }}
-                        placeholder="Usuario Capi"
-                        className="w-full bg-neutral-100 dark:bg-white/5 border border-neutral-300 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-brand-primary transition shadow-inner"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Foto de Perfil</label>
-                      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onloadend = () => {
-                                const base64String = reader.result as string;
-                                setCapiAvatar(base64String);
-                                localStorage.setItem("capi_user_avatar", base64String);
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                          className="flex-1 text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20 file:cursor-pointer"
-                        />
-                        {capiAvatar && (
+                  {/* === REPRODUCCIÓN === */}
+                  {settingsCategory === "reproduccion" && (
+                    <>
+                      {/* Search View Mode */}
+                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div>
+                          <h3 className="font-semibold text-sm text-text-primary">Modo de búsqueda por defecto</h3>
+                          <p className="text-xs text-text-secondary mt-1">Elige cómo se muestran los resultados al realizar una búsqueda.</p>
+                        </div>
+                        <div className="flex bg-white/5 p-1 rounded-xl">
                           <button
                             onClick={() => {
-                              setCapiAvatar("");
-                              localStorage.removeItem("capi_user_avatar");
-                              showToast("Foto de perfil eliminada");
+                              setSearchViewMode("list");
+                              localStorage.setItem("capi_default_search_view", "list");
                             }}
-                            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-xl text-xs font-semibold transition hover:scale-105 active:scale-95"
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                              searchViewMode === "list" ? "bg-brand-primary text-bg-dark" : "text-text-secondary hover:text-text-primary"
+                            }`}
                           >
-                            Eliminar foto
+                            Lista
                           </button>
-                        )}
+                          <button
+                            onClick={() => {
+                              setSearchViewMode("grid");
+                              localStorage.setItem("capi_default_search_view", "grid");
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                              searchViewMode === "grid" ? "bg-brand-primary text-bg-dark" : "text-text-secondary hover:text-text-primary"
+                            }`}
+                          >
+                            Cuadrícula
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Discord RPC */}
+                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div>
+                          <h3 className="font-semibold text-sm text-text-primary flex items-center gap-2">
+                            Discord Rich Presence
+                            {discordEnabled && (
+                              <span className={`inline-block w-2 h-2 rounded-full ${discordConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} title={discordConnected ? "Conectado a Discord" : "Buscando/Cargando Discord"} />
+                            )}
+                          </h3>
+                          <p className="text-xs text-text-secondary mt-1">Muestra la canción que estás escuchando en tu estado de Discord en tiempo real.</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={discordEnabled} 
+                            onChange={(e) => {
+                              setDiscordEnabled(e.target.checked);
+                            }}
+                            className="sr-only peer" 
+                          />
+                          <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                        </label>
+                      </div>
+                    </>
+                  )}
+
+                  {/* === GENERAL === */}
+                  {settingsCategory === "general" && (
+                    <>
+                      {/* Hide sidebar settings */}
+                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div>
+                          <h3 className="font-semibold text-sm text-text-primary">Ocultar acceso directo de ajustes de la barra lateral</h3>
+                          <p className="text-xs text-text-secondary mt-1">Oculta el botón de configuración de la barra lateral, manteniendo el del perfil visible.</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={!showSidebarSettings} 
+                            onChange={(e) => {
+                              const val = !e.target.checked;
+                              setShowSidebarSettings(val);
+                              localStorage.setItem("capi_show_sidebar_settings", String(val));
+                            }}
+                            className="sr-only peer" 
+                          />
+                          <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                        </label>
+                      </div>
+
+                      {/* Sidebar collapse default */}
+                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div>
+                          <h3 className="font-semibold text-sm text-text-primary">Colapsar barra lateral por defecto</h3>
+                          <p className="text-xs text-text-secondary mt-1">Si está activado, la barra lateral iniciará minimizada al abrir la aplicación.</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={(() => {
+                              const savedDefault = localStorage.getItem("capi_default_sidebar_collapsed");
+                              return savedDefault === "true";
+                            })()} 
+                            onChange={(e) => {
+                              const val = e.target.checked;
+                              localStorage.setItem("capi_default_sidebar_collapsed", String(val));
+                              showToast(`Preferencia guardada: Barra lateral ${val ? "colapsada" : "expandida"} por defecto`);
+                            }}
+                            className="sr-only peer" 
+                          />
+                          <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                        </label>
+                      </div>
+
+                      {/* Auto-start on boot */}
+                      <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                        <div>
+                          <h3 className="font-semibold text-sm text-text-primary">Iniciar Capi al arrancar el sistema</h3>
+                          <p className="text-xs text-text-secondary mt-1">Activa o desactiva que la aplicación se ejecute automáticamente al encender tu equipo.</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input 
+                            type="checkbox" 
+                            checked={(() => {
+                              const savedBoot = localStorage.getItem("capi_start_on_boot");
+                              return savedBoot === "true";
+                            })()} 
+                            onChange={(e) => {
+                              const val = e.target.checked;
+                              localStorage.setItem("capi_start_on_boot", String(val));
+                              showToast(`Preferencia guardada: Iniciar al arrancar ${val ? "activado" : "desactivado"}`);
+                            }}
+                            className="sr-only peer" 
+                          />
+                          <div className="relative w-11 h-6 bg-neutral-300 dark:bg-white/10 rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-primary"></div>
+                        </label>
+                      </div>
+                    </>
+                  )}
+
+                  {/* === DATOS === */}
+                  {settingsCategory === "datos" && (
+                    <>
+                      {/* Global Backup / Restore */}
+                      <div className="flex flex-col gap-3 border-b border-white/5 pb-4">
+                        <div>
+                          <h3 className="font-semibold text-sm text-text-primary">Copia de seguridad completa</h3>
+                          <p className="text-xs text-text-secondary mt-1">Exporta o importa toda la configuración, estadísticas, historial, favoritos, listas y descargas de la aplicación. Al importar en un dispositivo nuevo, las descargas se restaurarán automáticamente.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-3 pt-1">
+                          <button
+                            onClick={exportGlobalBackup}
+                            className="px-4 py-2 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary text-xs font-semibold rounded-xl transition hover:scale-105 active:scale-95 flex items-center gap-1.5"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Exportar copia completa
+                          </button>
+                          <label className="px-4 py-2 bg-white/5 hover:bg-white/10 text-text-primary text-xs font-semibold rounded-xl transition hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer">
+                            <Upload className="w-3.5 h-3.5" /> Importar copia completa
+                            <input 
+                              type="file" 
+                              accept=".json" 
+                              onChange={importGlobalBackup} 
+                              className="hidden" 
+                            />
+                          </label>
+                        </div>
+                      </div>
+                      {/* Import / Export */}
+                      <div className="flex flex-col gap-3 border-b border-white/5 pb-4">
+                        <div>
+                          <h3 className="font-semibold text-sm text-text-primary">Gestión de Datos y Estadísticas</h3>
+                          <p className="text-xs text-text-secondary mt-1">Copia de seguridad y restauración de tus estadísticas de reproducción de Capi.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-3 pt-1">
+                          <button
+                            onClick={exportStats}
+                            className="px-4 py-2 bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary text-xs font-semibold rounded-xl transition hover:scale-105 active:scale-95 flex items-center gap-1.5"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Exportar estadísticas
+                          </button>
+                          <label className="px-4 py-2 bg-white/5 hover:bg-white/10 text-text-primary text-xs font-semibold rounded-xl transition hover:scale-105 active:scale-95 flex items-center gap-1.5 cursor-pointer">
+                            <Upload className="w-3.5 h-3.5" /> Importar estadísticas
+                            <input 
+                              type="file" 
+                              accept=".json" 
+                              onChange={importStats} 
+                              className="hidden" 
+                            />
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Profile Edit */}
+                      <div className="space-y-4 pt-2">
+                        <h3 className="font-semibold text-sm text-text-primary">Editar Perfil</h3>
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Nombre de Usuario</label>
+                            <input
+                              type="text"
+                              value={capiUsername}
+                              onChange={(e) => {
+                                const newName = e.target.value;
+                                setCapiUsername(newName);
+                                localStorage.setItem("capi_username", newName);
+                              }}
+                              placeholder="Usuario Capi"
+                              className="w-full bg-neutral-100 dark:bg-white/5 border border-neutral-300 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-text-primary focus:outline-none focus:border-brand-primary transition shadow-inner"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-semibold text-text-secondary uppercase mb-2">Foto de Perfil</label>
+                            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    const reader = new FileReader();
+                                    reader.onloadend = () => {
+                                      const base64String = reader.result as string;
+                                      setCapiAvatar(base64String);
+                                      localStorage.setItem("capi_user_avatar", base64String);
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }
+                                }}
+                                className="flex-1 text-sm text-text-secondary file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-primary/10 file:text-brand-primary hover:file:bg-brand-primary/20 file:cursor-pointer"
+                              />
+                              {capiAvatar && (
+                                <button
+                                  onClick={() => {
+                                    setCapiAvatar("");
+                                    localStorage.removeItem("capi_user_avatar");
+                                    showToast("Foto de perfil eliminada");
+                                  }}
+                                  className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-xl text-xs font-semibold transition hover:scale-105 active:scale-95"
+                                >
+                                  Eliminar foto
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* === ACERCA DE === */}
+                  {settingsCategory === "acerca-de" && (
+                    <div className="space-y-6">
+                      {/* App Info */}
+                      <div className="border-b border-white/5 pb-6">
+                        <h3 className="font-semibold text-sm text-text-primary mb-3">Capi Desktop</h3>
+                        <div className="space-y-2 text-xs text-text-secondary">
+                          <p><span className="font-semibold text-text-primary">Versión:</span> 1.0.0</p>
+                          <p><span className="font-semibold text-text-primary">Desarrollado con:</span> React 19, TypeScript, Tauri 2, Tailwind CSS 4</p>
+                          <p><span className="font-semibold text-text-primary">Motor de audio:</span> capi-core (daemon local)</p>
+                          <p><span className="font-semibold text-text-primary">Repositorio:</span> github.com/jh2929/Capi</p>
+                        </div>
+                      </div>
+
+                      {/* Contact & Support */}
+                      <div className="border-b border-white/5 pb-6">
+                        <h3 className="font-semibold text-sm text-text-primary mb-3">Contacto y Soporte</h3>
+                        <div className="space-y-3 text-xs text-text-secondary">
+                          <a
+                            href="https://github.com/jh2929/Capi"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 hover:text-brand-primary transition cursor-pointer"
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.387.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.73.083-.73 1.205.085 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12 24 5.37 18.63 0 12 0Z"/></svg>
+                            GitHub — github.com/jh2929/Capi
+                          </a>
+                          <a
+                            href="https://mail.google.com/mail/?view=cm&fs=1&to=jemoldy.242@gmail.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 hover:text-brand-primary transition cursor-pointer"
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                            jemoldy.242@gmail.com
+                          </a>
+                          <a
+                            href="https://wa.me/585973616"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 hover:text-brand-primary transition cursor-pointer"
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                            +58-5973616
+                          </a>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText("jesusemilio2908@gmail.com");
+                              setShowPayPalModal(true);
+                            }}
+                            className="flex items-center gap-2 hover:text-brand-primary transition cursor-pointer w-full text-left"
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M7.076 21.337H2.47a.641.641 0 01-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106z"/><path d="M19.127 6.234c-.028.16-.06.323-.096.49-1.075 5.44-4.444 7.332-8.746 7.332h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106H3.18l1.533-9.723c.082-.518.526-.9 1.05-.9h2.19c4.302 0 7.67-1.893 8.746-7.332.036-.167.068-.33.096-.49.284-1.447.146-2.636-.546-3.498 1.288.48 2.365 1.424 2.877 2.78.38.998.34 2.135-.02 3.335z" opacity=".4"/></svg>
+                            jesusemilio2908@gmail.com (PayPal)
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Keyboard Shortcuts */}
+                      <div>
+                        <h3 className="font-semibold text-sm text-text-primary mb-4">Atajos de Teclado</h3>
+                        <div className="space-y-2.5">
+                          {[
+                            { keys: ["Shift", "↑"], desc: "Expandir / contraer reproductor" },
+                            { keys: ["Shift", "←"], desc: "Canción anterior" },
+                            { keys: ["Shift", "→"], desc: "Siguiente canción" },
+                            { keys: ["↑"], desc: "Subir volumen" },
+                            { keys: ["↓"], desc: "Bajar volumen" },
+                            { keys: ["Espacio"], desc: "Reproducir / pausar" },
+                          ].map((shortcut, i) => (
+                            <div key={i} className="flex items-center justify-between">
+                              <span className="text-xs text-text-secondary">{shortcut.desc}</span>
+                              <div className="flex items-center gap-1">
+                                {shortcut.keys.map((key, j) => (
+                                  <span key={j}>
+                                    <kbd className="px-2 py-0.5 bg-white/10 border border-white/10 rounded-md text-[11px] font-mono font-bold text-text-primary">{key}</kbd>
+                                    {j < shortcut.keys.length - 1 && <span className="text-text-secondary mx-0.5 text-[10px]">+</span>}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Disclaimer */}
+                      <div className="border-t border-white/5 pt-6">
+                        <p className="text-[11px] text-text-secondary/60 leading-relaxed">
+                          Capi Desktop es un reproductor de música independiente de código abierto. No está afiliado, asociado, autorizado ni respaldado por ninguna plataforma o servicio de terceros.
+                        </p>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
-
               </div>
             </div>
           )}
@@ -5290,11 +5566,11 @@ function App() {
         {isPlayerExpanded && currentTrack && (
           <div 
             style={dynamicThemeEnabled && extractedColors ? { background: `radial-gradient(circle at center, ${extractedColors.primary}25 0%, #0c0a0f 100%)` } : {}}
-            className="absolute inset-0 bg-bg-dark/95 z-30 flex flex-col md:flex-row p-8 gap-8 items-center justify-start md:justify-center overflow-y-auto md:overflow-y-hidden animate-fade-in backdrop-blur-lg"
+            className="absolute inset-0 bg-bg-dark/95 z-50 flex flex-col md:flex-row p-8 gap-8 items-center justify-start md:justify-center overflow-y-auto md:overflow-y-hidden animate-fade-in backdrop-blur-lg"
           >
             <button 
               onClick={() => setIsPlayerExpanded(false)}
-              className="fixed top-6 right-6 p-3 bg-white/5 hover:bg-white/10 text-white rounded-full transition z-40"
+              className="fixed top-6 right-6 p-3 bg-white/5 hover:bg-white/10 text-white rounded-full transition z-[60]"
             >
               <ChevronDown className="w-6 h-6" />
             </button>
@@ -5397,9 +5673,9 @@ function App() {
                         <div
                           key={track.id}
                           draggable
-                          onDragStart={() => handleDragStart(idx)}
+                          onDragStart={(e) => handleDragStart(e, idx)}
                           onDragOver={(e) => handleDragOver(e, idx)}
-                          onDrop={() => handleDrop(idx)}
+                          onDrop={(e) => handleDrop(e, idx)}
                           onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
                           className={`flex items-center gap-3 p-2.5 rounded-xl transition cursor-pointer group ${
                             currentTrack?.id === track.id ? "bg-brand-primary/10 border border-brand-primary/20" : "hover:bg-white/5"
@@ -6085,6 +6361,45 @@ function App() {
           </div>
         </div>
       )}
+
+      {/* PAYPAL DONATION MODAL */}
+      {showPayPalModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] modal-overlay" onClick={() => setShowPayPalModal(false)}>
+          <div className="glass p-6 rounded-2xl max-w-sm w-full border border-white/10 shadow-2xl mx-4 modal-content text-center space-y-5" onClick={(e) => e.stopPropagation()}>
+            <div className="w-14 h-14 mx-auto rounded-full bg-brand-primary/20 flex items-center justify-center">
+              <svg className="w-7 h-7 text-brand-primary" viewBox="0 0 24 24" fill="currentColor"><path d="M7.076 21.337H2.47a.641.641 0 01-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106z"/><path d="M19.127 6.234c-.028.16-.06.323-.096.49-1.075 5.44-4.444 7.332-8.746 7.332h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106H3.18l1.533-9.723c.082-.518.526-.9 1.05-.9h2.19c4.302 0 7.67-1.893 8.746-7.332.036-.167.068-.33.096-.49.284-1.447.146-2.636-.546-3.498 1.288.48 2.365 1.424 2.877 2.78.38.998.34 2.135-.02 3.335z" opacity=".4"/></svg>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-lg font-bold text-white">Apoya el Proyecto</h3>
+              <p className="text-sm text-text-secondary leading-relaxed">
+                Si te gusta Capi y quieres ayudar a que siga creciendo, 
+                puedes donar lo que tú quieras a través de PayPal.
+              </p>
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <span className="text-xs bg-white/10 px-3 py-1.5 rounded-lg text-text-primary font-mono">jesusemilio2908@gmail.com</span>
+                <span className="text-[10px] text-brand-primary font-semibold uppercase tracking-wider">Copiado</span>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText("jesusemilio2908@gmail.com");
+                showToast("Correo de PayPal copiado al portapapeles");
+              }}
+              className="w-full px-4 py-2.5 bg-brand-primary text-bg-dark text-xs font-bold rounded-xl hover:scale-[1.02] active:scale-95 transition shadow-lg shadow-brand-primary/20 flex items-center justify-center gap-2"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              Copiar correo
+            </button>
+            <button
+              onClick={() => setShowPayPalModal(false)}
+              className="w-full text-center text-xs text-text-secondary hover:text-text-primary transition py-1"
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
