@@ -16,10 +16,10 @@ pub struct DiscordState {
     pub client: Mutex<Option<DiscordIpcClient>>,
 }
 
-fn start_local_server(opentune_dir: PathBuf) -> u16 {
+fn start_local_server(capi_dir: PathBuf) -> u16 {
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind local server");
     let port = listener.local_addr().expect("Failed to get local address").port();
-    let opentune_dir = opentune_dir.clone();
+    let capi_dir = capi_dir.clone();
     
     let client = reqwest::blocking::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -29,7 +29,7 @@ fn start_local_server(opentune_dir: PathBuf) -> u16 {
     std::thread::spawn(move || {
         for stream in listener.incoming() {
             if let Ok(mut stream) = stream {
-                let opentune_dir = opentune_dir.clone();
+                let capi_dir = capi_dir.clone();
                 let client = client.clone();
                 std::thread::spawn(move || {
                     let mut buffer = [0; 4096];
@@ -124,9 +124,9 @@ fn start_local_server(opentune_dir: PathBuf) -> u16 {
                                     })
                                     .unwrap_or(false);
                                 let is_allowed = file_path.exists() && file_path.is_file() && (
-                                    file_path.starts_with(&opentune_dir) ||
-                                    file_path.to_string_lossy().contains("/Música/Opentune/") ||
-                                    file_path.to_string_lossy().contains("/Music/Opentune/") ||
+                                    file_path.starts_with(&capi_dir) ||
+                                    file_path.to_string_lossy().contains("/Música/Capi/") ||
+                                    file_path.to_string_lossy().contains("/Music/Capi/") ||
                                     is_audio_ext
                                 );
                                 if is_allowed {
@@ -333,10 +333,10 @@ async fn descargar_cancion(
         .app_data_dir()
         .map_err(|e| format!("No se pudo resolver el directorio de datos de la app: {}", e))?;
     
-    let opentune_dir = music_dir.join("Opentune");
-    if !opentune_dir.exists() {
-        std::fs::create_dir_all(&opentune_dir)
-            .map_err(|e| format!("No se pudo crear el directorio de Opentune: {}", e))?;
+    let capi_dir = music_dir.join("Capi");
+    if !capi_dir.exists() {
+        std::fs::create_dir_all(&capi_dir)
+            .map_err(|e| format!("No se pudo crear el directorio de Capi: {}", e))?;
     }
 
     let clean_title: String = title
@@ -355,7 +355,7 @@ async fn descargar_cancion(
     };
 
     let filename = format!("{} - {}.{}", clean_artist, clean_title, ext);
-    let dest_path = opentune_dir.join(&filename);
+    let dest_path = capi_dir.join(&filename);
 
     let client = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
@@ -613,50 +613,6 @@ async fn discord_disconnect(state: tauri::State<'_, DiscordState>) -> Result<(),
     Ok(())
 }
 
-fn get_po_tokens_from_docker() -> Option<(String, String)> {
-    let _ = Command::new("docker").args(["rm", "-f", "opentune-pot"]).output();
-    let run_res = Command::new("docker")
-        .args(["run", "-d", "-p", "4416:4416", "--name", "opentune-pot", "brainicism/bgutil-ytdlp-pot-provider"])
-        .output();
-    if run_res.is_err() {
-        eprintln!("[RUST] Failed to start Docker container");
-        return None;
-    }
-
-    let client = reqwest::blocking::Client::new();
-    let mut ready = false;
-    for _ in 0..20 {
-        if let Ok(resp) = client.get("http://127.0.0.1:4416/ping").send() {
-            if resp.status().is_success() {
-                ready = true;
-                break;
-            }
-        }
-        std::thread::sleep(std::time::Duration::from_millis(300));
-    }
-
-    if !ready {
-        eprintln!("[RUST] Docker container didn't respond to ping in time");
-        return None;
-    }
-
-    if let Ok(resp) = client.post("http://127.0.0.1:4416/get_pot").send() {
-        if let Ok(text) = resp.text() {
-            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text) {
-                if let (Some(po_token), Some(visitor_data)) = (
-                    json.get("poToken").and_then(|v| v.as_str()),
-                    json.get("contentBinding").and_then(|v| v.as_str()),
-                ) {
-                    println!("[RUST] Successfully obtained genuine PO token from Docker");
-                    return Some((po_token.to_string(), visitor_data.to_string()));
-                }
-            }
-        }
-    }
-
-    eprintln!("[RUST] Failed to fetch poToken from Docker sidecar");
-    None
-}
 
 #[derive(serde::Serialize, Debug)]
 struct LocalTrack {
@@ -726,7 +682,7 @@ fn listar_archivos_locales(ruta: String) -> Result<Vec<LocalTrack>, String> {
 async fn abrir_carpeta_descargas(app: tauri::AppHandle) -> Result<(), String> {
     let dir = app.path().app_data_dir()
         .map_err(|e| e.to_string())?
-        .join("Opentune");
+        .join("Capi");
     if !dir.exists() {
         std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     }
@@ -744,11 +700,6 @@ pub fn run() {
                .stdin(Stdio::piped())
                .stdout(Stdio::piped())
                .stderr(Stdio::inherit());
-
-            if let Some((po_token, visitor_data)) = get_po_tokens_from_docker() {
-                cmd.env("OPENTUNE_PO_TOKEN", po_token);
-                cmd.env("OPENTUNE_VISITOR_DATA", visitor_data);
-            }
 
             let mut child = cmd.spawn()
                 .map_err(|e| format!("Fallo al iniciar capi-core daemon: {}", e))?;
@@ -775,12 +726,12 @@ pub fn run() {
             // Start localhost HTTP server for local music playback
             let app_data = app.handle().path().app_data_dir()
                 .map_err(|e| format!("No se pudo resolver el directorio de datos: {}", e))?;
-            let opentune_dir = app_data.join("Capi");
-            if !opentune_dir.exists() {
-                std::fs::create_dir_all(&opentune_dir)
+            let capi_dir = app_data.join("Capi");
+            if !capi_dir.exists() {
+                std::fs::create_dir_all(&capi_dir)
                     .map_err(|e| format!("No se pudo crear el directorio de Capi: {}", e))?;
             }
-            let local_port = start_local_server(opentune_dir);
+            let local_port = start_local_server(capi_dir);
             app.manage(LocalServerState { port: local_port });
             app.manage(DiscordState { client: Mutex::new(None) });
 
@@ -807,7 +758,4 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-    
-    // Clean up Docker container on exit
-    let _ = Command::new("docker").args(["rm", "-f", "opentune-pot"]).output();
 }

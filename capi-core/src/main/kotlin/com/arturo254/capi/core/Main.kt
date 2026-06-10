@@ -480,19 +480,52 @@ fun main(args: Array<String>) {
                                 }
                             }
                             "get-playlist" -> {
-                                val playlistId = cmdObj["id"]?.jsonPrimitive?.contentOrNull ?: throw Exception("Missing id")
-                                val playlistPage = YouTube.playlist(playlistId).getOrThrow()
-                                val songs = playlistPage.songs.map {
-                                    SongDTO(
-                                        id = it.id,
-                                        title = it.title,
-                                        artist = it.artists.joinToString(", ") { a -> a.name },
-                                        album = it.album?.name,
-                                        duration = it.duration,
-                                        thumbnail = it.thumbnail,
-                                        explicit = it.explicit,
-                                        artistId = it.artists.firstOrNull()?.id
-                                    )
+                                var playlistId = cmdObj["id"]?.jsonPrimitive?.contentOrNull ?: throw Exception("Missing id")
+                                if (playlistId.startsWith("VL")) {
+                                    playlistId = playlistId.substring(2)
+                                }
+                                val songs = if (playlistId.startsWith("OLAK")) {
+                                    val resolvedSongs = YouTube.albumSongs(playlistId).getOrThrow()
+                                    resolvedSongs.map {
+                                        SongDTO(
+                                            id = it.id,
+                                            title = it.title,
+                                            artist = it.artists.joinToString(", ") { a -> a.name },
+                                            album = it.album?.name,
+                                            duration = it.duration,
+                                            thumbnail = it.thumbnail,
+                                            explicit = it.explicit,
+                                            artistId = it.artists.firstOrNull()?.id
+                                        )
+                                    }
+                                } else if (playlistId.startsWith("MPREb")) {
+                                    val albumPage = YouTube.album(playlistId).getOrThrow()
+                                    albumPage.songs.map {
+                                        SongDTO(
+                                            id = it.id,
+                                            title = it.title,
+                                            artist = it.artists.joinToString(", ") { a -> a.name },
+                                            album = it.album?.name,
+                                            duration = it.duration,
+                                            thumbnail = it.thumbnail,
+                                            explicit = it.explicit,
+                                            artistId = it.artists.firstOrNull()?.id
+                                        )
+                                    }
+                                } else {
+                                    val playlistPage = YouTube.playlist(playlistId).getOrThrow()
+                                    playlistPage.songs.map {
+                                        SongDTO(
+                                            id = it.id,
+                                            title = it.title,
+                                            artist = it.artists.joinToString(", ") { a -> a.name },
+                                            album = it.album?.name,
+                                            duration = it.duration,
+                                            thumbnail = it.thumbnail,
+                                            explicit = it.explicit,
+                                            artistId = it.artists.firstOrNull()?.id
+                                        )
+                                    }
                                 }
                                 Json.encodeToString(songs)
                             }

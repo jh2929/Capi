@@ -4,7 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import Logo from "./assets/Logo.png";
 import { 
   Play, Pause, SkipForward, SkipBack, Search, Music, Volume2, VolumeX,
-  ListMusic, Heart, Loader2, Sparkles, ChevronLeft, ChevronDown,
+  ListMusic, Heart, Loader2, Sparkles, ChevronLeft, ChevronDown, ChevronUp,
   Trash2, Home, Library, Download, Shuffle, ListPlus, Disc3, FolderOpen,
   MoreVertical, X, Sparkle, GripVertical, Copy, RefreshCw,
   User, Radio, Mic2, LayoutGrid, List, Plus, Bell,
@@ -172,7 +172,12 @@ function App() {
     if (savedDefault !== null) {
       return savedDefault === "true";
     }
-    return localStorage.getItem("opentune_sidebar_collapsed") === "true";
+    const old = localStorage.getItem("opentune_sidebar_collapsed");
+    if (old !== null) {
+      localStorage.setItem("capi_sidebar_collapsed", old);
+      localStorage.removeItem("opentune_sidebar_collapsed");
+    }
+    return (old || localStorage.getItem("capi_sidebar_collapsed")) === "true";
   });
   
   const [query, setQuery] = useState("");
@@ -185,12 +190,26 @@ function App() {
   const [isShuffle, setIsShuffle] = useState(false);
   
   const [searchViewMode, setSearchViewMode] = useState<"grid" | "list">(() => {
-    const saved = localStorage.getItem("opentune_default_search_view");
+    let saved = localStorage.getItem("capi_default_search_view");
+    if (!saved) {
+      saved = localStorage.getItem("opentune_default_search_view");
+      if (saved) {
+        localStorage.setItem("capi_default_search_view", saved);
+        localStorage.removeItem("opentune_default_search_view");
+      }
+    }
     return (saved === "grid" || saved === "list") ? saved : "list";
   });
 
   const [showSidebarSettings, setShowSidebarSettings] = useState<boolean>(() => {
-    const saved = localStorage.getItem("opentune_show_sidebar_settings");
+    let saved = localStorage.getItem("capi_show_sidebar_settings");
+    if (saved === null) {
+      saved = localStorage.getItem("opentune_show_sidebar_settings");
+      if (saved !== null) {
+        localStorage.setItem("capi_show_sidebar_settings", saved);
+        localStorage.removeItem("opentune_show_sidebar_settings");
+      }
+    }
     return saved !== "false";
   });
 
@@ -230,10 +249,16 @@ function App() {
     { tab: "home" }
   ]);
   const [navIndex, setNavIndex] = useState<number>(0);
+  const scrollableSectionRef = useRef<HTMLElement | null>(null);
   const [isPlayerExpanded, setIsPlayerExpanded] = useState(false);
 
   const [preMuteVolume, setPreMuteVolume] = useState<number>(0.8);
   const [contextMenuPlaylist, setContextMenuPlaylist] = useState<Playlist | null>(null);
+  const [contextMenuArtist, setContextMenuArtist] = useState<ArtistAffinity | null>(null);
+  const [hiddenArtists, setHiddenArtists] = useState<string[]>(() => {
+    const saved = localStorage.getItem("capi_hidden_artists");
+    return saved ? JSON.parse(saved) : [];
+  });
   const [showThemeDropdown, setShowThemeDropdown] = useState(false);
   const [accentColor, setAccentColor] = useState<string>(() => localStorage.getItem("capi_accent_color") || "purple");
   const [showAccentDropdown, setShowAccentDropdown] = useState(false);
@@ -312,24 +337,39 @@ function App() {
   const [loadingArtist, setLoadingArtist] = useState(false);
   
   // Persisted state
+  const migrateKey = (oldKey: string, newKey: string) => {
+    const oldVal = localStorage.getItem(oldKey);
+    if (oldVal) {
+      localStorage.setItem(newKey, oldVal);
+      localStorage.removeItem(oldKey);
+      return oldVal;
+    }
+    return null;
+  };
+
   const [favorites, setFavorites] = useState<Track[]>(() => {
-    const saved = localStorage.getItem("opentune_favorites");
+    migrateKey("opentune_favorites", "capi_favorites");
+    const saved = localStorage.getItem("capi_favorites");
     return saved ? JSON.parse(saved) : [];
   });
   const [playlists, setPlaylists] = useState<Playlist[]>(() => {
-    const saved = localStorage.getItem("opentune_playlists");
+    migrateKey("opentune_playlists", "capi_playlists");
+    const saved = localStorage.getItem("capi_playlists");
     return saved ? JSON.parse(saved) : [];
   });
   const [history, setHistory] = useState<Track[]>(() => {
-    const saved = localStorage.getItem("opentune_history");
+    migrateKey("opentune_history", "capi_history");
+    const saved = localStorage.getItem("capi_history");
     return saved ? JSON.parse(saved) : [];
   });
   const [downloads, setDownloads] = useState<Record<string, string>>(() => {
-    const saved = localStorage.getItem("opentune_downloads");
+    migrateKey("opentune_downloads", "capi_downloads");
+    const saved = localStorage.getItem("capi_downloads");
     return saved ? JSON.parse(saved) : {};
   });
   const [downloadedMetadata, setDownloadedMetadata] = useState<Track[]>(() => {
-    const saved = localStorage.getItem("opentune_downloaded_metadata");
+    migrateKey("opentune_downloaded_metadata", "capi_downloaded_metadata");
+    const saved = localStorage.getItem("capi_downloaded_metadata");
     return saved ? JSON.parse(saved) : [];
   });
   
@@ -340,6 +380,8 @@ function App() {
 
   // Player expansions and context menus
   const [contextMenuTrack, setContextMenuTrack] = useState<Track | null>(null);
+  const [contextMenuAlbumOrPlaylist, setContextMenuAlbumOrPlaylist] = useState<any | null>(null);
+  const [loadingTracksForMenu, setLoadingTracksForMenu] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({});
   const [capiUsername, setCapiUsername] = useState<string>(() => localStorage.getItem("capi_username") || "");
   const [capiAvatar, setCapiAvatar] = useState<string>(() => localStorage.getItem("capi_user_avatar") || "");
@@ -376,6 +418,10 @@ function App() {
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
 
+  useEffect(() => {
+    scrollableSectionRef.current?.scrollTo(0, 0);
+  }, [activeTab, selectedPlaylistId, currentAlbum]);
+
   // Live lyrics state
   const [lyricsText, setLyricsText] = useState<string>("");
   const [parsedLyrics, setParsedLyrics] = useState<LyricLine[]>([]);
@@ -395,7 +441,8 @@ function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(() => {
-    const saved = localStorage.getItem("opentune_volume");
+    const migrated = migrateKey("opentune_volume", "capi_volume");
+    const saved = migrated || localStorage.getItem("capi_volume");
     return saved ? parseFloat(saved) : 0.8;
   });
   const [buffering, setBuffering] = useState(false);
@@ -414,7 +461,8 @@ function App() {
   // Search suggestions & history
   const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
-    const saved = localStorage.getItem("opentune_search_history");
+    migrateKey("opentune_search_history", "capi_search_history");
+    const saved = localStorage.getItem("capi_search_history");
     return saved ? JSON.parse(saved) : [];
   });
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -490,6 +538,9 @@ function App() {
   const [downloadDragIndex, setDownloadDragIndex] = useState<number | null>(null);
   const [downloadDragOverIndex, setDownloadDragOverIndex] = useState<number | null>(null);
   const downloadDragIndexRef = useRef<number | null>(null);
+  const [playlistDragIndex, setPlaylistDragIndex] = useState<number | null>(null);
+  const [playlistDragOverIndex, setPlaylistDragOverIndex] = useState<number | null>(null);
+  const playlistDragRef = useRef<number | null>(null);
 
   // Global Confirmation Dialog State
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -616,18 +667,30 @@ function App() {
   }, []);
 
   // Sync to LocalStorage
-  useEffect(() => { localStorage.setItem("opentune_favorites", JSON.stringify(favorites)); }, [favorites]);
-  useEffect(() => { localStorage.setItem("opentune_playlists", JSON.stringify(playlists)); }, [playlists]);
-  useEffect(() => { localStorage.setItem("opentune_history", JSON.stringify(history)); }, [history]);
-  useEffect(() => { localStorage.setItem("opentune_downloads", JSON.stringify(downloads)); }, [downloads]);
-  useEffect(() => { localStorage.setItem("opentune_downloaded_metadata", JSON.stringify(downloadedMetadata)); }, [downloadedMetadata]);
-  useEffect(() => { localStorage.setItem("opentune_sidebar_collapsed", String(sidebarCollapsed)); }, [sidebarCollapsed]);
-  useEffect(() => { localStorage.setItem("opentune_search_history", JSON.stringify(searchHistory)); }, [searchHistory]);
-  useEffect(() => { localStorage.setItem("opentune_show_sidebar_settings", String(showSidebarSettings)); }, [showSidebarSettings]);
+  useEffect(() => { localStorage.setItem("capi_favorites", JSON.stringify(favorites)); }, [favorites]);
+  useEffect(() => { localStorage.setItem("capi_playlists", JSON.stringify(playlists)); }, [playlists]);
+  useEffect(() => { localStorage.setItem("capi_history", JSON.stringify(history)); }, [history]);
+  useEffect(() => { localStorage.setItem("capi_downloads", JSON.stringify(downloads)); }, [downloads]);
+  useEffect(() => { localStorage.setItem("capi_downloaded_metadata", JSON.stringify(downloadedMetadata)); }, [downloadedMetadata]);
+  useEffect(() => { localStorage.setItem("capi_sidebar_collapsed", String(sidebarCollapsed)); }, [sidebarCollapsed]);
+  useEffect(() => { localStorage.setItem("capi_search_history", JSON.stringify(searchHistory)); }, [searchHistory]);
+  useEffect(() => { localStorage.setItem("capi_show_sidebar_settings", String(showSidebarSettings)); }, [showSidebarSettings]);
+  useEffect(() => { localStorage.setItem("capi_hidden_artists", JSON.stringify(hiddenArtists)); }, [hiddenArtists]);
   useEffect(() => {
-    localStorage.setItem("opentune_volume", String(volume));
+    localStorage.setItem("capi_volume", String(volume));
     if (audioRef.current) { audioRef.current.volume = volume; }
   }, [volume]);
+
+  // Close playlist dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (playlistDropdownRef.current && !playlistDropdownRef.current.contains(e.target as Node)) {
+        setShowPlaylistDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   // Carousel auto-scroll timer (4 seconds)
   useEffect(() => {
@@ -669,7 +732,17 @@ function App() {
       } else if (e.key === " ") {
         e.preventDefault();
         togglePlay();
-      } else if (isPlayerExpanded) {
+      }
+
+      if (e.shiftKey && e.key === "ArrowRight") {
+        e.preventDefault();
+        playNext();
+      } else if (e.shiftKey && e.key === "ArrowLeft") {
+        e.preventDefault();
+        playPrev();
+      }
+
+      if (isPlayerExpanded) {
         if (e.key === "ArrowRight") {
           e.preventDefault();
           if (audioRef.current) {
@@ -1680,9 +1753,9 @@ function App() {
     }
   };
 
-  const downloadAllTracks = async (playlistTracks: Track[]) => {
-    showToast(`Iniciando descarga de ${playlistTracks.length} canciones...`);
-    for (const t of playlistTracks) {
+  const downloadAllTracks = (playlistTracks: Track[]) => {
+    showToast(`Iniciando descarga de ${playlistTracks.length} canciones en paralelo...`);
+    playlistTracks.forEach(async (t) => {
       if (!downloads[t.id]) {
         try {
           await downloadTrack(t);
@@ -1690,7 +1763,7 @@ function App() {
           console.error("Error downloading track in playlist:", e);
         }
       }
-    }
+    });
   };
 
   const openPlaylistContextMenu = (e: React.MouseEvent, playlist: Playlist) => {
@@ -1976,6 +2049,18 @@ function App() {
     });
   };
 
+  const [showPlaylistDropdown, setShowPlaylistDropdown] = useState(false);
+  const playlistDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  const handleSelectAll = () => {
+    const currentList = libTab === "downloads" ? downloadedMetadata : libTab === "history" ? history : localTracks;
+    if (selectedTrackIds.size === currentList.length) {
+      setSelectedTrackIds(new Set());
+    } else {
+      setSelectedTrackIds(new Set(currentList.map(t => t.id)));
+    }
+  };
+
   const handleBatchDelete = async () => {
     const ids = Array.from(selectedTrackIds);
     for (const id of ids) { await deleteLocalTrack(id); }
@@ -2002,7 +2087,7 @@ function App() {
   const handleToggleSidebar = () => {
     const nextVal = !sidebarCollapsed;
     setSidebarCollapsed(nextVal);
-    localStorage.setItem("opentune_sidebar_collapsed", String(nextVal));
+    localStorage.setItem("capi_sidebar_collapsed", String(nextVal));
   };
 
   // Swipe gesture handlers
@@ -2021,6 +2106,147 @@ function App() {
     e.stopPropagation();
     const track = findTrackById(trackId);
     if (track) setContextMenuTrack(track);
+  };
+
+  const openAlbumOrPlaylistContextMenu = (e: React.MouseEvent, item: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenuAlbumOrPlaylist(item);
+  };
+
+  const fetchTracksForAlbumOrPlaylist = async (item: any): Promise<Track[]> => {
+    const id = item.playlistId || item.id || item.browseId;
+    if (!id) return [];
+    
+    // Check if it's a local playlist first
+    const local = playlists.find(p => p.id === (item.id || item.browseId));
+    if (local) return local.tracks;
+
+    // Otherwise, fetch from backend daemon
+    setLoadingTracksForMenu(true);
+    try {
+      const response = await invoke<string>("obtener_playlist", { id });
+      const songs: Track[] = JSON.parse(response);
+      return songs;
+    } catch (err) {
+      console.error("Error fetching album/playlist tracks:", err);
+      showToast("Error al obtener canciones");
+      return [];
+    } finally {
+      setLoadingTracksForMenu(false);
+    }
+  };
+
+  const playTracksNext = (tracksToInsert: Track[]) => {
+    if (tracksToInsert.length === 0) return;
+    setActiveQueue(prev => {
+      const toInsertIds = new Set(tracksToInsert.map(t => t.id));
+      const filtered = prev.filter(t => !toInsertIds.has(t.id));
+      const currentIndex = filtered.findIndex(t => t.id === currentTrack?.id);
+      const newQueue = [...filtered];
+      if (currentIndex === -1) {
+        newQueue.unshift(...tracksToInsert);
+      } else {
+        newQueue.splice(currentIndex + 1, 0, ...tracksToInsert);
+      }
+      return newQueue;
+    });
+    showToast(T("toast_play_next") || "Reproduciendo a continuación");
+  };
+
+  const addTracksToQueue = (tracksToAppend: Track[]) => {
+    if (tracksToAppend.length === 0) return;
+    setActiveQueue(prev => {
+      const existingIds = new Set(prev.map(t => t.id));
+      const toAdd = tracksToAppend.filter(t => !existingIds.has(t.id));
+      if (toAdd.length === 0) {
+        showToast("Ya en la cola");
+        return prev;
+      }
+      showToast("Agregado a la cola");
+      return [...prev, ...toAdd];
+    });
+  };
+
+  const addTracksToFavorites = (tracksToAppend: Track[]) => {
+    if (tracksToAppend.length === 0) return;
+    setFavorites(prev => {
+      const existingIds = new Set(prev.map(t => t.id));
+      const toAdd = tracksToAppend.filter(t => !existingIds.has(t.id));
+      if (toAdd.length === 0) return prev;
+      showToast("Agregado a favoritos");
+      return [...prev, ...toAdd];
+    });
+  };
+
+  const saveAlbumOrPlaylistAsLocal = async (item: any) => {
+    setContextMenuAlbumOrPlaylist(null);
+    const resolvedTracks = await fetchTracksForAlbumOrPlaylist(item);
+    if (resolvedTracks.length === 0) return;
+    const playlistName = item.title || item.name || "Nueva Playlist";
+    const newPl: Playlist = {
+      id: Math.random().toString(36).substring(2, 9),
+      name: playlistName.trim(),
+      tracks: resolvedTracks
+    };
+    setPlaylists(prev => [...prev, newPl]);
+    showToast("Playlist guardada");
+  };
+
+  const downloadAlbumOrPlaylist = async (item: any) => {
+    setContextMenuAlbumOrPlaylist(null);
+    const resolvedTracks = await fetchTracksForAlbumOrPlaylist(item);
+    if (resolvedTracks.length === 0) return;
+    downloadAllTracks(resolvedTracks);
+  };
+
+  const playAlbumOrPlaylistAll = async (item: any) => {
+    setContextMenuAlbumOrPlaylist(null);
+    const resolvedTracks = await fetchTracksForAlbumOrPlaylist(item);
+    if (resolvedTracks.length === 0) return;
+    playTrack(resolvedTracks[0], resolvedTracks);
+  };
+
+  const playAlbumOrPlaylistShuffle = async (item: any) => {
+    setContextMenuAlbumOrPlaylist(null);
+    const resolvedTracks = await fetchTracksForAlbumOrPlaylist(item);
+    if (resolvedTracks.length === 0) return;
+    playShuffleQueue(resolvedTracks);
+  };
+
+  const playAlbumOrPlaylistNext = async (item: any) => {
+    setContextMenuAlbumOrPlaylist(null);
+    const resolvedTracks = await fetchTracksForAlbumOrPlaylist(item);
+    if (resolvedTracks.length === 0) return;
+    playTracksNext(resolvedTracks);
+  };
+
+  const addAlbumOrPlaylistToQueue = async (item: any) => {
+    setContextMenuAlbumOrPlaylist(null);
+    const resolvedTracks = await fetchTracksForAlbumOrPlaylist(item);
+    if (resolvedTracks.length === 0) return;
+    addTracksToQueue(resolvedTracks);
+  };
+
+  const addAlbumOrPlaylistToFavorites = async (item: any) => {
+    setContextMenuAlbumOrPlaylist(null);
+    const resolvedTracks = await fetchTracksForAlbumOrPlaylist(item);
+    if (resolvedTracks.length === 0) return;
+    addTracksToFavorites(resolvedTracks);
+  };
+
+  const copyAlbumOrPlaylistLink = (item: any) => {
+    setContextMenuAlbumOrPlaylist(null);
+    const id = item.playlistId || item.id || item.browseId;
+    if (!id) return;
+    let url = "";
+    if (id.startsWith("OLAK") || id.startsWith("PL") || id.startsWith("RD")) {
+      url = `https://music.youtube.com/playlist?list=${id}`;
+    } else {
+      url = `https://music.youtube.com/browse/${id}`;
+    }
+    navigator.clipboard.writeText(url);
+    showToast("Enlace copiado al portapapeles");
   };
 
   const findTrackById = (trackId: string): Track | null => {
@@ -2393,7 +2619,7 @@ function App() {
           </div>
         </header>
 
-        <section className="flex-1 overflow-y-auto p-8 pb-32">
+        <section ref={scrollableSectionRef} className="flex-1 overflow-y-auto p-8 pb-32">
           {loading && tracks.length === 0 && activeTab === "buscar" && (
             <div className="h-64 flex flex-col items-center justify-center gap-3">
               <Loader2 className="w-8 h-8 text-brand-primary animate-spin" />
@@ -2587,7 +2813,7 @@ function App() {
                   )}
 
                   {/* Row: Artistas que escuchas */}
-                  {topArtists.length > 0 && (
+                  {topArtists.filter(a => !hiddenArtists.includes(a.artistName)).length > 0 && (
                     <div className="space-y-4 animate-fade-in">
                       <h3 className="text-lg font-bold text-text-primary border-l-4 border-brand-primary pl-2 flex items-center gap-2">
                         <User className="w-4 h-4 text-brand-primary" /> {T("artists_you_listen_to")}
@@ -2611,7 +2837,7 @@ function App() {
                           className="flex gap-6 pb-2 overflow-x-auto items-center"
                           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                         >
-                          {topArtists.map((artist) => (
+                          {topArtists.filter(a => !hiddenArtists.includes(a.artistName)).map((artist) => (
                             <div
                               key={artist.artistName}
                               onClick={() => {
@@ -2630,6 +2856,7 @@ function App() {
                                   });
                                 }
                               }}
+                              onContextMenu={(e) => { e.preventDefault(); setContextMenuArtist(artist); }}
                               className="flex flex-col items-center gap-2 cursor-pointer group flex-shrink-0 animate-fade-in"
                             >
                               <div className="w-24 h-24 rounded-full overflow-hidden object-cover border-2 border-white/10 group-hover:border-brand-primary group-hover:scale-105 transition-all duration-300 relative bg-black/20 shadow-lg">
@@ -3084,13 +3311,14 @@ function App() {
                                   key={i}
                                   onClick={() => {
                                     loadAlbumProfile(
-                                      item.id || item.browseId,
+                                      item.playlistId || item.id || item.browseId,
                                       item.title,
                                       item.thumbnail,
                                       item.type || "album",
                                       artistData?.name
                                     );
                                   }}
+                                  onContextMenu={(e) => openAlbumOrPlaylistContextMenu(e, item)}
                                   className="p-3 bg-surface-dark/30 hover:bg-surface-dark/70 rounded-xl transition border border-white/5 flex flex-col justify-between group cursor-pointer"
                                 >
                                   <div className="aspect-square w-full rounded-lg overflow-hidden mb-2 relative bg-black/20">
@@ -3173,7 +3401,7 @@ function App() {
                           "¿Estás seguro de que quieres vaciar todo el historial de reproducción de Capi?",
                           () => {
                             setHistory([]);
-                            localStorage.removeItem("opentune_history");
+                            localStorage.removeItem("capi_history");
                           }
                         );
                       }}
@@ -3191,26 +3419,69 @@ function App() {
 
               {selectedTrackIds.size > 0 && (
                 <div className="flex items-center justify-between p-4 bg-brand-primary/10 border border-brand-primary/20 rounded-2xl animate-fade-in">
-                  <span className="text-sm font-semibold text-brand-primary">{selectedTrackIds.size} elementos seleccionados</span>
-                  <div className="flex gap-2">
+                  <span className="text-sm font-semibold text-brand-primary flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-brand-primary text-bg-dark flex items-center justify-center text-xs font-bold">
+                      {selectedTrackIds.size}
+                    </span>
+                    {selectedTrackIds.size === 1 ? "elemento seleccionado" : "elementos seleccionados"}
+                  </span>
+                  <div className="flex gap-2 items-center">
+                    <button
+                      onClick={handleSelectAll}
+                      className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <polyline points="9 12 11 14 15 10"/>
+                      </svg>
+                      Seleccionar todo
+                    </button>
                     {playlists.length > 0 && (
-                      <select 
-                        onChange={(e) => { if (e.target.value) { handleBatchAddToPlaylist(e.target.value); e.target.value = ""; } }}
-                        className="bg-surface-dark border border-white/10 rounded-lg px-3 py-1.5 text-xs text-text-primary"
-                      >
-                        <option value="">Añadir a Playlist...</option>
-                        {playlists.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                      </select>
+                      <div className="relative" ref={playlistDropdownRef}>
+                        <button
+                          onClick={() => setShowPlaylistDropdown(!showPlaylistDropdown)}
+                          className="flex items-center gap-1.5 px-4 py-2 bg-surface-dark/80 border border-white/10 rounded-xl text-xs font-medium text-text-primary hover:border-brand-primary/40 transition-all"
+                        >
+                          <ListPlus className="w-3.5 h-3.5" />
+                          Añadir a playlist
+                          <svg className={`w-3 h-3 text-text-secondary transition-transform duration-200 ${showPlaylistDropdown ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="6 9 12 15 18 9"/>
+                          </svg>
+                        </button>
+                        {showPlaylistDropdown && (
+                          <div className="absolute top-full mt-1 right-0 min-w-[220px] bg-surface-dark border border-white/10 rounded-xl shadow-2xl shadow-black/40 overflow-hidden z-50 animate-fade-in">
+                            <div className="py-1">
+                              <div className="px-3 py-1.5 text-[10px] font-semibold text-text-secondary uppercase tracking-wider">Añadir a playlist</div>
+                              {playlists.map(p => (
+                                <button
+                                  key={p.id}
+                                  onClick={() => { handleBatchAddToPlaylist(p.id); setShowPlaylistDropdown(false); }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-text-primary hover:bg-white/5 transition text-left"
+                                >
+                                  <ListMusic className="w-3.5 h-3.5 text-brand-primary flex-shrink-0" />
+                                  <span className="truncate">{p.name}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                     {libTab === "downloads" && (
                       <button 
                         onClick={handleBatchDelete}
-                        className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 text-xs font-semibold rounded-lg flex items-center gap-1"
+                        className="px-3 py-2 bg-red-500/15 hover:bg-red-500/25 text-red-400 hover:text-red-300 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition hover:scale-105 active:scale-95"
                       >
-                        <Trash2 className="w-3.5 h-3.5" /> Borrar Físicos
+                        <Trash2 className="w-3.5 h-3.5" /> Borrar físicos
                       </button>
                     )}
-                    <button onClick={() => setSelectedTrackIds(new Set())} className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-xs font-semibold rounded-lg">
+                    <button 
+                      onClick={() => setSelectedTrackIds(new Set())} 
+                      className="px-3 py-2 bg-white/5 hover:bg-white/10 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
                       Cancelar
                     </button>
                   </div>
@@ -3262,7 +3533,7 @@ function App() {
                             const [removed] = newMetadata.splice(startIdx, 1);
                             newMetadata.splice(idx, 0, removed);
                             setDownloadedMetadata(newMetadata);
-                            localStorage.setItem("opentune_downloaded_metadata", JSON.stringify(newMetadata));
+                            localStorage.setItem("capi_downloaded_metadata", JSON.stringify(newMetadata));
                             setDownloadDragIndex(null);
                             setDownloadDragOverIndex(null);
                             downloadDragIndexRef.current = null;
@@ -3519,10 +3790,12 @@ function App() {
           {/* PLAYLISTS VIEW */}
           {activeTab === "playlists" && (
             <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight mb-2">Mis Listas de Reproducción</h2>
-                <p className="text-sm text-text-secondary mb-6">Organiza tus colecciones musicales.</p>
-              </div>
+              {!selectedPlaylistId && (
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight mb-2">Mis Listas de Reproducción</h2>
+                  <p className="text-sm text-text-secondary mb-6">Organiza tus colecciones musicales.</p>
+                </div>
+              )}
 
               {selectedPlaylistId ? (
                 <div className="space-y-6 animate-fade-in">
@@ -3530,57 +3803,152 @@ function App() {
                     const playlist = playlists.find(p => p.id === selectedPlaylistId);
                     if (!playlist) return null;
                     return (
-                      <>
-                        <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                          <div>
-                            <button 
-                              onClick={() => setSelectedPlaylistId(null)}
-                              className="text-brand-primary text-xs font-semibold hover:underline mb-2 block"
-                            >
-                              &larr; Volver a todas
-                            </button>
-                            <h3 className="text-xl font-bold">{playlist.name}</h3>
-                            <p className="text-xs text-text-secondary mt-1">{playlist.tracks.length} canciones</p>
-                          </div>
-                          <div className="flex gap-2">
-                            {playlist.tracks.length > 0 && (
-                              <button 
-                                onClick={() => playShuffleQueue(playlist.tracks)}
-                                className="px-4 py-2 bg-brand-primary text-bg-dark rounded-xl text-sm font-semibold flex items-center gap-1 hover:scale-105 active:scale-95 transition"
-                              >
-                                <Shuffle className="w-4 h-4" /> Reproducción Aleatoria
-                              </button>
-                            )}
-                            {playlist.tracks.length > 0 && (
-                              <button 
-                                onClick={() => downloadAllTracks(playlist.tracks)}
-                                className="px-4 py-2 bg-white/5 hover:bg-white/10 text-text-primary border border-white/10 rounded-xl text-sm font-semibold flex items-center gap-1.5 hover:scale-105 active:scale-95 transition"
-                              >
-                                <Download className="w-4 h-4" /> Descargar Todo
-                              </button>
-                            )}
+                      <div className="flex flex-col lg:flex-row gap-8 items-start">
+                        {/* Left Panel: Playlist Info & Cover (sticky) */}
+                        <div className="w-full lg:w-auto flex-shrink-0 lg:sticky lg:top-0 flex flex-col items-center gap-4 bg-surface-dark/20 p-6 rounded-2xl border border-white/5 shadow-xl">
+                          <div className="flex items-center gap-2 self-start">
                             <button
-                              onClick={() => deletePlaylist(playlist.id)}
-                              className="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-white/5 transition flex items-center gap-2 text-sm hover:scale-105 active:scale-95"
+                              onClick={() => setSelectedPlaylistId(null)}
+                              className="p-2 bg-surface-dark border border-white/10 hover:border-white/20 rounded-full transition text-text-secondary hover:text-white cursor-pointer"
+                              title="Volver a todas"
                             >
-                              <Trash2 className="w-4 h-4" /> Eliminar Lista
+                              <ChevronLeft className="w-5 h-5" />
                             </button>
+                            <button
+                              onClick={goForward}
+                              disabled={navIndex === navHistory.length - 1}
+                              className="p-2 bg-surface-dark border border-white/10 hover:border-white/20 disabled:opacity-40 disabled:hover:border-white/10 rounded-full transition text-text-secondary hover:text-white cursor-pointer"
+                              title="Adelante"
+                            >
+                              <ChevronLeft className="w-5 h-5 rotate-180" />
+                            </button>
+                          </div>
+                          <div className="w-44 h-44 lg:w-56 lg:h-56 rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-surface-dark flex items-center justify-center relative self-center">
+                            {playlist.tracks.length > 0 ? (
+                              <img 
+                                src={getHighQualityThumbnail(playlist.tracks[0].thumbnail)} 
+                                alt={playlist.name} 
+                                onError={handleImageError}
+                                className="w-full h-full object-cover" 
+                              />
+                            ) : (
+                              <Music className="w-20 h-20 text-text-secondary" />
+                            )}
+                          </div>
+                          <div className="w-full min-w-0 self-start text-center lg:text-left">
+                            <p className="text-xs text-brand-primary uppercase font-bold tracking-wider mb-1">
+                              Lista Personal
+                            </p>
+                            <h3 className="text-2xl font-extrabold tracking-tight mb-2 text-white break-words">{playlist.name}</h3>
+                            <p className="text-xs text-text-secondary mt-1">{playlist.tracks.length} canciones</p>
+                            
+                            <div className="flex flex-wrap gap-2 justify-center lg:justify-start mt-5 w-full">
+                              {playlist.tracks.length > 0 && (
+                                <>
+                                  <button 
+                                    onClick={() => playTrack(playlist.tracks[0], playlist.tracks)}
+                                    className="flex-1 min-w-[120px] px-4 py-2.5 bg-brand-primary text-bg-dark rounded-xl font-bold text-xs hover:scale-105 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                                  >
+                                    <Play className="w-4 h-4 fill-current" /> Reproducir
+                                  </button>
+                                  <button 
+                                    onClick={() => playShuffleQueue(playlist.tracks)}
+                                    className="p-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl hover:scale-105 transition cursor-pointer group relative"
+                                    title="Aleatorio"
+                                  >
+                                    <Shuffle className="w-4 h-4" />
+                                    <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px] font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-surface-dark px-2 py-0.5 rounded-md border border-white/10 shadow-lg pointer-events-none">
+                                      Aleatorio
+                                    </span>
+                                  </button>
+                                  <button 
+                                    onClick={() => downloadAllTracks(playlist.tracks)}
+                                    className="p-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl hover:scale-105 transition cursor-pointer group relative"
+                                    title="Descargar todo"
+                                  >
+                                    <Download className="w-4 h-4" />
+                                    <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px] font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-surface-dark px-2 py-0.5 rounded-md border border-white/10 shadow-lg pointer-events-none">
+                                      Descargar todo
+                                    </span>
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => deletePlaylist(playlist.id)}
+                                className="p-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl hover:scale-105 transition cursor-pointer group relative"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px] font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-surface-dark px-2 py-0.5 rounded-md border border-white/10 shadow-lg pointer-events-none">
+                                  Eliminar Lista
+                                </span>
+                              </button>
+                            </div>
                           </div>
                         </div>
 
-                        {playlist.tracks.length > 0 ? (
-                          <div className="space-y-2">
-                            {playlist.tracks.map((track, idx) => (
-                              <div 
-                                key={track.id}
-                                onContextMenu={(e) => openContextMenu(e, track.id)}
-                                className="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition"
-                              >
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                  <span className="text-xs text-text-secondary w-4 text-right">{idx + 1}</span>
-                                  <img src={getHighQualityThumbnail(track.thumbnail)} className="w-10 h-10 rounded-lg object-cover" />
-                                  <div className="min-w-0">
-                                    <p className="font-semibold text-sm truncate">{track.title}</p>
+                        {/* Right Panel: Tracks list */}
+                        <div className="flex-1 min-w-0 w-full">
+                          {playlist.tracks.length > 0 ? (
+                            <div className="flex flex-col gap-2 w-full">
+                              {playlist.tracks.map((track, idx) => (
+                                <div 
+                                  key={track.id}
+                                  draggable
+                                  onDragStart={(e) => {
+                                    e.dataTransfer.effectAllowed = 'move';
+                                    e.dataTransfer.setData('text/plain', String(idx));
+                                    playlistDragRef.current = idx;
+                                    setPlaylistDragIndex(idx);
+                                  }}
+                                  onDragOver={(e) => {
+                                    e.preventDefault();
+                                    e.dataTransfer.dropEffect = 'move';
+                                    setPlaylistDragOverIndex(idx);
+                                  }}
+                                  onDrop={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    const startIdx = playlistDragRef.current;
+                                    if (startIdx === null || startIdx === idx) {
+                                      setPlaylistDragIndex(null);
+                                      setPlaylistDragOverIndex(null);
+                                      playlistDragRef.current = null;
+                                      return;
+                                    }
+                                    const currentPlaylist = playlists.find(p => p.id === selectedPlaylistId);
+                                    if (!currentPlaylist) return;
+                                    const newTracks = [...currentPlaylist.tracks];
+                                    const [removed] = newTracks.splice(startIdx, 1);
+                                    newTracks.splice(idx, 0, removed);
+                                    setPlaylists(prev => prev.map(p =>
+                                      p.id === selectedPlaylistId ? { ...p, tracks: newTracks } : p
+                                    ));
+                                    setPlaylistDragIndex(null);
+                                    setPlaylistDragOverIndex(null);
+                                    playlistDragRef.current = null;
+                                  }}
+                                  onDragEnd={() => {
+                                    setPlaylistDragIndex(null);
+                                    setPlaylistDragOverIndex(null);
+                                    playlistDragRef.current = null;
+                                  }}
+                                  onContextMenu={(e) => openContextMenu(e, track.id)}
+                                  onClick={() => {
+                                    if (currentTrack?.id === track.id) {
+                                      setIsPlayerExpanded(true);
+                                    } else {
+                                      playTrack(track, playlist.tracks);
+                                    }
+                                  }}
+                                  className={`flex items-center gap-4 p-3 rounded-xl transition duration-200 bg-surface-dark/30 hover:bg-surface-dark/70 border cursor-pointer group ${
+                                    currentTrack?.id === track.id ? "bg-brand-primary/10 border-brand-primary/20" : "border-white/5"
+                                  } ${playlistDragIndex === idx ? "dragging-queue-item" : ""} ${playlistDragOverIndex === idx ? "drag-over-queue-item" : ""}`}
+                                >
+                                  <GripVertical className="w-4 h-4 text-text-secondary/30 drag-handle flex-shrink-0 cursor-grab" />
+                                  <span className="text-xs text-text-secondary w-5 text-right font-medium">{idx + 1}</span>
+                                  <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-text-primary"}`}>{track.title}</p>
                                     <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
                                       <p className="text-xs text-text-secondary truncate">{track.artist}</p>
                                       {downloads[track.id] && (
@@ -3590,38 +3958,43 @@ function App() {
                                       )}
                                     </div>
                                   </div>
+                                  <span className="text-xs text-text-secondary hidden sm:block w-16 text-right mr-2">{formatTime(track.duration)}</span>
+                                  <div className="flex items-center gap-2">
+                                    <button 
+                                      onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        if (currentTrack?.id === track.id) {
+                                          togglePlay();
+                                        } else {
+                                          playTrack(track, playlist.tracks);
+                                        }
+                                      }} 
+                                      className="p-2 bg-brand-primary text-bg-dark rounded-full opacity-0 group-hover:opacity-100 transition shadow hover:scale-105"
+                                    >
+                                      {currentTrack?.id === track.id && isPlaying ? (
+                                        <Pause className="w-3.5 h-3.5 fill-current" />
+                                      ) : (
+                                        <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                                      )}
+                                    </button>
+                                    <button 
+                                      onClick={(e) => { e.stopPropagation(); removeTrackFromPlaylist(track.id, playlist.id); }} 
+                                      className="p-2 text-text-secondary hover:text-red-400 transition rounded-lg"
+                                      title="Quitar de la lista"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (currentTrack?.id === track.id) {
-                                        togglePlay();
-                                      } else {
-                                        playTrack(track, playlist.tracks);
-                                      }
-                                    }} 
-                                    className="p-2 bg-brand-primary rounded-full text-bg-dark hover:scale-105 active:scale-95 transition"
-                                  >
-                                    {currentTrack?.id === track.id && isPlaying ? (
-                                      <Pause className="w-3.5 h-3.5 fill-current" />
-                                    ) : (
-                                      <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                                    )}
-                                  </button>
-                                  <button onClick={(e) => { e.stopPropagation(); removeTrackFromPlaylist(track.id, playlist.id); }} className="p-2 text-text-secondary hover:text-red-400">
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-sm text-text-secondary py-8 text-center bg-white/5 rounded-2xl">
-                            Esta lista está vacía. Añade canciones.
-                          </p>
-                        )}
-                      </>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="p-12 text-center bg-white/5 rounded-2xl border border-white/5">
+                              <p className="text-sm text-text-secondary">No hay canciones en esta lista de reproducción.</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     );
                   })()}
                 </div>
@@ -3630,10 +4003,15 @@ function App() {
                   {/* Create Playlist dashed button card */}
                   <div 
                     onClick={() => setShowCreatePlaylistModal(true)}
-                    className="p-5 rounded-2xl bg-surface-dark/20 hover:bg-surface-dark/50 border border-dashed border-white/20 hover:border-brand-primary/40 cursor-pointer transition flex flex-col items-center justify-center text-center group h-40"
+                    className="p-5 rounded-2xl bg-surface-dark/20 hover:bg-surface-dark/40 border border-dashed border-white/20 hover:border-brand-primary/40 shadow-xl cursor-pointer transition flex flex-col items-center justify-center text-center gap-3 group"
                   >
-                    <Plus className="w-8 h-8 text-brand-primary/60 group-hover:scale-110 group-hover:text-brand-primary transition duration-200 mb-2" />
-                    <span className="font-bold text-sm text-text-secondary group-hover:text-text-primary transition">Crear Lista</span>
+                    <div className="w-24 h-24 rounded-2xl border-2 border-dashed border-white/20 flex items-center justify-center">
+                      <Plus className="w-8 h-8 text-brand-primary/60 group-hover:scale-110 group-hover:text-brand-primary transition duration-200" />
+                    </div>
+                    <div className="w-full min-w-0">
+                      <p className="text-[10px] text-brand-primary uppercase font-bold tracking-wider">Nueva</p>
+                      <h3 className="font-bold text-sm truncate mt-0.5 text-text-secondary group-hover:text-text-primary transition">Crear Lista</h3>
+                    </div>
                   </div>
 
                   {playlists.map((playlist) => (
@@ -3641,16 +4019,24 @@ function App() {
                       key={playlist.id}
                       onClick={() => setSelectedPlaylistId(playlist.id)}
                       onContextMenu={(e) => openPlaylistContextMenu(e, playlist)}
-                      className="p-5 rounded-2xl bg-surface-dark/50 hover:bg-surface-dark border border-transparent hover:border-white/10 cursor-pointer transition flex flex-col justify-between group h-40"
+                      className="p-5 rounded-2xl bg-surface-dark/20 hover:bg-surface-dark/40 border border-white/5 hover:border-white/10 shadow-xl cursor-pointer transition flex flex-col items-center text-center gap-3 group"
                     >
-                      <div className="flex justify-between items-start">
-                        <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-                          <ListMusic className="w-5 h-5" />
-                        </div>
+                      <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-lg border border-white/10 bg-surface-dark flex items-center justify-center flex-shrink-0">
+                        {playlist.tracks.length > 0 ? (
+                          <img 
+                            src={getHighQualityThumbnail(playlist.tracks[0].thumbnail)} 
+                            alt={playlist.name}
+                            onError={handleImageError}
+                            className="w-full h-full object-cover" 
+                          />
+                        ) : (
+                          <Music className="w-8 h-8 text-text-secondary" />
+                        )}
                       </div>
-                      <div>
-                        <h3 className="font-bold text-base truncate">{playlist.name}</h3>
-                        <p className="text-xs text-text-secondary mt-1">{playlist.tracks.length} canciones</p>
+                      <div className="w-full min-w-0">
+                        <p className="text-[10px] text-brand-primary uppercase font-bold tracking-wider">Lista Personal</p>
+                        <h3 className="font-bold text-sm truncate mt-0.5 text-white">{playlist.name}</h3>
+                        <p className="text-[10px] text-text-secondary mt-0.5">{playlist.tracks.length} canciones</p>
                       </div>
                     </div>
                   ))}
@@ -3742,12 +4128,12 @@ function App() {
           {/* DEDICATED ALBUM/PLAYLIST VIEW */}
           {activeTab === "album_view" && currentAlbum && (
             <div className="space-y-6 animate-fade-in">
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-3">
                 <button
-                  onClick={goBack}
+                  onClick={() => { goBack(); }}
                   disabled={navIndex === 0}
                   className="p-2 bg-surface-dark border border-white/10 hover:border-white/20 disabled:opacity-40 disabled:hover:border-white/10 rounded-full transition text-text-secondary hover:text-white"
-                  title="Atrás"
+                  title="Volver"
                 >
                   <ChevronLeft className="w-5 h-5" />
                 </button>
@@ -3760,104 +4146,141 @@ function App() {
                   <ChevronLeft className="w-5 h-5 rotate-180" />
                 </button>
               </div>
-              <div className="flex flex-col md:flex-row items-center md:items-end gap-6 border-b border-white/5 pb-6">
-                <img 
-                  src={getHighQualityThumbnail(currentAlbum.thumbnail)} 
-                  alt={currentAlbum.title} 
-                  onError={handleImageError}
-                  className="w-48 h-48 rounded-2xl object-cover shadow-2xl border border-white/10" 
-                />
-                <div className="flex-1 text-center md:text-left">
-                  <p className="text-xs text-brand-primary uppercase font-bold tracking-wider mb-2">
-                    {currentAlbum.type === "album" ? "Álbum" : "Lista de Reproducción"}
-                  </p>
-                  <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-2">{currentAlbum.title}</h2>
-                  {currentAlbum.artist && (
-                    <p className="text-sm text-text-secondary">De <span className="text-white font-semibold">{currentAlbum.artist}</span></p>
-                  )}
-                  <p className="text-xs text-text-secondary mt-1">{currentAlbumTracks.length} canciones</p>
-                  
-                  <div className="flex flex-wrap gap-3 justify-center md:justify-start mt-6">
-                    {currentAlbumTracks.length > 0 && (
-                      <>
-                        <button 
-                          onClick={() => playTrack(currentAlbumTracks[0], currentAlbumTracks)}
-                          className="px-6 py-2.5 bg-brand-primary text-bg-dark rounded-xl font-bold text-sm hover:scale-105 transition flex items-center gap-2"
-                        >
-                          <Play className="w-4 h-4 fill-current" /> Reproducir
-                        </button>
-                        <button 
-                          onClick={() => playShuffleQueue(currentAlbumTracks)}
-                          className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold text-sm hover:scale-105 transition flex items-center gap-2"
-                        >
-                          <Shuffle className="w-4 h-4" /> Aleatorio
-                        </button>
-                      </>
+
+              <div className="flex flex-col lg:flex-row gap-8 items-start">
+                {/* Left Panel: Cover & Info */}
+                <div className="w-full lg:w-auto flex-shrink-0 lg:sticky lg:top-0 flex flex-col items-center lg:items-start text-center lg:text-left gap-4 bg-surface-dark/20 p-6 rounded-2xl border border-white/5 shadow-xl">
+                  <img 
+                    src={getHighQualityThumbnail(currentAlbum.thumbnail)} 
+                    alt={currentAlbum.title} 
+                    onError={handleImageError}
+                    className="w-44 h-44 lg:w-56 lg:h-56 rounded-2xl object-cover shadow-2xl border border-white/10" 
+                  />
+                  <div className="w-full min-w-0">
+                    <p className="text-xs text-brand-primary uppercase font-bold tracking-wider mb-1">
+                      {currentAlbum.type === "album" ? "Álbum" : "Lista de Reproducción"}
+                    </p>
+                    <h2 className="text-2xl font-extrabold tracking-tight mb-2 text-white break-words">{currentAlbum.title}</h2>
+                    {currentAlbum.artist && (
+                      <p className="text-sm text-text-secondary">De <span className="text-white font-semibold">{currentAlbum.artist}</span></p>
                     )}
+                    <p className="text-xs text-text-secondary mt-1">{currentAlbumTracks.length} canciones</p>
+                    
+                    <div className="flex flex-wrap gap-2 justify-center lg:justify-start mt-5 w-full">
+                      {currentAlbumTracks.length > 0 && (
+                        <>
+                          <button 
+                            onClick={() => playTrack(currentAlbumTracks[0], currentAlbumTracks)}
+                            className="flex-1 min-w-[120px] px-4 py-2.5 bg-brand-primary text-bg-dark rounded-xl font-bold text-xs hover:scale-105 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <Play className="w-4 h-4 fill-current" /> Reproducir
+                          </button>
+                          <button 
+                            onClick={() => playShuffleQueue(currentAlbumTracks)}
+                            className="p-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl hover:scale-105 transition cursor-pointer group relative"
+                            title="Aleatorio"
+                          >
+                            <Shuffle className="w-4 h-4" />
+                            <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px] font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-surface-dark px-2 py-0.5 rounded-md border border-white/10 shadow-lg pointer-events-none">
+                              Aleatorio
+                            </span>
+                          </button>
+                          <button 
+                            onClick={() => downloadAllTracks(currentAlbumTracks)}
+                            className="p-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl hover:scale-105 transition cursor-pointer group relative"
+                            title="Descargar todo"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px] font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-surface-dark px-2 py-0.5 rounded-md border border-white/10 shadow-lg pointer-events-none">
+                              Descargar todo
+                            </span>
+                          </button>
+                          <button 
+                            onClick={(e) => openAlbumOrPlaylistContextMenu(e, currentAlbum)}
+                            className="p-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl hover:scale-105 transition flex items-center justify-center cursor-pointer group relative"
+                            title="Más opciones"
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                            <span className="absolute -bottom-7 left-1/2 -translate-x-1/2 text-[10px] font-semibold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity bg-surface-dark px-2 py-0.5 rounded-md border border-white/10 shadow-lg pointer-events-none">
+                              Más opciones
+                            </span>
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {currentAlbumTracks.length > 0 ? (
-                <div className="flex flex-col gap-2 w-full animate-fade-in">
-                  {currentAlbumTracks.map((track, idx) => (
-                    <div
-                      key={track.id}
-                      onContextMenu={(e) => openContextMenu(e, track.id)}
-                      className={`flex items-center gap-4 p-3 rounded-xl transition duration-200 bg-surface-dark/30 hover:bg-surface-dark/70 border border-white/5 cursor-pointer group ${
-                        currentTrack?.id === track.id ? "bg-brand-primary/10 border-brand-primary/20" : "border-transparent"
-                      }`}
-                      onClick={() => playTrack(track, currentAlbumTracks)}
-                    >
-                      <span className="text-xs text-text-secondary w-5 text-right font-medium">{idx + 1}</span>
-                      <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-text-primary"}`}>{track.title}</p>
-                        <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
-                          <p className="text-xs text-text-secondary truncate">{track.artist}</p>
-                          {downloads[track.id] && (
-                            <span className="flex-shrink-0 text-brand-primary" title="Descargado localmente">
-                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="M12 7v8M12 15l-3-3M12 15l3-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" className="text-bg-dark"/></svg>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <span className="text-xs text-text-secondary hidden sm:block w-16 text-right mr-2">{formatTime(track.duration)}</span>
-                      <div className="flex items-center gap-2">
-                        <button 
-                          onClick={(e) => { 
-                            e.stopPropagation(); 
+                {/* Right Panel: Tracks list */}
+                <div className="flex-1 min-w-0 max-w-3xl w-full">
+                  {currentAlbumTracks.length > 0 ? (
+                    <div className="flex flex-col gap-2 w-full">
+                      {currentAlbumTracks.map((track, idx) => (
+                        <div
+                          key={track.id}
+                          onContextMenu={(e) => openContextMenu(e, track.id)}
+                          className={`flex items-center gap-4 p-3 rounded-xl transition duration-200 bg-surface-dark/30 hover:bg-surface-dark/70 border border-white/5 cursor-pointer group ${
+                            currentTrack?.id === track.id ? "bg-brand-primary/10 border-brand-primary/20" : "border-transparent"
+                          }`}
+                          onClick={() => {
                             if (currentTrack?.id === track.id) {
-                              togglePlay();
+                              setIsPlayerExpanded(true);
                             } else {
                               playTrack(track, currentAlbumTracks);
                             }
-                          }} 
-                          className="p-2 bg-brand-primary text-bg-dark rounded-full opacity-0 group-hover:opacity-100 transition shadow hover:scale-105"
+                          }}
                         >
-                          {currentTrack?.id === track.id && isPlaying ? (
-                            <Pause className="w-3.5 h-3.5 fill-current" />
-                          ) : (
-                            <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                          )}
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); openContextMenu(e, track.id); }} 
-                          className="p-2 text-text-secondary hover:text-brand-primary transition rounded-lg"
-                        >
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                      </div>
+                          <span className="text-xs text-text-secondary w-5 text-right font-medium">{idx + 1}</span>
+                          <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-text-primary"}`}>{track.title}</p>
+                            <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
+                              <p className="text-xs text-text-secondary truncate">{track.artist}</p>
+                              {downloads[track.id] && (
+                                <span className="flex-shrink-0 text-brand-primary" title="Descargado localmente">
+                                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="currentColor"/><path d="M12 7v8M12 15l-3-3M12 15l3-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none" className="text-bg-dark"/></svg>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span className="text-xs text-text-secondary hidden sm:block w-16 text-right mr-2">{formatTime(track.duration)}</span>
+                          <div className="flex items-center gap-2">
+                            <button 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                if (currentTrack?.id === track.id) {
+                                  togglePlay();
+                                } else {
+                                  playTrack(track, currentAlbumTracks);
+                                }
+                              }} 
+                              className="p-2 bg-brand-primary text-bg-dark rounded-full opacity-0 group-hover:opacity-100 transition shadow hover:scale-105"
+                            >
+                              {currentTrack?.id === track.id && isPlaying ? (
+                                <Pause className="w-3.5 h-3.5 fill-current" />
+                              ) : (
+                                <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
+                              )}
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); openContextMenu(e, track.id); }} 
+                              className="p-2 text-text-secondary hover:text-brand-primary transition rounded-lg"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    <div className="flex flex-col gap-2 w-full">
+                      {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <SkeletonRow key={i} />
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="flex flex-col gap-2 w-full">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <SkeletonRow key={i} />
-                  ))}
-                </div>
-              )}
+              </div>
             </div>
           )}
 
@@ -4061,7 +4484,7 @@ function App() {
                     <button
                       onClick={() => {
                         setSearchViewMode("list");
-                        localStorage.setItem("opentune_default_search_view", "list");
+                        localStorage.setItem("capi_default_search_view", "list");
                       }}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
                         searchViewMode === "list" ? "bg-brand-primary text-bg-dark" : "text-text-secondary hover:text-text-primary"
@@ -4072,7 +4495,7 @@ function App() {
                     <button
                       onClick={() => {
                         setSearchViewMode("grid");
-                        localStorage.setItem("opentune_default_search_view", "grid");
+                        localStorage.setItem("capi_default_search_view", "grid");
                       }}
                       className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
                         searchViewMode === "grid" ? "bg-brand-primary text-bg-dark" : "text-text-secondary hover:text-text-primary"
@@ -4377,7 +4800,7 @@ function App() {
                       onChange={(e) => {
                         const val = !e.target.checked;
                         setShowSidebarSettings(val);
-                        localStorage.setItem("opentune_show_sidebar_settings", String(val));
+                        localStorage.setItem("capi_show_sidebar_settings", String(val));
                       }}
                       className="sr-only peer" 
                     />
@@ -4851,6 +5274,15 @@ function App() {
               onTouchStart={(e) => e.stopPropagation()}
               className="w-24 accent-brand-secondary h-1 rounded-full bg-white/10 appearance-none cursor-pointer"
             />
+            {currentTrack && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); setIsPlayerExpanded(true); }} 
+                className="p-2 text-text-secondary hover:text-white transition"
+                title="Expandir reproductor"
+              >
+                <ChevronUp className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </footer>
 
@@ -5150,6 +5582,60 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* ARTIST CONTEXT MENU */}
+      {contextMenuArtist && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] modal-overlay" onClick={() => setContextMenuArtist(null)}>
+          <div className="glass p-5 rounded-2xl max-w-xs w-full border border-white/10 shadow-2xl mx-4 modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/5">
+              <img src={contextMenuArtist.thumbnail || "https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=300"} onError={handleImageError} className="w-12 h-12 rounded-full object-cover bg-black/40" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-sm truncate">{contextMenuArtist.artistName}</p>
+                <p className="text-xs text-text-secondary truncate">Artista</p>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <button
+                onClick={() => {
+                  setHiddenArtists(prev => [...prev, contextMenuArtist.artistName]);
+                  setContextMenuArtist(null);
+                }}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <X className="w-4 h-4" /> Eliminar de la vista principal
+              </button>
+              <button
+                onClick={() => {
+                  setContextMenuArtist(null);
+                  if (contextMenuArtist.artistId) {
+                    loadArtistProfile(contextMenuArtist.artistId);
+                  } else {
+                    setQuery(contextMenuArtist.artistName);
+                    navigateTo("buscar");
+                    invoke<string>("buscar_cancion", { query: contextMenuArtist.artistName }).then((res) => {
+                      const parsed = JSON.parse(res);
+                      const items = Array.isArray(parsed) ? parsed : (parsed.results || parsed.tracks || []);
+                      const match = items.find((item: any) => item.type === "artist" || item.type?.toLowerCase().includes("artist"));
+                      if (match && (match.id || match.browseId)) {
+                        loadArtistProfile(match.id || match.browseId);
+                      }
+                    });
+                  }
+                }}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <User className="w-4 h-4" /> View artist
+              </button>
+            </div>
+            <button
+              onClick={() => setContextMenuArtist(null)}
+              className="w-full mt-3 pt-3 border-t border-white/5 text-center text-xs text-text-secondary hover:text-text-primary transition py-2"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* CONTEXT MENU MODAL */}
       {contextMenuTrack && (
@@ -5484,6 +5970,93 @@ function App() {
 
         return null;
       })()}
+
+      {/* ALBUM OR PLAYLIST CONTEXT MENU MODAL */}
+      {contextMenuAlbumOrPlaylist && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] modal-overlay" onClick={() => setContextMenuAlbumOrPlaylist(null)}>
+          <div className="glass p-5 rounded-2xl max-w-xs w-full border border-white/10 shadow-2xl mx-4 modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/5">
+              <img src={contextMenuAlbumOrPlaylist.thumbnail} onError={handleImageError} className="w-12 h-12 rounded-xl object-cover bg-black/40" />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-sm truncate">{contextMenuAlbumOrPlaylist.title || contextMenuAlbumOrPlaylist.name || "Nueva Playlist"}</p>
+                <p className="text-xs text-text-secondary truncate capitalize">{contextMenuAlbumOrPlaylist.type === "album" ? "Álbum" : "Lista de reproducción"}</p>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <button 
+                onClick={() => playAlbumOrPlaylistAll(contextMenuAlbumOrPlaylist)}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <Play className="w-4 h-4" /> {T("play_all") || "Reproducir todo"}
+              </button>
+              <button 
+                onClick={() => playAlbumOrPlaylistShuffle(contextMenuAlbumOrPlaylist)}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <Shuffle className="w-4 h-4" /> {T("play_shuffle_all") || "Reproducir aleatorio"}
+              </button>
+              <button 
+                onClick={() => playAlbumOrPlaylistNext(contextMenuAlbumOrPlaylist)}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <SkipForward className="w-4 h-4" /> {T("play_next_playlist") || "Reproducir al siguiente"}
+              </button>
+              <button 
+                onClick={() => addAlbumOrPlaylistToQueue(contextMenuAlbumOrPlaylist)}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <ListPlus className="w-4 h-4" /> {T("add_playlist_to_queue") || "Agregar a la cola"}
+              </button>
+              <button 
+                onClick={() => saveAlbumOrPlaylistAsLocal(contextMenuAlbumOrPlaylist)}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <ListMusic className="w-4 h-4" /> {T("save_playlist_complete") || "Guardar playlist completa"}
+              </button>
+              <button 
+                onClick={() => downloadAlbumOrPlaylist(contextMenuAlbumOrPlaylist)}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <Download className="w-4 h-4" /> {T("download_complete") || "Descargar completa"}
+              </button>
+              <button 
+                onClick={() => addAlbumOrPlaylistToFavorites(contextMenuAlbumOrPlaylist)}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <Heart className="w-4 h-4" /> {T("add_playlist_to_favorites") || "Agregar a favoritos"}
+              </button>
+              <button 
+                onClick={() => copyAlbumOrPlaylistLink(contextMenuAlbumOrPlaylist)}
+                className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+              >
+                <Copy className="w-4 h-4" /> {T("copy_playlist_link") || "Copiar enlace de playlist"}
+              </button>
+            </div>
+            <button
+              onClick={() => setContextMenuAlbumOrPlaylist(null)}
+              className="w-full mt-3 pt-3 border-t border-white/5 text-center text-xs text-text-secondary hover:text-text-primary transition py-2"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* FULLSCREEN TRACKS LOADING OVERLAY FOR MENU ACTIONS */}
+      {loadingTracksForMenu && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[80] animate-fade-in">
+          <div className="flex flex-col items-center gap-4 p-8 rounded-3xl border border-white/10 shadow-2xl glass max-w-xs w-full text-center">
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-4 border-white/5"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-t-brand-primary animate-spin"></div>
+            </div>
+            <div className="space-y-1">
+              <p className="font-bold text-white text-base">{T("loading_tracks") || "Cargando canciones..."}</p>
+              <p className="text-xs text-text-secondary">Esto puede demorar unos segundos</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* GLOBAL CONFIRMATION MODAL */}
       {confirmDialog.isOpen && (

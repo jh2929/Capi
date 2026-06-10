@@ -88,6 +88,16 @@ export interface TranslationKeys {
   ready: string;
   selected_items: string;
   play_shuffle: string;
+  save_playlist_complete?: string;
+  download_complete?: string;
+  play_all?: string;
+  play_shuffle_all?: string;
+  copy_playlist_link?: string;
+  play_next_playlist?: string;
+  add_playlist_to_queue?: string;
+  add_playlist_to_favorites?: string;
+  loading_tracks?: string;
+  toast_play_next?: string;
 }
 
 const translations: Record<Locale, TranslationKeys> = {
@@ -120,7 +130,17 @@ const translations: Record<Locale, TranslationKeys> = {
     your_playlists: "Tus Playlists", new_releases_subtitle: "Descubre la música más reciente lanzada al mercado.",
     loading: "Cargando...", loading_recs: "Cargando recomendaciones...", no_artist_profile: "No se pudo cargar el perfil del artista.",
     download_manager: "Gestor de Descargas", download_manager_subtitle: "Monitorea y gestiona tus descargas activas en tiempo real.",
-    select: "Seleccionar", ready: "Listo", selected_items: "elementos seleccionados", play_shuffle: "Reproducir Aleatorio"
+    select: "Seleccionar", ready: "Listo", selected_items: "elementos seleccionados", play_shuffle: "Reproducir Aleatorio",
+    save_playlist_complete: "Guardar playlist completa",
+    download_complete: "Descargar completa",
+    play_all: "Reproducir todo",
+    play_shuffle_all: "Reproducir aleatorio",
+    copy_playlist_link: "Copiar enlace de playlist",
+    play_next_playlist: "Reproducir al siguiente",
+    add_playlist_to_queue: "Agregar a la cola",
+    add_playlist_to_favorites: "Agregar a favoritos",
+    loading_tracks: "Cargando canciones...",
+    toast_play_next: "Reproduciendo a continuación"
   },
   en: {
     search_placeholder: "Search songs, artists, albums...",
@@ -151,7 +171,17 @@ const translations: Record<Locale, TranslationKeys> = {
     your_playlists: "Your Playlists", new_releases_subtitle: "Discover the latest music released to the market.",
     loading: "Loading...", loading_recs: "Loading recommendations...", no_artist_profile: "Could not load artist profile.",
     download_manager: "Downloads Manager", download_manager_subtitle: "Monitor and manage active downloads in real-time.",
-    select: "Select", ready: "Ready", selected_items: "selected items", play_shuffle: "Play Shuffle"
+    select: "Select", ready: "Ready", selected_items: "selected items", play_shuffle: "Play Shuffle",
+    save_playlist_complete: "Save complete playlist",
+    download_complete: "Download complete",
+    play_all: "Play all",
+    play_shuffle_all: "Play shuffle",
+    copy_playlist_link: "Copy playlist link",
+    play_next_playlist: "Play next",
+    add_playlist_to_queue: "Add to queue",
+    add_playlist_to_favorites: "Add to favorites",
+    loading_tracks: "Loading tracks...",
+    toast_play_next: "Playing next"
   },
   pt: {
     search_placeholder: "Buscar músicas, artistas, álbuns...",
