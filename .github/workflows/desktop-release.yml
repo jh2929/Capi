@@ -26,7 +26,7 @@ env:
 
 jobs:
   # ──────────────────────────────────────────────────────────────────────
-  # PHASE 1: Build capi-core binary only (inspect before full build)
+  # PHASE 1: Build capi-core.exe for Windows (inspect before full build)
   # ──────────────────────────────────────────────────────────────────────
   binaries-windows:
     name: 🔷 capi-core.exe (Windows)
@@ -48,10 +48,12 @@ jobs:
           distribution: "graalvm"
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache: gradle
-          native-image: true
 
       - name: Grant execute permission to gradlew
         run: chmod +x gradlew
+
+      - name: Switch Gradle to 8.13 for native-image compat
+        run: ./gradlew wrapper --gradle-version 8.13 --no-daemon
 
       - name: Build capi-core native binary
         run: ./gradlew :capi-core:nativeCompile --no-daemon
@@ -63,43 +65,8 @@ jobs:
           path: capi-core/build/native/nativeCompile/capi-core.exe
           retention-days: 30
 
-  binaries-linux:
-    name: 🐧 capi-core (Linux)
-    if: >
-      github.event_name == 'workflow_dispatch' &&
-      (inputs.target == 'binaries' || inputs.target == 'all')
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - name: Set up GraalVM JDK 21
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: "21"
-          distribution: "graalvm"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          cache: gradle
-          native-image: true
-
-      - name: Grant execute permission to gradlew
-        run: chmod +x gradlew
-
-      - name: Build capi-core native binary
-        run: ./gradlew :capi-core:nativeCompile --no-daemon
-
-      - name: Upload capi-core (Linux) artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: capi-core-linux
-          path: capi-core/build/native/nativeCompile/capi-core
-          retention-days: 30
-
   # ──────────────────────────────────────────────────────────────────────
-  # PHASE 2: Full desktop application for Windows
+  # PHASE 2: Full Windows desktop application
   # ──────────────────────────────────────────────────────────────────────
   desktop-windows:
     name: 🪟 Windows (.msi/.exe)
@@ -122,10 +89,12 @@ jobs:
           distribution: "graalvm"
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache: gradle
-          native-image: true
 
       - name: Grant execute permission to gradlew
         run: chmod +x gradlew
+
+      - name: Switch Gradle to 8.13 for native-image compat
+        run: ./gradlew wrapper --gradle-version 8.13 --no-daemon
 
       - name: Build capi-core native binary
         run: ./gradlew :capi-core:nativeCompile --no-daemon
@@ -162,7 +131,7 @@ jobs:
           generate_release_notes: true
 
   # ──────────────────────────────────────────────────────────────────────
-  # PHASE 3: Full desktop application for Linux
+  # PHASE 3: Linux packages (uses capi-core already in repo)
   # ──────────────────────────────────────────────────────────────────────
   desktop-linux:
     name: 🐧 Linux (.deb / .AppImage / .rpm)
@@ -188,26 +157,6 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             patchelf
-
-      - name: Set up GraalVM JDK 21
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: "21"
-          distribution: "graalvm"
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          cache: gradle
-          native-image: true
-
-      - name: Grant execute permission to gradlew
-        run: chmod +x gradlew
-
-      - name: Build capi-core native binary
-        run: ./gradlew :capi-core:nativeCompile --no-daemon
-
-      - name: Copy capi-core to desktop bundle
-        run: |
-          mkdir -p capi-desktop/bin
-          cp capi-core/build/native/nativeCompile/capi-core capi-desktop/bin/capi-core
 
       - name: Set up Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
