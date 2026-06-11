@@ -1,0 +1,235 @@
+name: Desktop Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Build target"
+        required: true
+        default: "binaries"
+        type: choice
+        options:
+          - binaries
+          - windows
+          - linux
+          - all
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ──────────────────────────────────────────────────────────────────────
+  # PHASE 1: Build capi-core binary only (inspect before full build)
+  # ──────────────────────────────────────────────────────────────────────
+  binaries-windows:
+    name: 🔷 capi-core.exe (Windows)
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.target == 'binaries' || inputs.target == 'all')
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up GraalVM JDK 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: "21"
+          distribution: "graalvm"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: gradle
+          native-image: true
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Build capi-core native binary
+        run: ./gradlew :capi-core:nativeCompile --no-daemon
+
+      - name: Upload capi-core.exe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: capi-core-windows
+          path: capi-core/build/native/nativeCompile/capi-core.exe
+          retention-days: 30
+
+  binaries-linux:
+    name: 🐧 capi-core (Linux)
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.target == 'binaries' || inputs.target == 'all')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up GraalVM JDK 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: "21"
+          distribution: "graalvm"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: gradle
+          native-image: true
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Build capi-core native binary
+        run: ./gradlew :capi-core:nativeCompile --no-daemon
+
+      - name: Upload capi-core (Linux) artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: capi-core-linux
+          path: capi-core/build/native/nativeCompile/capi-core
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────────────────────────
+  # PHASE 2: Full desktop application for Windows
+  # ──────────────────────────────────────────────────────────────────────
+  desktop-windows:
+    name: 🪟 Windows (.msi/.exe)
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.target == 'windows' || inputs.target == 'all') ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v'))
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up GraalVM JDK 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: "21"
+          distribution: "graalvm"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: gradle
+          native-image: true
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Build capi-core native binary
+        run: ./gradlew :capi-core:nativeCompile --no-daemon
+
+      - name: Copy capi-core.exe to desktop bundle
+        shell: bash
+        run: |
+          mkdir -p capi-desktop/bin
+          cp capi-core/build/native/nativeCompile/capi-core.exe capi-desktop/bin/capi-core.exe
+
+      - name: Set up Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install npm dependencies
+        run: npm install
+        working-directory: capi-desktop
+
+      - name: Build Capi Desktop for Windows
+        run: npm run tauri build
+        working-directory: capi-desktop
+
+      - name: Upload Windows installer bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Capi-Windows
+          path: capi-desktop/src-tauri/target/release/bundle/
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: capi-desktop/src-tauri/target/release/bundle/**/*
+          generate_release_notes: true
+
+  # ──────────────────────────────────────────────────────────────────────
+  # PHASE 3: Full desktop application for Linux
+  # ──────────────────────────────────────────────────────────────────────
+  desktop-linux:
+    name: 🐧 Linux (.deb / .AppImage / .rpm)
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.target == 'linux' || inputs.target == 'all')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Set up GraalVM JDK 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: "21"
+          distribution: "graalvm"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: gradle
+          native-image: true
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Build capi-core native binary
+        run: ./gradlew :capi-core:nativeCompile --no-daemon
+
+      - name: Copy capi-core to desktop bundle
+        run: |
+          mkdir -p capi-desktop/bin
+          cp capi-core/build/native/nativeCompile/capi-core capi-desktop/bin/capi-core
+
+      - name: Set up Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install npm dependencies
+        run: npm install
+        working-directory: capi-desktop
+
+      - name: Build Capi Desktop for Linux (deb + AppImage + rpm)
+        run: npm run tauri build -- --bundles deb,appimage,rpm
+        working-directory: capi-desktop
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: Capi-Linux
+          path: capi-desktop/src-tauri/target/release/bundle/
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: capi-desktop/src-tauri/target/release/bundle/**/*
+          generate_release_notes: true

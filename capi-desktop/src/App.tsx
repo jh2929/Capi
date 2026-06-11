@@ -14,6 +14,7 @@ import "./App.css";
 import { t, Locale, LOCALE_NAMES, TranslationKeys } from "./i18n";
 import SafeImage from "./SafeImage";
 import { recordPlayEvent, getRecommendationQueries, getTopArtistsFromDB, getTopTracksFromDB, ArtistAffinity, getPersonalizedHomeSections, addListenedTime } from "./recommendations";
+import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 
 interface NavState {
   tab: "home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos" | "download_manager" | "stats";
@@ -213,6 +214,12 @@ function App() {
     }
     return saved !== "false";
   });
+
+  const [autostartEnabled, setAutostartEnabled] = useState(false);
+
+  useEffect(() => {
+    isEnabled().then(setAutostartEnabled).catch(() => {});
+  }, []);
 
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselTouchStart, setCarouselTouchStart] = useState<number | null>(null);
@@ -5113,14 +5120,15 @@ function App() {
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input 
                             type="checkbox" 
-                            checked={(() => {
-                              const savedBoot = localStorage.getItem("capi_start_on_boot");
-                              return savedBoot === "true";
-                            })()} 
+                            checked={autostartEnabled}
                             onChange={(e) => {
                               const val = e.target.checked;
-                              localStorage.setItem("capi_start_on_boot", String(val));
-                              showToast(`Preferencia guardada: Iniciar al arrancar ${val ? "activado" : "desactivado"}`);
+                              if (val) {
+                                enable().then(() => setAutostartEnabled(true)).catch(console.error);
+                              } else {
+                                disable().then(() => setAutostartEnabled(false)).catch(console.error);
+                              }
+                              showToast(`Iniciar al arrancar: ${val ? "activado" : "desactivado"}`);
                             }}
                             className="sr-only peer" 
                           />

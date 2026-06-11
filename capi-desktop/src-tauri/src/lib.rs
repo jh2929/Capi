@@ -2,6 +2,8 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::io::Write;
 use tauri::{Manager, Emitter};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::menu::{Menu, MenuItem};
 use futures_util::StreamExt;
 use std::net::TcpListener;
 use std::io::Read;
@@ -25,6 +27,8 @@ fn start_local_server(capi_dir: PathBuf) -> u16 {
     
     let client = reqwest::blocking::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .connect_timeout(std::time::Duration::from_secs(8))
+        .pool_idle_timeout(std::time::Duration::from_secs(20))
         .build()
         .expect("Failed to build proxy HTTP client");
     
@@ -225,19 +229,24 @@ struct DownloadProgress {
 }
 
 fn get_binary_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
-    // 1. Check development/absolute workspace path first to allow running the target/release binary directly
-    let dev_path = std::path::Path::new("/home/emixdy/Documentos/Capi/capi-desktop/bin/capi-core");
-    if dev_path.exists() {
-        return Ok(dev_path.to_path_buf());
+    let binary_name = if cfg!(target_os = "windows") { "capi-core.exe" } else { "capi-core" };
+
+    // 1. Check development/absolute workspace path first
+    #[cfg(target_os = "linux")]
+    {
+        let dev_path = std::path::Path::new("/home/emixdy/Documentos/Capi/capi-desktop/bin/capi-core");
+        if dev_path.exists() {
+            return Ok(dev_path.to_path_buf());
+        }
     }
 
     // 2. Check compiled bundle resources
     if let Ok(dir) = app.path().resource_dir() {
-        let path = dir.join("bin").join("capi-core");
+        let path = dir.join("bin").join(binary_name);
         if path.exists() {
             return Ok(path);
         }
-        let path_flat = dir.join("capi-core");
+        let path_flat = dir.join(binary_name);
         if path_flat.exists() {
             return Ok(path_flat);
         }
@@ -246,11 +255,11 @@ fn get_binary_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     // 3. Check adjacent to current running binary directory
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(parent) = exe_path.parent() {
-            let path = parent.join("bin").join("capi-core");
+            let path = parent.join("bin").join(binary_name);
             if path.exists() {
                 return Ok(path);
             }
-            let path_flat = parent.join("capi-core");
+            let path_flat = parent.join(binary_name);
             if path_flat.exists() {
                 return Ok(path_flat);
             }
@@ -261,65 +270,157 @@ fn get_binary_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     app.path()
         .resource_dir()
         .map_err(|e| e.to_string())
-        .map(|dir| dir.join("bin").join("capi-core"))
+        .map(|dir| dir.join("bin").join(binary_name))
 }
 
 use std::process::{ChildStdin, ChildStdout, Stdio};
 use std::io::{BufRead, BufReader};
 use std::sync::Mutex;
+use std::sync::Arc;
 
 struct DaemonProcess {
     stdin: Mutex<ChildStdin>,
     stdout: Mutex<BufReader<ChildStdout>>,
 }
 
-fn send_daemon_command(daemon: &DaemonProcess, command: &str) -> Result<String, String> {
-    let total_start = std::time::Instant::now();
-    
-    let lock_start = std::time::Instant::now();
-    let mut stdin = daemon.stdin.lock().map_err(|e| e.to_string())?;
-    let mut stdout = daemon.stdout.lock().map_err(|e| e.to_string())?;
-    println!("[TIMING] Mutex lock took: {}ms", lock_start.elapsed().as_millis());
-    
-    let write_start = std::time::Instant::now();
-    writeln!(stdin, "{}", command).map_err(|e| e.to_string())?;
-    stdin.flush().map_err(|e| e.to_string())?;
-    println!("[TIMING] Write+flush took: {}ms", write_start.elapsed().as_millis());
-    
-    let read_start = std::time::Instant::now();
-    let mut response = String::new();
-    stdout.read_line(&mut response).map_err(|e| e.to_string())?;
-    println!("[TIMING] read_line took: {}ms", read_start.elapsed().as_millis());
-    println!("[TIMING] send_daemon_command TOTAL: {}ms | cmd: {}", total_start.elapsed().as_millis(), &command[..std::cmp::min(60, command.len())]);
-    
-    Ok(response.trim().to_string())
+async fn send_daemon_command(
+    daemon: Arc<DaemonProcess>,
+    child: Arc<Mutex<std::process::Child>>,
+    command: String,
+) -> Result<String, String> {
+    let timeout_dur = std::time::Duration::from_secs(25);
+
+    let result = tokio::time::timeout(
+        timeout_dur,
+        tokio::task::spawn_blocking(move || {
+            let start = std::time::Instant::now();
+            let mut stdin = daemon.stdin.lock().map_err(|e| e.to_string())?;
+            let mut stdout = daemon.stdout.lock().map_err(|e| e.to_string())?;
+            writeln!(stdin, "{}", command).map_err(|e| e.to_string())?;
+            stdin.flush().map_err(|e| e.to_string())?;
+            let mut response = String::new();
+            stdout.read_line(&mut response).map_err(|e| e.to_string())?;
+            println!("[DAEMON] cmd took: {}ms | cmd: {}", start.elapsed().as_millis(), &command[..std::cmp::min(60, command.len())]);
+            Ok::<String, String>(response.trim().to_string())
+        }),
+    ).await;
+
+    match result {
+        Ok(Ok(Ok(resp))) => Ok(resp),
+        Ok(Ok(Err(e))) => Err(e),
+        Ok(Err(join_err)) => Err(format!("Daemon thread error: {}", join_err)),
+        Err(_elapsed) => {
+            // Timeout — kill daemon to unblock the stuck thread
+            if let Ok(mut guard) = child.lock() {
+                let _ = guard.kill();
+                let _ = guard.wait();
+            }
+            // Small pause so the blocking thread detects the broken pipe
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+            Err("El daemon dejó de responder".to_string())
+        }
+    }
+}
+
+fn spawn_daemon_process(binary: &PathBuf) -> Result<(DaemonProcess, std::process::Child), String> {
+    let mut cmd = Command::new(binary);
+    cmd.arg("--daemon")
+       .stdin(Stdio::piped())
+       .stdout(Stdio::piped())
+       .stderr(Stdio::inherit());
+
+    let mut child = cmd.spawn()
+        .map_err(|e| format!("Fallo al iniciar capi-core daemon: {}", e))?;
+
+    let stdin = child.stdin.take().unwrap();
+    let mut stdout = BufReader::new(child.stdout.take().unwrap());
+
+    // Wait for {"status":"ready"}
+    let mut ready_line = String::new();
+    stdout.read_line(&mut ready_line).map_err(|e| format!("Daemon startup read failed: {}", e))?;
+    if !ready_line.contains("ready") {
+        return Err(format!("Daemon initialization failed: {}", ready_line));
+    }
+
+    Ok((DaemonProcess {
+        stdin: Mutex::new(stdin),
+        stdout: Mutex::new(stdout),
+    }, child))
+}
+
+fn restart_daemon(app: &tauri::AppHandle) -> Result<(), String> {
+    let binary = get_binary_path(app)?;
+    let (daemon, child) = spawn_daemon_process(&binary)?;
+    app.manage(Arc::new(daemon));
+    app.manage(Arc::new(Mutex::new(child)));
+    println!("[DAEMON] Restarted successfully");
+    Ok(())
 }
 
 #[tauri::command]
-async fn buscar_cancion(daemon: tauri::State<'_, DaemonProcess>, query: String) -> Result<String, String> {
+async fn buscar_cancion(app: tauri::AppHandle, daemon: tauri::State<'_, Arc<DaemonProcess>>, child: tauri::State<'_, Arc<Mutex<std::process::Child>>>, query: String) -> Result<String, String> {
     let cmd = serde_json::json!({
         "action": "search",
         "query": query
     }).to_string();
-    send_daemon_command(&daemon, &cmd)
+    let result = send_daemon_command(daemon.inner().clone(), child.inner().clone(), cmd).await;
+    if let Err(ref e) = result {
+        if e == "El daemon dejó de responder" {
+            restart_daemon(&app)?;
+            let new_daemon = app.state::<Arc<DaemonProcess>>();
+            let new_child = app.state::<Arc<Mutex<std::process::Child>>>();
+            let cmd2 = serde_json::json!({
+                "action": "search",
+                "query": query
+            }).to_string();
+            return send_daemon_command(new_daemon.inner().clone(), new_child.inner().clone(), cmd2).await;
+        }
+    }
+    result
 }
 
 #[tauri::command]
-async fn obtener_stream(daemon: tauri::State<'_, DaemonProcess>, id: String) -> Result<String, String> {
+async fn obtener_stream(app: tauri::AppHandle, daemon: tauri::State<'_, Arc<DaemonProcess>>, child: tauri::State<'_, Arc<Mutex<std::process::Child>>>, id: String) -> Result<String, String> {
     let cmd = serde_json::json!({
         "action": "get-stream",
         "id": id
     }).to_string();
-    send_daemon_command(&daemon, &cmd)
+    let result = send_daemon_command(daemon.inner().clone(), child.inner().clone(), cmd).await;
+    if let Err(ref e) = result {
+        if e == "El daemon dejó de responder" {
+            restart_daemon(&app)?;
+            let new_daemon = app.state::<Arc<DaemonProcess>>();
+            let new_child = app.state::<Arc<Mutex<std::process::Child>>>();
+            let cmd2 = serde_json::json!({
+                "action": "get-stream",
+                "id": id
+            }).to_string();
+            return send_daemon_command(new_daemon.inner().clone(), new_child.inner().clone(), cmd2).await;
+        }
+    }
+    result
 }
 
 #[tauri::command]
-async fn obtener_playlist(daemon: tauri::State<'_, DaemonProcess>, id: String) -> Result<String, String> {
+async fn obtener_playlist(app: tauri::AppHandle, daemon: tauri::State<'_, Arc<DaemonProcess>>, child: tauri::State<'_, Arc<Mutex<std::process::Child>>>, id: String) -> Result<String, String> {
     let cmd = serde_json::json!({
         "action": "get-playlist",
         "id": id
     }).to_string();
-    send_daemon_command(&daemon, &cmd)
+    let result = send_daemon_command(daemon.inner().clone(), child.inner().clone(), cmd).await;
+    if let Err(ref e) = result {
+        if e == "El daemon dejó de responder" {
+            restart_daemon(&app)?;
+            let new_daemon = app.state::<Arc<DaemonProcess>>();
+            let new_child = app.state::<Arc<Mutex<std::process::Child>>>();
+            let cmd2 = serde_json::json!({
+                "action": "get-playlist",
+                "id": id
+            }).to_string();
+            return send_daemon_command(new_daemon.inner().clone(), new_child.inner().clone(), cmd2).await;
+        }
+    }
+    result
 }
 
 #[tauri::command]
@@ -361,6 +462,9 @@ async fn descargar_cancion(
 
     let client = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .connect_timeout(std::time::Duration::from_secs(8))
+        .timeout(std::time::Duration::from_secs(30))
+        .pool_idle_timeout(std::time::Duration::from_secs(20))
         .build()
         .map_err(|e| format!("Error creando cliente HTTP: {}", e))?;
     let res = client
@@ -383,6 +487,9 @@ async fn descargar_cancion(
 
     let client = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .connect_timeout(std::time::Duration::from_secs(8))
+        .timeout(std::time::Duration::from_secs(30))
+        .pool_idle_timeout(std::time::Duration::from_secs(20))
         .build()
         .map_err(|e| format!("Error creando cliente HTTP: {}", e))?;
 
@@ -477,40 +584,93 @@ async fn borrar_cancion(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn obtener_home(daemon: tauri::State<'_, DaemonProcess>, continuation: Option<String>) -> Result<String, String> {
+async fn obtener_home(app: tauri::AppHandle, daemon: tauri::State<'_, Arc<DaemonProcess>>, child: tauri::State<'_, Arc<Mutex<std::process::Child>>>, continuation: Option<String>) -> Result<String, String> {
     let cmd = serde_json::json!({
         "action": "home",
         "continuation": continuation
     }).to_string();
-    send_daemon_command(&daemon, &cmd)
+    let result = send_daemon_command(daemon.inner().clone(), child.inner().clone(), cmd).await;
+    if let Err(ref e) = result {
+        if e == "El daemon dejó de responder" {
+            restart_daemon(&app)?;
+            let new_daemon = app.state::<Arc<DaemonProcess>>();
+            let new_child = app.state::<Arc<Mutex<std::process::Child>>>();
+            let cmd2 = serde_json::json!({
+                "action": "home",
+                "continuation": continuation
+            }).to_string();
+            return send_daemon_command(new_daemon.inner().clone(), new_child.inner().clone(), cmd2).await;
+        }
+    }
+    result
 }
 
 #[tauri::command]
-async fn obtener_artista(daemon: tauri::State<'_, DaemonProcess>, id: String) -> Result<String, String> {
+async fn obtener_artista(app: tauri::AppHandle, daemon: tauri::State<'_, Arc<DaemonProcess>>, child: tauri::State<'_, Arc<Mutex<std::process::Child>>>, id: String) -> Result<String, String> {
     let cmd = serde_json::json!({
         "action": "artist",
         "id": id
     }).to_string();
-    send_daemon_command(&daemon, &cmd)
+    let result = send_daemon_command(daemon.inner().clone(), child.inner().clone(), cmd).await;
+    if let Err(ref e) = result {
+        if e == "El daemon dejó de responder" {
+            restart_daemon(&app)?;
+            let new_daemon = app.state::<Arc<DaemonProcess>>();
+            let new_child = app.state::<Arc<Mutex<std::process::Child>>>();
+            let cmd2 = serde_json::json!({
+                "action": "artist",
+                "id": id
+            }).to_string();
+            return send_daemon_command(new_daemon.inner().clone(), new_child.inner().clone(), cmd2).await;
+        }
+    }
+    result
 }
 
 #[tauri::command]
-async fn obtener_explorar(daemon: tauri::State<'_, DaemonProcess>) -> Result<String, String> {
+async fn obtener_explorar(app: tauri::AppHandle, daemon: tauri::State<'_, Arc<DaemonProcess>>, child: tauri::State<'_, Arc<Mutex<std::process::Child>>>,) -> Result<String, String> {
     let cmd = serde_json::json!({
         "action": "explore"
     }).to_string();
-    send_daemon_command(&daemon, &cmd)
+    let result = send_daemon_command(daemon.inner().clone(), child.inner().clone(), cmd).await;
+    if let Err(ref e) = result {
+        if e == "El daemon dejó de responder" {
+            restart_daemon(&app)?;
+            let new_daemon = app.state::<Arc<DaemonProcess>>();
+            let new_child = app.state::<Arc<Mutex<std::process::Child>>>();
+            let cmd2 = serde_json::json!({
+                "action": "explore"
+            }).to_string();
+            return send_daemon_command(new_daemon.inner().clone(), new_child.inner().clone(), cmd2).await;
+        }
+    }
+    result
 }
 
 #[tauri::command]
-async fn obtener_letras(daemon: tauri::State<'_, DaemonProcess>, artist: String, title: String, duration: i32) -> Result<String, String> {
+async fn obtener_letras(app: tauri::AppHandle, daemon: tauri::State<'_, Arc<DaemonProcess>>, child: tauri::State<'_, Arc<Mutex<std::process::Child>>>, artist: String, title: String, duration: i32) -> Result<String, String> {
     let cmd = serde_json::json!({
         "action": "lyrics",
         "artist": artist,
         "title": title,
         "duration": duration
     }).to_string();
-    send_daemon_command(&daemon, &cmd)
+    let result = send_daemon_command(daemon.inner().clone(), child.inner().clone(), cmd).await;
+    if let Err(ref e) = result {
+        if e == "El daemon dejó de responder" {
+            restart_daemon(&app)?;
+            let new_daemon = app.state::<Arc<DaemonProcess>>();
+            let new_child = app.state::<Arc<Mutex<std::process::Child>>>();
+            let cmd2 = serde_json::json!({
+                "action": "lyrics",
+                "artist": artist,
+                "title": title,
+                "duration": duration
+            }).to_string();
+            return send_daemon_command(new_daemon.inner().clone(), new_child.inner().clone(), cmd2).await;
+        }
+    }
+    result
 }
 
 #[tauri::command]
@@ -816,6 +976,9 @@ async fn cache_audio(app: tauri::AppHandle, track_id: String, url: String, title
 
     let client = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .connect_timeout(std::time::Duration::from_secs(8))
+        .timeout(std::time::Duration::from_secs(30))
+        .pool_idle_timeout(std::time::Duration::from_secs(20))
         .build()
         .map_err(|e| format!("Error creando cliente HTTP: {}", e))?;
 
@@ -995,38 +1158,27 @@ async fn remove_cached_track(app: tauri::AppHandle, track_id: String) -> Result<
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
-            let binary = get_binary_path(&app.handle())?;
-            let mut cmd = Command::new(&binary);
-            cmd.arg("--daemon")
-               .stdin(Stdio::piped())
-               .stdout(Stdio::piped())
-               .stderr(Stdio::inherit());
-
-            let mut child = cmd.spawn()
-                .map_err(|e| format!("Fallo al iniciar capi-core daemon: {}", e))?;
-
-            let stdin = child.stdin.take().unwrap();
-            let mut stdout = BufReader::new(child.stdout.take().unwrap());
-
-            // Wait for {"status":"ready"}
-            let mut ready_line = String::new();
-            stdout.read_line(&mut ready_line).map_err(|e| format!("Daemon startup read failed: {}", e))?;
-            if !ready_line.contains("ready") {
-                return Err(format!("Daemon initialization failed: {}", ready_line).into());
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--hidden"]),
+        ))
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                let _ = window.hide();
             }
+        })
+        .setup(|app| {
+            let handle = app.handle();
 
-            app.manage(DaemonProcess {
-                stdin: Mutex::new(stdin),
-                stdout: Mutex::new(stdout),
-            });
+            let binary = get_binary_path(handle)?;
+            let (daemon_process, child) = spawn_daemon_process(&binary)?;
 
-            // Prevent leaking daemon by holding child process
-            let child_mutex = Mutex::new(child);
-            app.manage(child_mutex);
+            app.manage(Arc::new(daemon_process));
+            app.manage(Arc::new(Mutex::new(child)));
 
             // Start localhost HTTP server for local music playback
-            let app_data = app.handle().path().app_data_dir()
+            let app_data = handle.path().app_data_dir()
                 .map_err(|e| format!("No se pudo resolver el directorio de datos: {}", e))?;
             let capi_dir = app_data.join("Capi");
             if !capi_dir.exists() {
@@ -1042,6 +1194,58 @@ pub fn run() {
             let local_port = start_local_server(capi_dir);
             app.manage(LocalServerState { port: local_port });
             app.manage(DiscordState { client: Mutex::new(None) });
+
+            // ─── System Tray ────────────────────────────────────────
+            if let Some(icon) = handle.default_window_icon() {
+                if let Ok(show) = MenuItem::with_id(handle, "show", "Mostrar ventana", true, None::<&str>) {
+                    if let Ok(quit) = MenuItem::with_id(handle, "quit", "Salir", true, None::<&str>) {
+                        if let Ok(menu) = Menu::with_items(handle, &[&show, &quit]) {
+                            let _ = TrayIconBuilder::new()
+                                .icon(icon.clone())
+                                .tooltip("Capi")
+                                .menu(&menu)
+                                .on_menu_event(|handle, event| {
+                                    match event.id.as_ref() {
+                                        "show" => {
+                                            if let Some(window) = handle.get_webview_window("main") {
+                                                let _ = window.show();
+                                                let _ = window.set_focus();
+                                            }
+                                        }
+                                        "quit" => handle.exit(0),
+                                        _ => {}
+                                    }
+                                })
+                                .on_tray_icon_event(|tray, event| {
+                                    if let TrayIconEvent::Click {
+                                        button: MouseButton::Left,
+                                        button_state: MouseButtonState::Up,
+                                        ..
+                                    } = event {
+                                        let handle = tray.app_handle();
+                                        if let Some(window) = handle.get_webview_window("main") {
+                                            if window.is_visible().unwrap_or(false) {
+                                                let _ = window.hide();
+                                            } else {
+                                                let _ = window.show();
+                                                let _ = window.set_focus();
+                                            }
+                                        }
+                                    }
+                                })
+                                .build(handle);
+                        }
+                    }
+                }
+            }
+
+            // ─── Start hidden (autostart) ──────────────────────────
+            let args: Vec<String> = std::env::args().collect();
+            if args.contains(&"--hidden".to_string()) {
+                if let Some(window) = handle.get_webview_window("main") {
+                    window.hide()?;
+                }
+            }
 
             Ok(())
         })
