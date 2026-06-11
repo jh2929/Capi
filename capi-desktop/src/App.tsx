@@ -8,11 +8,12 @@ import {
   Trash2, Home, Library, Download, Shuffle, ListPlus, Disc3, FolderOpen,
   MoreVertical, X, Sparkle, GripVertical, Copy, RefreshCw,
   User, Radio, Mic2, LayoutGrid, List, Plus, Bell,
-  Moon, Timer, BarChart3, Languages, Palette, RotateCcw, Trophy, Users, Repeat, Repeat1, Lock, Unlock, Upload
+  Moon, Timer, BarChart3, Languages, Palette, RotateCcw, Trophy, Users, Repeat, Repeat1, Lock, Unlock, Upload, Pencil
 } from "lucide-react";
 import "./App.css";
 import { t, Locale, LOCALE_NAMES, TranslationKeys } from "./i18n";
-import { recordPlayEvent, getRecommendationQueries, getTopArtistsFromDB, ArtistAffinity } from "./recommendations";
+import SafeImage from "./SafeImage";
+import { recordPlayEvent, getRecommendationQueries, getTopArtistsFromDB, getTopTracksFromDB, ArtistAffinity, getPersonalizedHomeSections, addListenedTime } from "./recommendations";
 
 interface NavState {
   tab: "home" | "explore" | "buscar" | "biblioteca" | "playlists" | "favoritos" | "artist" | "album_view" | "settings" | "perfil" | "lanzamientos" | "download_manager" | "stats";
@@ -33,6 +34,8 @@ interface Track {
   artistId?: string;
 }
 
+
+
 const getHighQualityThumbnail = (url: string) => {
   if (!url) return url;
   let hq = url;
@@ -40,10 +43,6 @@ const getHighQualityThumbnail = (url: string) => {
   hq = hq.replace(/=s\d+/, "=s600");
   hq = hq.replace("/default.jpg", "/hqdefault.jpg");
   return hq;
-};
-
-const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-  e.currentTarget.src = "https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=300";
 };
 
 interface Playlist {
@@ -134,6 +133,8 @@ const convertYTItemToTrack = (item: any): Track => ({
 
 const getSectionIcon = (title: string) => {
   const t = title.toLowerCase();
+  if (t.includes("favoritos") || t.includes("favorite")) return <Heart className="w-4 h-4 text-brand-primary fill-brand-primary/20" />;
+  if (t.includes("reciente") || t.includes("recientemente") || t.includes("recent")) return <Timer className="w-4 h-4 text-brand-primary" />;
   if (t.includes("pop")) return <Sparkles className="w-4 h-4 text-brand-primary" />;
   if (t.includes("reggaeton") || t.includes("urbano")) return <Sparkle className="w-4 h-4 text-brand-primary animate-pulse" />;
   if (t.includes("rock") || t.includes("metal")) return <Music className="w-4 h-4 text-brand-primary" />;
@@ -328,7 +329,10 @@ function App() {
 
   const [artistCardData, setArtistCardData] = useState<{ id: string; name: string; thumbnail: string; banner: string } | null>(null);
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState(false);
+  const [showImportPlaylistModal, setShowImportPlaylistModal] = useState(false);
+  const [importPlaylistUrl, setImportPlaylistUrl] = useState("");
   const streamCacheRef = useRef<Record<string, string>>({});
+  // const playCountCacheRef = useRef<Record<string, number>>({});
   const nextRandomIndexRef = useRef<number | null>(null);
   
   // Dynamic recommendations & Explore state
@@ -424,6 +428,8 @@ function App() {
   const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState<Track | null>(null);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
+  const [isRenamingPlaylist, setIsRenamingPlaylist] = useState(false);
+  const [renamePlaylistName, setRenamePlaylistName] = useState("");
 
   useEffect(() => {
     scrollableSectionRef.current?.scrollTo(0, 0);
@@ -542,6 +548,7 @@ function App() {
   const [repeatMode, setRepeatMode] = useState<"none" | "one" | "all">("none");
   const [settingsCategory, setSettingsCategory] = useState<string>("apariencia");
   const [showPayPalModal, setShowPayPalModal] = useState(false);
+  const [carouselTracks, setCarouselTracks] = useState<Track[]>([]);
   const ignoreNextScrollRef = useRef(false);
   const [lyricsScrollLocked, setLyricsScrollLocked] = useState(true);
   const [downloadDragIndex, setDownloadDragIndex] = useState<number | null>(null);
@@ -797,12 +804,13 @@ function App() {
   // Carousel auto-scroll timer (4 seconds)
   useEffect(() => {
     if (activeTab !== "home") return;
-    const slidesCount = 5; // We show up to 5 tracks in the carousel
+    const n = carouselTracks.length;
+    if (n === 0) return;
     const interval = setInterval(() => {
-      setCarouselIndex(prev => (slidesCount > 0 ? (prev + 1) % slidesCount : 0));
+      setCarouselIndex(prev => (prev + 1) % n);
     }, 4000);
     return () => clearInterval(interval);
-  }, [activeTab]);
+  }, [activeTab, carouselTracks.length]);
 
   // ESC, Space, and Arrow shortcuts
   useEffect(() => {
@@ -963,6 +971,8 @@ function App() {
   }, [activeTab, newReleases.length]);
 
   const autoScrollTimeoutRef = useRef<number | null>(null);
+  const listenedAccumRef = useRef<{ trackId: string; ms: number }>({ trackId: "", ms: 0 });
+  const listenedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const currentTimeRef = useRef(currentTime);
   currentTimeRef.current = currentTime;
@@ -1060,6 +1070,23 @@ function App() {
       console.error("Failed to load top artists for home circular section:", e);
     }
 
+    // TIER 1: Personalized sections from local data
+    try {
+      const personalSections = await getPersonalizedHomeSections(async (query) => {
+        const res = await invoke<string>("buscar_cancion", { query });
+        const data = JSON.parse(res);
+        const items = Array.isArray(data) ? data : data.tracks || data.results || [];
+        return items.slice(0, 8);
+      });
+      if (personalSections.length >= 2) {
+        setHomeSections(personalSections);
+        return;
+      }
+    } catch (e) {
+      console.error("Failed to load personalized home sections:", e);
+    }
+
+    // TIER 2: YouTube Music curated content
     try {
       const response = await invoke<string>("obtener_home", { continuation: null });
       const parsed = JSON.parse(response);
@@ -1071,6 +1098,7 @@ function App() {
       console.error("Failed to load dynamic home data:", e);
     }
 
+    // TIER 3: Recommendation queries via search
     try {
       const recQueries = await getRecommendationQueries(20);
       if (recQueries.length > 0) {
@@ -1097,7 +1125,7 @@ function App() {
       console.error("Failed to generate recommendation queries:", err);
     }
 
-    // Fallback: fetch multiple genre searches
+    // TIER 4: Fallback genre searches
     loadHomeFallback();
   };
 
@@ -1709,6 +1737,30 @@ function App() {
   }, [currentTrack?.id]);
 
   const playTrack = async (track: Track, queueList: Track[] = []) => {
+    // Immediately stop current playback before doing anything else
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.removeAttribute("src");
+      audioRef.current.load();
+    }
+    setIsPlaying(false);
+    setStreamUrl(null);
+    setCurrentTime(0);
+    setDuration(0);
+    setBuffering(false);
+    // Track play count for cache threshold — DISABLED
+    // playCountCacheRef.current[track.id] = (playCountCacheRef.current[track.id] || 0) + 1;
+
+    // Flush listened time for previous track before starting new one
+    if (listenedAccumRef.current.trackId && listenedAccumRef.current.ms > 0) {
+      addListenedTime(listenedAccumRef.current.trackId, listenedAccumRef.current.ms);
+      listenedAccumRef.current = { trackId: "", ms: 0 };
+    }
+    if (listenedIntervalRef.current) {
+      clearInterval(listenedIntervalRef.current);
+      listenedIntervalRef.current = null;
+    }
+
     try {
       // Detect playlist/radio IDs and resolve them into actual songs first
       const isPlaylistId = track.id.startsWith('RDCLAK') || track.id.startsWith('OLAK') || track.id.startsWith('PL');
@@ -1743,10 +1795,6 @@ function App() {
         setBuffering(true);
       }
       setCurrentTrack(track);
-      setIsPlaying(false);
-      setStreamUrl(null);
-      setCurrentTime(0);
-      setDuration(0);
       console.timeLog(`[PLAY-TIMING] ${track.title}`, 'state updates done');
 
       if (queueList.length > 0) {
@@ -1760,7 +1808,7 @@ function App() {
         return [track, ...filtered].slice(0, 50);
       });
 
-      recordPlayEvent(track).catch(err => console.error("recordPlayEvent failed:", err));
+      recordPlayEvent(track, 0).catch(err => console.error("recordPlayEvent failed:", err));
       
       let stream: string;
       if (track.id.startsWith("local://")) {
@@ -1794,11 +1842,23 @@ function App() {
             stream = stream.substring(1, stream.length - 1);
           }
         }
-        
-        // Wrap the YouTube stream URL in our local HTTP server to bypass GStreamer SSL/TLS negotiation bugs
+
+        // Wrap the YouTube stream URL in our local HTTP server
         stream = `http://127.0.0.1:${localPort}/play?url=${encodeURIComponent(stream)}`;
         streamCacheRef.current[track.id] = stream;
         console.timeLog(`[PLAY-TIMING] ${track.title}`, 'stream URL wrapped in proxy');
+
+        // Cache after 2+ plays (fire-and-forget, never blocks playback) — DISABLED
+        // if (playCountCacheRef.current[track.id] >= 2) {
+        //   setCacheDownloadsProgress(prev => ({ ...prev, [track.id]: 0 }));
+        //   invoke("cache_audio", { trackId: track.id, url: originalStreamUrl, title: track.title, artist: track.artist, thumbnail: track.thumbnail })
+        //     .then(() => setCacheDownloadsProgress(prev => ({ ...prev, [track.id]: 100 })))
+        //     .catch(() => setCacheDownloadsProgress(prev => {
+        //       const copy = { ...prev };
+        //       delete copy[track.id];
+        //       return copy;
+        //     }));
+        // }
       }
 
       setStreamUrl(stream);
@@ -1813,6 +1873,12 @@ function App() {
           setIsPlaying(true);
           setBuffering(false);
           setLoading(false);
+          // Start listening time accumulator
+          listenedAccumRef.current = { trackId: track.id, ms: 0 };
+          if (listenedIntervalRef.current) clearInterval(listenedIntervalRef.current);
+          listenedIntervalRef.current = setInterval(() => {
+            listenedAccumRef.current.ms += 10000;
+          }, 10000);
         }).catch(err => {
           console.timeEnd(`[PLAY-TIMING] ${track.title}`);
           console.error("Playback error:", err, "for stream:", stream);
@@ -2125,6 +2191,11 @@ function App() {
     if (selectedPlaylistId === id) setSelectedPlaylistId(null);
   };
 
+  const renamePlaylist = (id: string, newName: string) => {
+    if (!newName.trim()) return;
+    setPlaylists(prev => prev.map(p => p.id === id ? { ...p, name: newName.trim() } : p));
+  };
+
   const addTrackToPlaylist = (track: Track, playlistId: string) => {
     setPlaylists(prev => prev.map(p => {
       if (p.id === playlistId) {
@@ -2298,6 +2369,48 @@ function App() {
     showToast("Playlist guardada");
   };
 
+  const extractPlaylistIdFromUrl = (url: string): string | null => {
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    // Direct ID (no URL)
+    if (/^[A-Za-z0-9_-]{10,}$/.test(trimmed)) return trimmed;
+    // YouTube / YouTube Music playlist URL
+    try {
+      const u = new URL(trimmed);
+      const list = u.searchParams.get("list");
+      if (list) return list;
+    } catch {}
+    return null;
+  };
+
+  const importPlaylistFromUrl = async () => {
+    const id = extractPlaylistIdFromUrl(importPlaylistUrl);
+    if (!id) {
+      showToast("URL de playlist no válida");
+      return;
+    }
+    setShowImportPlaylistModal(false);
+    setImportPlaylistUrl("");
+    try {
+      const response = await invoke<string>("obtener_playlist", { id });
+      const tracks: Track[] = JSON.parse(response);
+      if (tracks.length === 0) {
+        showToast("No se encontraron canciones en esa playlist");
+        return;
+      }
+      const newPl: Playlist = {
+        id: Math.random().toString(36).substring(2, 9),
+        name: "Playlist Importada",
+        tracks,
+      };
+      setPlaylists(prev => [...prev, newPl]);
+      showToast(`Playlist importada (${tracks.length} canciones)`);
+    } catch (err) {
+      console.error("Error importing playlist:", err);
+      showToast("Error al importar la playlist");
+    }
+  };
+
   const downloadAlbumOrPlaylist = async (item: any) => {
     setContextMenuAlbumOrPlaylist(null);
     const resolvedTracks = await fetchTracksForAlbumOrPlaylist(item);
@@ -2430,53 +2543,59 @@ function App() {
     }
   };
 
-  const loadTrackWithoutPlay = async (track: Track) => {
-    try {
-      setLoading(true);
-      setCurrentTrack(track);
-      setIsPlaying(false);
-      setStreamUrl(null);
-      setCurrentTime(0);
-      setDuration(0);
-      setIsPlayerExpanded(true); // Open the full-screen player
+  // Build carousel from listeningStats + affinity data
+  useEffect(() => {
+    const build = async () => {
+      const tracks: Track[] = [];
 
-      // Add to queue if not present
-      if (!activeQueue.some(t => t.id === track.id)) {
-        setActiveQueue(prev => [track, ...prev]);
+      // First 5: top played from listeningStats
+      const sortedByPlays = Object.entries(listeningStats.trackPlays)
+        .sort(([, a], [, b]) => b.plays - a.plays);
+      for (const [, { track }] of sortedByPlays) {
+        if (tracks.length >= 5) break;
+        if (track && !tracks.some(t => t.id === track.id)) tracks.push(track);
       }
 
-      // Fetch stream URL but don't play it
-      const resultJson = await invoke<string>("obtener_stream", { id: track.id });
-      let stream = resultJson;
+      // If no stats at all, fall back to homeSections[0]
+      if (tracks.length === 0 && homeSections.length > 0 && homeSections[0].items) {
+        setCarouselTracks(homeSections[0].items.map(convertYTItemToTrack).slice(0, 10));
+        return;
+      }
+
+      // Fill remaining slots from affinity data (up to 10)
       try {
-        const parsed = JSON.parse(resultJson);
-        if (parsed.streamUrl) stream = parsed.streamUrl;
-        else if (parsed.url) stream = parsed.url;
-      } catch {
-        if (stream.startsWith('"') && stream.endsWith('"')) {
-          stream = stream.substring(1, stream.length - 1);
+        const topTracks = await getTopTracksFromDB(20);
+        for (const t of topTracks) {
+          if (tracks.length >= 10) break;
+          if (!tracks.some(ex => ex.id === t.trackId)) {
+            tracks.push({
+              id: t.trackId,
+              title: t.title,
+              artist: t.artist,
+              duration: 0,
+              thumbnail: t.thumbnail,
+              explicit: false,
+              artistId: t.artistId,
+            });
+          }
+        }
+      } catch {}
+
+      // If still not enough, fill from homeSections content
+      if (tracks.length < 10 && homeSections.length > 0) {
+        const allItems = homeSections.flatMap(s => s.items || []).map(convertYTItemToTrack);
+        for (const t of allItems) {
+          if (tracks.length >= 10) break;
+          if (!tracks.some(ex => ex.id === t.id)) {
+            tracks.push(t);
+          }
         }
       }
-      stream = `http://127.0.0.1:${localPort}/play?url=${encodeURIComponent(stream)}`;
-      streamCacheRef.current[track.id] = stream;
-      setStreamUrl(stream);
-      if (audioRef.current) {
-        audioRef.current.src = stream;
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const getCarouselTracks = () => {
-    if (homeSections.length > 0 && homeSections[0].items) {
-      return homeSections[0].items.map(convertYTItemToTrack).slice(0, 5);
-    }
-    return [];
-  };
-  const carouselTracks = getCarouselTracks();
+      setCarouselTracks(tracks.slice(0, 10));
+    };
+    build();
+  }, [listeningStats, homeSections]);
 
   const getQuickPicksTracks = () => {
     if (homeSections.length > 0) {
@@ -2495,7 +2614,18 @@ function App() {
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onPlay={() => setIsPlaying(true)}
-        onPause={() => { setIsPlaying(false); setBuffering(false); }}
+        onPause={() => {
+          setIsPlaying(false);
+          setBuffering(false);
+          if (listenedAccumRef.current.trackId && listenedAccumRef.current.ms > 0) {
+            addListenedTime(listenedAccumRef.current.trackId, listenedAccumRef.current.ms);
+            listenedAccumRef.current = { trackId: "", ms: 0 };
+          }
+          if (listenedIntervalRef.current) {
+            clearInterval(listenedIntervalRef.current);
+            listenedIntervalRef.current = null;
+          }
+        }}
         onWaiting={() => setBuffering(true)}
         onPlaying={() => setBuffering(false)}
         onSeeking={() => setBuffering(true)}
@@ -2590,9 +2720,9 @@ function App() {
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings flex-shrink-0"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
               {!sidebarCollapsed && <span className="text-sm">Configuración</span>}
-            </button>
-          )}
-          <button
+              </button>
+            )}
+            <button
             onClick={() => navigateTo("perfil")}
             className={`w-full flex items-center ${sidebarCollapsed ? "justify-center px-2" : "gap-3 px-4"} py-3 rounded-xl transition duration-200 ${
               activeTab === "perfil" ? "bg-white/5 text-brand-primary font-medium" : "text-text-secondary hover:bg-white/5 hover:text-text-primary"
@@ -2767,12 +2897,12 @@ function App() {
                             setCarouselIndex(prev => (prev - 1 + carouselTracks.length) % carouselTracks.length);
                           }
                         }}
-                        onClick={() => loadTrackWithoutPlay(carouselTracks[carouselIndex])}
+                        onClick={() => playTrack(carouselTracks[carouselIndex])}
                         className="cursor-pointer relative h-64 md:h-80 w-full overflow-hidden group"
                       >
                         {/* Background blurred cover */}
                         <div className="absolute inset-0 scale-105 blur-lg opacity-40 transition-all duration-500">
-                          <img src={getHighQualityThumbnail(carouselTracks[carouselIndex].thumbnail)} className="w-full h-full object-cover" />
+                          <SafeImage src={carouselTracks[carouselIndex].thumbnail} className="w-full h-full object-cover" alt="" />
                         </div>
                         {/* Real content */}
                         <div className="absolute inset-0 flex items-center justify-between px-12 md:px-20 z-10 gap-6">
@@ -2786,7 +2916,7 @@ function App() {
                             </p>
                           </div>
                           <div className="w-36 h-36 md:w-48 md:h-48 rounded-2xl overflow-hidden shadow-2xl border border-white/10 flex-shrink-0 group-hover:scale-105 transition duration-300">
-                            <img src={getHighQualityThumbnail(carouselTracks[carouselIndex].thumbnail)} className="w-full h-full object-cover" />
+                            <SafeImage src={carouselTracks[carouselIndex].thumbnail} className="w-full h-full object-cover" alt={carouselTracks[carouselIndex].title} />
                           </div>
                         </div>
                       </div>
@@ -2840,7 +2970,7 @@ function App() {
                             className="p-3 bg-surface-dark/30 hover:bg-surface-dark/70 rounded-xl transition border border-white/5 flex items-center justify-between group cursor-pointer"
                           >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
-                              <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" />
+<SafeImage trackId={track.id} src={track.thumbnail} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" alt={track.title} />
                               <div className="min-w-0 flex-1 ml-1">
                                 <p className="font-semibold text-sm truncate text-white">{track.title}</p>
                                 <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
@@ -2895,11 +3025,12 @@ function App() {
                                   setSelectedPlaylistId(playlist.id);
                                   navigateTo("playlists");
                                 }}
+                                onContextMenu={(e) => openPlaylistContextMenu(e, playlist)}
                                 className="min-w-[200px] w-[200px] p-4 bg-surface-dark/40 hover:bg-surface-dark rounded-2xl transition border border-white/5 flex flex-col justify-between group relative cursor-pointer"
                               >
                                 <div>
                                   <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-black/20 shadow-md">
-                                    <img src={getHighQualityThumbnail(firstTrackThumb)} alt={playlist.name} onError={handleImageError} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                                    <SafeImage src={firstTrackThumb} alt={playlist.name} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
                                       <Play className="w-8 h-8 text-brand-primary fill-current" />
                                     </div>
@@ -2975,12 +3106,7 @@ function App() {
                               className="flex flex-col items-center gap-2 cursor-pointer group flex-shrink-0 animate-fade-in"
                             >
                               <div className="w-24 h-24 rounded-full overflow-hidden object-cover border-2 border-white/10 group-hover:border-brand-primary group-hover:scale-105 transition-all duration-300 relative bg-black/20 shadow-lg">
-                                <img
-                                  src={artist.thumbnail || "https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=300"}
-                                  alt={artist.artistName}
-                                  onError={handleImageError}
-                                  className="w-full h-full object-cover"
-                                />
+                                <SafeImage src={artist.thumbnail || ""} alt={artist.artistName} className="w-full h-full object-cover" />
                               </div>
                               <span className="text-xs font-semibold text-text-primary group-hover:text-brand-primary transition truncate w-24 text-center">
                                 {artist.artistName}
@@ -3039,7 +3165,7 @@ function App() {
                             >
                               <div>
                                 <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-black/20 shadow-md">
-                                  <img src={getHighQualityThumbnail(track.thumbnail)} alt={track.title} onError={handleImageError} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                                  <SafeImage trackId={track.id} src={track.thumbnail} alt={track.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
                                     <button 
                                       onClick={() => {
@@ -3173,10 +3299,10 @@ function App() {
                   {/* Subtle background banner */}
                   {artistCardData.banner && (
                     <div className="absolute inset-0 z-0 opacity-20 filter blur-md pointer-events-none scale-105">
-                      <img src={artistCardData.banner} className="w-full h-full object-cover" />
+                      <SafeImage src={artistCardData.banner} className="w-full h-full object-cover" alt="" />
                     </div>
                   )}
-                  <img src={artistCardData.thumbnail} alt={artistCardData.name} className="relative z-10 w-20 h-20 rounded-full object-cover border-2 border-white/10 shadow-lg group-hover:scale-105 transition flex-shrink-0" />
+                  <SafeImage src={artistCardData.thumbnail} alt={artistCardData.name} className="relative z-10 w-20 h-20 rounded-full object-cover border-2 border-white/10 shadow-lg group-hover:scale-105 transition flex-shrink-0" />
                   <div className="relative z-10 min-w-0">
                     <p className="text-xs text-brand-primary uppercase font-semibold tracking-wider">Artista</p>
                     <h3 className="text-xl font-bold tracking-tight text-white group-hover:text-brand-primary transition truncate">{artistCardData.name}</h3>
@@ -3198,7 +3324,7 @@ function App() {
                       >
                         <div>
                           <div className="relative aspect-video rounded-xl overflow-hidden mb-3 bg-black/40 shadow-sm">
-                            <img src={getHighQualityThumbnail(track.thumbnail)} alt={track.title} onError={handleImageError} className="w-full h-full object-cover group-hover:scale-105 transition" />
+                            <SafeImage trackId={track.id} src={track.thumbnail} alt={track.title} className="w-full h-full object-cover group-hover:scale-105 transition" />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
                               <button 
                                 onClick={() => {
@@ -3248,7 +3374,7 @@ function App() {
                         onClick={() => playTrack(track, tracks)}
                       >
                         <span className="text-xs text-text-secondary w-5 text-right font-medium">{idx + 1}</span>
-                        <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" />
+                        <SafeImage trackId={track.id} src={track.thumbnail} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" alt={track.title} />
                         <div className="min-w-0 flex-1">
                           <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-text-primary"}`}>{track.title}</p>
                           <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
@@ -3360,14 +3486,14 @@ function App() {
                     {artistData.thumbnail && (
                       <>
                         <div className="absolute inset-0 z-0 opacity-50 filter blur-md scale-105">
-                          <img src={getHighQualityThumbnail(artistData.thumbnail)} className="w-full h-full object-cover" />
+                          <SafeImage src={artistData.thumbnail} alt="" className="w-full h-full object-cover" />
                         </div>
                         <div className="absolute inset-0 bg-gradient-to-t from-bg-dark via-bg-dark/60 to-transparent z-0" />
                       </>
                     )}
                     <div className="relative z-10 flex items-center gap-6">
                       {artistData.thumbnail && (
-                        <img src={getHighQualityThumbnail(artistData.thumbnail)} className="w-24 h-24 rounded-full object-cover border-2 border-white/20 shadow-xl" />
+                        <SafeImage src={artistData.thumbnail} alt={artistData.name} className="w-24 h-24 rounded-full object-cover border-2 border-white/20 shadow-xl" />
                       )}
                       <div>
                         <h2 className="text-4xl font-extrabold tracking-tight">{artistData.name}</h2>
@@ -3404,7 +3530,7 @@ function App() {
                                   className="p-3 bg-surface-dark/30 hover:bg-surface-dark/70 rounded-xl transition border border-white/5 flex items-center justify-between group"
                                 >
                                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                                    <img src={track.thumbnail} onError={handleImageError} className="w-10 h-10 rounded-lg object-cover bg-black/40" />
+                                    <SafeImage trackId={track.id} src={track.thumbnail} className="w-10 h-10 rounded-lg object-cover bg-black/40" alt={track.title} />
                                     <div className="min-w-0">
                                       <p className="font-semibold text-sm truncate">{track.title}</p>
                                       <p className="text-xs text-text-secondary truncate">{track.artist}</p>
@@ -3437,7 +3563,7 @@ function App() {
                                   className="p-3 bg-surface-dark/30 hover:bg-surface-dark/70 rounded-xl transition border border-white/5 flex flex-col justify-between group cursor-pointer"
                                 >
                                   <div className="aspect-square w-full rounded-lg overflow-hidden mb-2 relative bg-black/20">
-                                    <img src={item.thumbnail} onError={handleImageError} className="w-full h-full object-cover group-hover:scale-105 transition" />
+                                    <SafeImage src={item.thumbnail} className="w-full h-full object-cover group-hover:scale-105 transition" alt={item.title} />
                                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
                                       <Search className="w-6 h-6 text-brand-primary" />
                                     </div>
@@ -3693,7 +3819,7 @@ function App() {
                                 )}
                               </div>
                             )}
-                            <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" />
+                            <SafeImage trackId={track.id} src={track.thumbnail} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" alt={track.title} />
                             <div className="min-w-0 flex-1 ml-1">
                               <p className="font-semibold text-sm truncate text-text-primary">{track.title}</p>
                               <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
@@ -3775,7 +3901,7 @@ function App() {
                                 )}
                               </div>
                             )}
-                            <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" />
+                            <SafeImage trackId={track.id} src={track.thumbnail} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" alt={track.title} />
                             <div className="min-w-0 flex-1 ml-1">
                               <p className="font-semibold text-sm truncate text-text-primary">{track.title}</p>
                               <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
@@ -3853,43 +3979,46 @@ function App() {
                           onClick={() => playShuffleQueue(localTracks)}
                           className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition"
                         >
-                          <Shuffle className="w-3.5 h-3.5" /> Aleatorio
+                          <Shuffle className="w-3.5 h-3.5" />
+                          Reproducir aleatorio
                         </button>
                       </div>
                       <div className="flex flex-col gap-2 w-full">
                         {localTracks.map((track) => (
                           <div
                             key={track.id}
-                            onClick={() => playTrack(track, localTracks)}
-                            className="p-3.5 bg-surface-dark/30 hover:bg-surface-dark/70 rounded-xl flex items-center justify-between border border-white/5 w-full transition duration-150 cursor-pointer"
+                            onContextMenu={(e) => openContextMenu(e, track.id)}
+                            onClick={() => {
+                              if (showSelectionMode) {
+                                handleSelectTrack(track.id);
+                              } else {
+                                playTrack(track, localTracks);
+                              }
+                            }}
+                            className={`p-3.5 bg-surface-dark/30 hover:bg-surface-dark/70 rounded-xl flex items-center justify-between border w-full transition duration-150 cursor-pointer ${
+                              selectedTrackIds.has(track.id) ? "border-brand-primary/40 bg-brand-primary/5" : "border-white/5"
+                            }`}
                           >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
-                              <div className="w-11 h-11 rounded-lg bg-brand-primary/10 flex items-center justify-center text-brand-primary flex-shrink-0">
-                                <Music className="w-5 h-5" />
-                              </div>
+                              {showSelectionMode && (
+                                <div
+                                  onClick={(e) => { e.stopPropagation(); handleSelectTrack(track.id); }}
+                                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center cursor-pointer mr-2 flex-shrink-0 transition-all ${
+                                    selectedTrackIds.has(track.id)
+                                      ? "bg-brand-primary border-brand-primary"
+                                      : "border-white/20 hover:border-brand-primary/60"
+                                  }`}
+                                >
+                                  {selectedTrackIds.has(track.id) && (
+                                    <div className="w-2 h-2 rounded-full bg-bg-dark" />
+                                  )}
+                                </div>
+                              )}
+                              <SafeImage trackId={track.id} src={track.thumbnail} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" alt={track.title} />
                               <div className="min-w-0 flex-1 ml-1">
                                 <p className="font-semibold text-sm truncate text-text-primary">{track.title}</p>
-                                <p className="text-xs text-text-secondary truncate mt-0.5">{track.artist}</p>
+                                <p className="text-xs text-text-secondary truncate">{track.artist}</p>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (currentTrack?.id === track.id) {
-                                    togglePlay();
-                                  } else {
-                                    playTrack(track, localTracks);
-                                  }
-                                }}
-                                className="p-2 bg-brand-primary text-bg-dark rounded-full shadow hover:scale-105 transition"
-                              >
-                                {currentTrack?.id === track.id && isPlaying ? (
-                                  <Pause className="w-3.5 h-3.5 fill-current" />
-                                ) : (
-                                  <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                                )}
-                              </button>
                             </div>
                           </div>
                         ))}
@@ -3911,9 +4040,21 @@ function App() {
           {activeTab === "playlists" && (
             <div className="space-y-6">
               {!selectedPlaylistId && (
-                <div>
-                  <h2 className="text-2xl font-bold tracking-tight mb-2">Mis Listas de Reproducción</h2>
-                  <p className="text-sm text-text-secondary mb-6">Organiza tus colecciones musicales.</p>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight mb-2">Mis Listas de Reproducción</h2>
+                    <p className="text-sm text-text-secondary">Organiza tus colecciones musicales.</p>
+                  </div>
+                  <button
+                    onClick={() => setShowImportPlaylistModal(true)}
+                    className="p-2.5 bg-surface-dark/40 hover:bg-surface-dark/80 border border-white/10 hover:border-brand-primary/40 rounded-xl transition group cursor-pointer"
+                    title="Importar playlist desde URL"
+                  >
+                    <svg className="w-5 h-5 text-text-secondary group-hover:text-brand-primary transition" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                  </button>
                 </div>
               )}
 
@@ -3945,12 +4086,7 @@ function App() {
                           </div>
                           <div className="w-44 h-44 lg:w-56 lg:h-56 rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-surface-dark flex items-center justify-center relative self-center">
                             {playlist.tracks.length > 0 ? (
-                              <img 
-                                src={getHighQualityThumbnail(playlist.tracks[0].thumbnail)} 
-                                alt={playlist.name} 
-                                onError={handleImageError}
-                                className="w-full h-full object-cover" 
-                              />
+                              <SafeImage src={playlist.tracks[0].thumbnail} alt={playlist.name} className="w-full h-full object-cover" />
                             ) : (
                               <Music className="w-20 h-20 text-text-secondary" />
                             )}
@@ -4066,7 +4202,7 @@ function App() {
                                 >
                                   <GripVertical className="w-4 h-4 text-text-secondary/30 drag-handle flex-shrink-0 cursor-grab" />
                                   <span className="text-xs text-text-secondary w-5 text-right font-medium">{idx + 1}</span>
-                                  <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" />
+<SafeImage trackId={track.id} src={track.thumbnail} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" alt={track.title} />
                                   <div className="min-w-0 flex-1">
                                     <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-text-primary"}`}>{track.title}</p>
                                     <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
@@ -4143,12 +4279,7 @@ function App() {
                     >
                       <div className="w-24 h-24 rounded-2xl overflow-hidden shadow-lg border border-white/10 bg-surface-dark flex items-center justify-center flex-shrink-0">
                         {playlist.tracks.length > 0 ? (
-                          <img 
-                            src={getHighQualityThumbnail(playlist.tracks[0].thumbnail)} 
-                            alt={playlist.name}
-                            onError={handleImageError}
-                            className="w-full h-full object-cover" 
-                          />
+                          <SafeImage src={playlist.tracks[0].thumbnail} alt={playlist.name} className="w-full h-full object-cover" />
                         ) : (
                           <Music className="w-8 h-8 text-text-secondary" />
                         )}
@@ -4196,7 +4327,7 @@ function App() {
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <span className="text-xs text-text-secondary w-5 text-right font-medium">{idx + 1}</span>
-                        <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" />
+                        <SafeImage trackId={track.id} src={track.thumbnail} className="w-11 h-11 rounded-lg object-cover shadow flex-shrink-0" alt={track.title} />
                         <div className="min-w-0 flex-1 ml-1">
                           <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-text-primary"}`}>{track.title}</p>
                           <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
@@ -4270,12 +4401,7 @@ function App() {
               <div className="flex flex-col lg:flex-row gap-8 items-start">
                 {/* Left Panel: Cover & Info */}
                 <div className="w-full lg:w-auto flex-shrink-0 lg:sticky lg:top-0 flex flex-col items-center lg:items-start text-center lg:text-left gap-4 bg-surface-dark/20 p-6 rounded-2xl border border-white/5 shadow-xl">
-                  <img 
-                    src={getHighQualityThumbnail(currentAlbum.thumbnail)} 
-                    alt={currentAlbum.title} 
-                    onError={handleImageError}
-                    className="w-44 h-44 lg:w-56 lg:h-56 rounded-2xl object-cover shadow-2xl border border-white/10" 
-                  />
+                  <SafeImage src={currentAlbum.thumbnail} alt={currentAlbum.title} className="w-44 h-44 lg:w-56 lg:h-56 rounded-2xl object-cover shadow-2xl border border-white/10" />
                   <div className="w-full min-w-0">
                     <p className="text-xs text-brand-primary uppercase font-bold tracking-wider mb-1">
                       {currentAlbum.type === "album" ? "Álbum" : "Lista de Reproducción"}
@@ -4351,7 +4477,7 @@ function App() {
                           }}
                         >
                           <span className="text-xs text-text-secondary w-5 text-right font-medium">{idx + 1}</span>
-                          <img src={getHighQualityThumbnail(track.thumbnail)} onError={handleImageError} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" />
+                          <SafeImage trackId={track.id} src={track.thumbnail} className="w-11 h-11 rounded-lg object-cover shadow-md flex-shrink-0" alt={track.title} />
                           <div className="min-w-0 flex-1">
                             <p className={`font-semibold text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary" : "text-text-primary"}`}>{track.title}</p>
                             <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
@@ -4508,12 +4634,7 @@ function App() {
                       getTopTracks().map((item, i) => (
                         <div key={item.track.id} className="flex items-center gap-3">
                           <span className="text-xs font-black text-brand-primary w-5 text-center flex-shrink-0">{i + 1}</span>
-                          <img
-                            src={item.track.thumbnail}
-                            alt=""
-                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
-                            onError={handleImageError}
-                          />
+                          <SafeImage trackId={item.track.id} src={item.track.thumbnail} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-text-primary truncate">{item.track.title}</p>
                             <p className="text-xs text-text-secondary truncate">{item.track.artist}</p>
@@ -5281,11 +5402,7 @@ function App() {
                     >
                       <div>
                         <div className="relative aspect-square rounded-xl overflow-hidden mb-3 bg-black/20 shadow-md">
-                          <img 
-                            src={getHighQualityThumbnail(release.thumbnail)} 
-                            alt={release.title} 
-                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300" 
-                          />
+                          <SafeImage src={release.thumbnail} alt={release.title} className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
                             <Play className="w-8 h-8 text-brand-primary fill-current" />
                           </div>
@@ -5328,11 +5445,7 @@ function App() {
                       if (!track) return null;
                       return (
                         <div key={trackId} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
-                          <img
-                            src={track.thumbnail}
-                            alt={track.title}
-                            className="w-12 h-12 rounded-lg object-cover bg-black/40 flex-shrink-0"
-                          />
+                          <SafeImage trackId={track.id} src={track.thumbnail} alt={track.title} className="w-12 h-12 rounded-lg object-cover bg-black/40 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <h4 className="font-semibold text-sm text-white truncate">{track.title}</h4>
                             <p className="text-xs text-text-secondary truncate">{track.artist}</p>
@@ -5374,6 +5487,7 @@ function App() {
               </div>
             </div>
           )}
+
         </section>
 
         {/* BOTTOM PLAYER BAR - full width */}
@@ -5390,11 +5504,13 @@ function App() {
             {currentTrack ? (
               <>
                 <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-white/5 shadow-md flex-shrink-0">
-                  <img src={getHighQualityThumbnail(currentTrack.thumbnail)} alt={currentTrack.title} onError={handleImageError} className="w-full h-full object-cover group-hover:scale-105 transition" />
+                  <SafeImage trackId={currentTrack.id} src={currentTrack.thumbnail} alt={currentTrack.title} className="w-full h-full object-cover group-hover:scale-105 transition" />
                 </div>
                 <div className="min-w-0">
                   <h4 className="text-sm font-semibold truncate group-hover:text-brand-primary transition text-text-primary">{currentTrack.title}</h4>
-                  <p className="text-xs text-text-secondary truncate mt-0.5">{currentTrack.artist}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <p className="text-xs text-text-secondary truncate">{currentTrack.artist}</p>
+                  </div>
                 </div>
               </>
             ) : (
@@ -5577,7 +5693,7 @@ function App() {
 
             {/* Ambient Blurred Background Art */}
             <div className="absolute inset-0 z-0 overflow-hidden filter blur-3xl opacity-20 pointer-events-none scale-125">
-              <img src={getHighQualityThumbnail(currentTrack.thumbnail)} className="w-full h-full object-cover" />
+              <SafeImage src={currentTrack.thumbnail} alt="" className="w-full h-full object-cover" />
             </div>
 
             {/* Left Panel: Cover Art & Controls */}
@@ -5589,7 +5705,7 @@ function App() {
                 onTouchEnd={handleTouchEnd}
                 className="relative aspect-square w-full max-w-[350px] rounded-3xl overflow-hidden shadow-2xl bg-black/40 border border-white/10 cursor-grab active:cursor-grabbing group"
               >
-                <img src={getHighQualityThumbnail(currentTrack.thumbnail)} alt={currentTrack.title} onError={handleImageError} className="w-full h-full object-cover" />
+                <SafeImage trackId={currentTrack.id} src={currentTrack.thumbnail} alt={currentTrack.title} className="w-full h-full object-cover" />
               </div>
               
               {/* Title & Artist stacked vertically */}
@@ -5683,7 +5799,7 @@ function App() {
                           onClick={() => playTrack(track)}
                         >
                           <GripVertical className="w-4 h-4 text-text-secondary/50 drag-handle flex-shrink-0" />
-                          <img src={track.thumbnail} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+                          <SafeImage trackId={track.id} src={track.thumbnail} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" alt={track.title} />
                           <div className="min-w-0 flex-1">
                             <p className={`text-sm truncate ${currentTrack?.id === track.id ? "text-brand-primary font-semibold" : "font-medium"}`}>{track.title}</p>
                             <div className="flex items-center gap-1.5 min-w-0">
@@ -5819,9 +5935,11 @@ function App() {
                           <p className="text-sm py-12">{lyricsText}</p>
                         );
                       })()}
-                    </div>
-                  </div>
-                )}
+          </div>
+        </div>
+      )}
+
+
 
                 {/* RELATED TAB */}
                 {playerTab === "related" && (
@@ -5835,7 +5953,7 @@ function App() {
                           }`}
                           onClick={() => playTrack(track, relatedTracks)}
                         >
-                          <img src={track.thumbnail} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+                          <SafeImage trackId={track.id} src={track.thumbnail} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" alt={track.title} />
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium truncate">{track.title}</p>
                             <p className="text-xs text-text-secondary truncate">{track.artist}</p>
@@ -5864,7 +5982,7 @@ function App() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] modal-overlay" onClick={() => setContextMenuArtist(null)}>
           <div className="glass p-5 rounded-2xl max-w-xs w-full border border-white/10 shadow-2xl mx-4 modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/5">
-              <img src={contextMenuArtist.thumbnail || "https://images.unsplash.com/photo-1614680376593-902f74fa0d41?q=80&w=300"} onError={handleImageError} className="w-12 h-12 rounded-full object-cover bg-black/40" />
+              <SafeImage src={contextMenuArtist.thumbnail || ""} className="w-12 h-12 rounded-full object-cover bg-black/40" alt={contextMenuArtist.artistName} />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-sm truncate">{contextMenuArtist.artistName}</p>
                 <p className="text-xs text-text-secondary truncate">Artista</p>
@@ -5919,7 +6037,7 @@ function App() {
           <div className="glass p-5 rounded-2xl max-w-xs w-full border border-white/10 shadow-2xl mx-4 modal-content" onClick={(e) => e.stopPropagation()}>
             {/* Track info header */}
             <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/5">
-              <img src={contextMenuTrack.thumbnail} className="w-12 h-12 rounded-xl object-cover" />
+              <SafeImage src={contextMenuTrack.thumbnail} className="w-12 h-12 rounded-xl object-cover" alt={contextMenuTrack.title} />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-sm truncate">{contextMenuTrack.title}</p>
                 <p className="text-xs text-text-secondary truncate">{contextMenuTrack.artist}</p>
@@ -6011,18 +6129,65 @@ function App() {
 
       {/* PLAYLIST CONTEXT MENU MODAL */}
       {contextMenuPlaylist && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] modal-overlay" onClick={() => setContextMenuPlaylist(null)}>
-          <div className="glass p-5 rounded-2xl max-w-xs w-full border border-white/10 shadow-2xl mx-4 modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/5">
-              <div className="w-10 h-10 rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] modal-overlay" onClick={() => { setContextMenuPlaylist(null); setIsRenamingPlaylist(false); setRenamePlaylistName(""); }}>
+          <div className={`glass p-5 rounded-2xl w-full border border-white/10 shadow-2xl mx-4 modal-content ${isRenamingPlaylist ? "max-w-sm" : "max-w-xs"}`} onClick={(e) => e.stopPropagation()}>
+            <div className={`flex ${isRenamingPlaylist ? "items-start" : "items-center"} gap-3 mb-4 pb-3 border-b border-white/5`}>
+              <div className={`rounded-xl bg-brand-primary/10 flex items-center justify-center text-brand-primary flex-shrink-0 ${isRenamingPlaylist ? "w-10 h-[58px]" : "w-10 h-10"}`}>
                 <ListMusic className="w-5 h-5" />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-sm truncate">{contextMenuPlaylist.name}</p>
+              <div className="min-w-0 flex-1 space-y-1.5">
+                {isRenamingPlaylist ? (
+                  <input
+                    type="text"
+                    value={renamePlaylistName}
+                    onChange={(e) => setRenamePlaylistName(e.target.value)}
+                    autoFocus
+                    className="w-full bg-surface-dark border border-white/10 rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && renamePlaylistName.trim()) {
+                        renamePlaylist(contextMenuPlaylist.id, renamePlaylistName);
+                        setContextMenuPlaylist(null);
+                        setIsRenamingPlaylist(false);
+                        setRenamePlaylistName("");
+                      }
+                      if (e.key === "Escape") {
+                        setIsRenamingPlaylist(false);
+                        setRenamePlaylistName("");
+                      }
+                    }}
+                  />
+                ) : (
+                  <p className="font-semibold text-sm truncate">{contextMenuPlaylist.name}</p>
+                )}
                 <p className="text-xs text-text-secondary truncate">{contextMenuPlaylist.tracks.length} canciones</p>
               </div>
             </div>
             <div className="space-y-1">
+              {isRenamingPlaylist ? (
+                <>
+                  <button
+                    onClick={() => {
+                      if (renamePlaylistName.trim()) {
+                        renamePlaylist(contextMenuPlaylist.id, renamePlaylistName);
+                        setContextMenuPlaylist(null);
+                        setIsRenamingPlaylist(false);
+                        setRenamePlaylistName("");
+                      }
+                    }}
+                    disabled={!renamePlaylistName.trim()}
+                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3 disabled:opacity-50"
+                  >
+                    <Pencil className="w-4 h-4" /> Guardar nombre
+                  </button>
+                  <button
+                    onClick={() => { setIsRenamingPlaylist(false); setRenamePlaylistName(""); }}
+                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-white/10 rounded-xl transition flex items-center gap-3"
+                  >
+                    Cancelar
+                  </button>
+                </>
+              ) : (
+                <>
               <button 
                 onClick={() => { setSelectedPlaylistId(contextMenuPlaylist.id); setContextMenuPlaylist(null); setActiveTab("playlists"); }}
                 className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
@@ -6045,19 +6210,29 @@ function App() {
                   <Download className="w-4 h-4" /> Descargar todo
                 </button>
               )}
-              <button 
+                <button 
+                 onClick={() => { setRenamePlaylistName(contextMenuPlaylist.name); setIsRenamingPlaylist(true); }}
+                 className="w-full text-left px-3 py-2.5 text-sm hover:bg-brand-primary hover:text-bg-dark rounded-xl transition flex items-center gap-3"
+               >
+                 <Pencil className="w-4 h-4" /> Renombrar
+               </button>
+               <button 
                 onClick={() => { deletePlaylist(contextMenuPlaylist.id); setContextMenuPlaylist(null); }}
                 className="w-full text-left px-3 py-2.5 text-sm hover:bg-red-500 hover:text-white rounded-xl transition text-red-300 flex items-center gap-3"
               >
                 <Trash2 className="w-4 h-4" /> Eliminar Lista
               </button>
+              </>
+              )}
             </div>
+            {!isRenamingPlaylist && (
             <button
               onClick={() => setContextMenuPlaylist(null)}
               className="w-full mt-3 pt-3 border-t border-white/5 text-center text-xs text-text-secondary hover:text-text-primary transition py-2"
             >
               Cancelar
             </button>
+            )}
           </div>
         </div>
       )}
@@ -6141,6 +6316,59 @@ function App() {
                 className="px-4 py-2 rounded-xl bg-brand-primary text-bg-dark font-bold text-sm transition hover:scale-105 active:scale-95 disabled:opacity-50"
               >
                 Crear
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* IMPORT PLAYLIST FROM URL MODAL */}
+      {showImportPlaylistModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] animate-fade-in" onClick={() => { setShowImportPlaylistModal(false); setImportPlaylistUrl(""); }}>
+          <div className="glass p-6 rounded-2xl max-w-md w-full border border-white/10 shadow-2xl mx-4 modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-brand-primary/15 flex items-center justify-center">
+                <svg className="w-5 h-5 text-brand-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Importar Playlist</h3>
+                <p className="text-xs text-text-secondary mt-0.5">Pega el enlace de YouTube Music</p>
+              </div>
+            </div>
+            <input
+              type="text"
+              value={importPlaylistUrl}
+              onChange={(e) => setImportPlaylistUrl(e.target.value)}
+              placeholder="https://music.youtube.com/playlist?list=..."
+              autoFocus
+              className="w-full bg-surface-dark border border-white/10 rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder-text-secondary focus:outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary mb-5 transition duration-200"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  importPlaylistFromUrl();
+                }
+              }}
+            />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => { setShowImportPlaylistModal(false); setImportPlaylistUrl(""); }}
+                className="px-4 py-2 rounded-xl text-text-secondary hover:text-text-primary text-sm font-semibold transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={importPlaylistFromUrl}
+                disabled={!importPlaylistUrl.trim()}
+                className="px-4 py-2 rounded-xl bg-brand-primary text-bg-dark font-bold text-sm transition hover:scale-105 active:scale-95 disabled:opacity-50 flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Importar
               </button>
             </div>
           </div>
@@ -6252,7 +6480,7 @@ function App() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] modal-overlay" onClick={() => setContextMenuAlbumOrPlaylist(null)}>
           <div className="glass p-5 rounded-2xl max-w-xs w-full border border-white/10 shadow-2xl mx-4 modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4 pb-3 border-b border-white/5">
-              <img src={contextMenuAlbumOrPlaylist.thumbnail} onError={handleImageError} className="w-12 h-12 rounded-xl object-cover bg-black/40" />
+              <SafeImage src={contextMenuAlbumOrPlaylist.thumbnail} className="w-12 h-12 rounded-xl object-cover bg-black/40" alt={contextMenuAlbumOrPlaylist.title || contextMenuAlbumOrPlaylist.name || ""} />
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-sm truncate">{contextMenuAlbumOrPlaylist.title || contextMenuAlbumOrPlaylist.name || "Nueva Playlist"}</p>
                 <p className="text-xs text-text-secondary truncate capitalize">{contextMenuAlbumOrPlaylist.type === "album" ? "Álbum" : "Lista de reproducción"}</p>

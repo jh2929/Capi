@@ -6,6 +6,8 @@ use futures_util::StreamExt;
 use std::net::TcpListener;
 use std::io::Read;
 use std::fs::File;
+use std::collections::HashMap;
+use serde::{Serialize, Deserialize};
 use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
 
 struct LocalServerState {
@@ -689,6 +691,306 @@ async fn abrir_carpeta_descargas(app: tauri::AppHandle) -> Result<(), String> {
     open::that(&dir).map_err(|e| format!("No se pudo abrir: {}", e))
 }
 
+// ─── Audio Cache System ─────────────────────────────────────────────────
+
+#[derive(Serialize, Deserialize, Clone)]
+struct CacheEntry {
+    path: String,
+    cached_at: u64,
+    size_bytes: u64,
+    title: String,
+    artist: String,
+    thumbnail: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct CacheMetadata {
+    tracks: HashMap<String, CacheEntry>,
+}
+
+#[derive(Serialize)]
+struct CacheStats {
+    used_bytes: u64,
+    max_bytes: u64,
+    file_count: usize,
+    oldest_entry: u64,
+}
+
+impl CacheMetadata {
+    fn load(path: &PathBuf) -> Self {
+        if path.exists() {
+            if let Ok(content) = std::fs::read_to_string(path) {
+                if let Ok(meta) = serde_json::from_str::<CacheMetadata>(&content) {
+                    return meta;
+                }
+            }
+        }
+        CacheMetadata { tracks: HashMap::new() }
+    }
+
+    fn save(&self, path: &PathBuf) {
+        if let Ok(content) = serde_json::to_string_pretty(self) {
+            let _ = std::fs::write(path, content);
+        }
+    }
+}
+
+fn get_cache_dirs(app: &tauri::AppHandle) -> Result<(PathBuf, PathBuf, PathBuf), String> {
+    let base = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let cache_dir = base.join("Capi").join("cache").join("audio");
+    let meta_path = base.join("Capi").join("cache").join("cache_metadata.json");
+    let config_path = base.join("Capi").join("cache_config.json");
+    Ok((cache_dir, meta_path, config_path))
+}
+
+#[derive(Serialize, Deserialize)]
+struct CacheConfig {
+    max_bytes: u64,
+    ttl_secs: u64,
+}
+
+impl Default for CacheConfig {
+    fn default() -> Self {
+        CacheConfig { max_bytes: 2_147_483_648, ttl_secs: 604_800 }
+    }
+}
+
+fn load_cache_config(config_path: &PathBuf) -> CacheConfig {
+    if config_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(config_path) {
+            if let Ok(cfg) = serde_json::from_str::<CacheConfig>(&content) {
+                return cfg;
+            }
+        }
+    }
+    CacheConfig::default()
+}
+
+#[tauri::command]
+async fn get_cached_audio(app: tauri::AppHandle, track_id: String) -> Result<Option<String>, String> {
+    let (_cache_dir, meta_path, config_path) = get_cache_dirs(&app)?;
+    let config = load_cache_config(&config_path);
+    let metadata = CacheMetadata::load(&meta_path);
+
+    if let Some(entry) = metadata.tracks.get(&track_id) {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let age = now.saturating_sub(entry.cached_at);
+        let path = std::path::Path::new(&entry.path);
+
+        if age <= config.ttl_secs && path.exists() {
+            Ok(Some(entry.path.clone()))
+        } else {
+            if path.exists() {
+                let _ = std::fs::remove_file(path);
+            }
+            Ok(None)
+        }
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+async fn cache_audio(app: tauri::AppHandle, track_id: String, url: String, title: String, artist: String, thumbnail: String) -> Result<String, String> {
+    let (cache_dir, meta_path, config_path) = get_cache_dirs(&app)?;
+
+    if !cache_dir.exists() {
+        std::fs::create_dir_all(&cache_dir)
+            .map_err(|e| format!("Error creando directorio de caché: {}", e))?;
+    }
+
+    let ext = if url.contains("mime=audio%2Fmp4") || url.contains("mime=audio/mp4") || url.contains("mime=audio%2Fm4a") {
+        "m4a"
+    } else {
+        "webm"
+    };
+
+    let dest_path = cache_dir.join(format!("{}.{}", track_id, ext));
+    if dest_path.exists() {
+        let dest_str = dest_path.to_str().unwrap_or("").to_string();
+        return Ok(dest_str);
+    }
+
+    let client = reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        .build()
+        .map_err(|e| format!("Error creando cliente HTTP: {}", e))?;
+
+    let res = client.get(&url).send().await
+        .map_err(|e| format!("Error en petición de caché: {}", e))?;
+
+    let mut file = std::fs::File::create(&dest_path)
+        .map_err(|e| format!("Error creando archivo de caché: {}", e))?;
+
+    let mut stream = res.bytes_stream();
+    let mut total_bytes: u64 = 0;
+
+    while let Some(item) = stream.next().await {
+        let chunk = item.map_err(|e| format!("Error leyendo stream: {}", e))?;
+        file.write_all(&chunk).map_err(|e| format!("Error escribiendo caché: {}", e))?;
+        total_bytes += chunk.len() as u64;
+    }
+
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    let mut metadata = CacheMetadata::load(&meta_path);
+    metadata.tracks.insert(track_id.clone(), CacheEntry {
+        path: dest_path.to_str().unwrap_or("").to_string(),
+        cached_at: now,
+        size_bytes: total_bytes,
+        title,
+        artist,
+        thumbnail,
+    });
+    metadata.save(&meta_path);
+
+    // Clean up if over limit
+    let config = load_cache_config(&config_path);
+    let total: u64 = metadata.tracks.values().map(|e| e.size_bytes).sum();
+    if total > config.max_bytes {
+        let _ = clean_audio_cache_internal(&cache_dir, &meta_path, config.max_bytes, config.ttl_secs);
+    }
+
+    let dest_str = dest_path.to_str().unwrap_or("").to_string();
+    Ok(dest_str)
+}
+
+fn clean_audio_cache_internal(
+    _cache_dir: &PathBuf,
+    meta_path: &PathBuf,
+    max_bytes: u64,
+    ttl_secs: u64,
+) -> Result<CacheStats, String> {
+    let mut metadata = CacheMetadata::load(meta_path);
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+
+    // Remove expired entries
+    let expired_ids: Vec<String> = metadata.tracks.iter()
+        .filter(|(_, e)| now.saturating_sub(e.cached_at) > ttl_secs)
+        .map(|(id, _)| id.clone())
+        .collect();
+
+    for id in &expired_ids {
+        if let Some(entry) = metadata.tracks.get(id) {
+            let path = std::path::Path::new(&entry.path);
+            if path.exists() {
+                let _ = std::fs::remove_file(path);
+            }
+        }
+        metadata.tracks.remove(id);
+    }
+
+    // Remove oldest entries if over size limit
+    if max_bytes > 0 {
+        let mut total: u64 = metadata.tracks.values().map(|e| e.size_bytes).sum();
+        let mut sorted: Vec<(String, u64)> = metadata.tracks.iter()
+            .map(|(id, e)| (id.clone(), e.cached_at))
+            .collect();
+        sorted.sort_by_key(|(_, t)| *t);
+
+        for (id, _) in &sorted {
+            if total <= max_bytes { break; }
+            if let Some(entry) = metadata.tracks.get(id) {
+                total = total.saturating_sub(entry.size_bytes);
+                let path = std::path::Path::new(&entry.path);
+                if path.exists() {
+                    let _ = std::fs::remove_file(path);
+                }
+            }
+            metadata.tracks.remove(id);
+        }
+    }
+
+    metadata.save(meta_path);
+
+    let oldest = metadata.tracks.values()
+        .map(|e| e.cached_at)
+        .min()
+        .unwrap_or(0);
+
+    Ok(CacheStats {
+        used_bytes: metadata.tracks.values().map(|e| e.size_bytes).sum(),
+        max_bytes,
+        file_count: metadata.tracks.len(),
+        oldest_entry: oldest,
+    })
+}
+
+#[tauri::command]
+async fn clean_audio_cache(app: tauri::AppHandle) -> Result<CacheStats, String> {
+    let (cache_dir, meta_path, config_path) = get_cache_dirs(&app)?;
+    let config = load_cache_config(&config_path);
+    clean_audio_cache_internal(&cache_dir, &meta_path, config.max_bytes, config.ttl_secs)
+}
+
+#[tauri::command]
+async fn get_cache_stats(app: tauri::AppHandle) -> Result<CacheStats, String> {
+    let (cache_dir, meta_path, config_path) = get_cache_dirs(&app)?;
+    let config = load_cache_config(&config_path);
+    let metadata = CacheMetadata::load(&meta_path);
+
+    let oldest = metadata.tracks.values()
+        .map(|e| e.cached_at)
+        .min()
+        .unwrap_or(0);
+
+    // Also clean expired on stats fetch
+    let _ = clean_audio_cache_internal(&cache_dir, &meta_path, config.max_bytes, config.ttl_secs);
+
+    let metadata = CacheMetadata::load(&meta_path);
+    Ok(CacheStats {
+        used_bytes: metadata.tracks.values().map(|e| e.size_bytes).sum(),
+        max_bytes: config.max_bytes,
+        file_count: metadata.tracks.len(),
+        oldest_entry: oldest,
+    })
+}
+
+#[tauri::command]
+async fn set_cache_config(app: tauri::AppHandle, max_bytes: u64, ttl_secs: u64) -> Result<(), String> {
+    let (_, _, config_path) = get_cache_dirs(&app)?;
+    let config = CacheConfig { max_bytes, ttl_secs };
+    let content = serde_json::to_string_pretty(&config)
+        .map_err(|e| format!("Error serializando config: {}", e))?;
+    std::fs::write(&config_path, content)
+        .map_err(|e| format!("Error guardando config: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn list_cached_tracks(app: tauri::AppHandle) -> Result<HashMap<String, CacheEntry>, String> {
+    let (_, meta_path, _) = get_cache_dirs(&app)?;
+    let metadata = CacheMetadata::load(&meta_path);
+    Ok(metadata.tracks)
+}
+
+#[tauri::command]
+async fn remove_cached_track(app: tauri::AppHandle, track_id: String) -> Result<(), String> {
+    let (_cache_dir, meta_path, _) = get_cache_dirs(&app)?;
+    let mut metadata = CacheMetadata::load(&meta_path);
+    if let Some(entry) = metadata.tracks.remove(&track_id) {
+        let _ = std::fs::remove_file(&entry.path);
+        // Also try to clean any matching webm/m4a
+        for ext in &["webm", "m4a"] {
+            let alt = entry.path.replace(".webm", &format!(".{}", ext)).replace(".m4a", &format!(".{}", ext));
+            if alt != entry.path {
+                let _ = std::fs::remove_file(&alt);
+            }
+        }
+        metadata.save(&meta_path);
+    }
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -731,6 +1033,12 @@ pub fn run() {
                 std::fs::create_dir_all(&capi_dir)
                     .map_err(|e| format!("No se pudo crear el directorio de Capi: {}", e))?;
             }
+            // Create cache directory
+            let cache_dir = capi_dir.join("cache").join("audio");
+            if !cache_dir.exists() {
+                std::fs::create_dir_all(&cache_dir)
+                    .map_err(|e| format!("No se pudo crear el directorio de caché: {}", e))?;
+            }
             let local_port = start_local_server(capi_dir);
             app.manage(LocalServerState { port: local_port });
             app.manage(DiscordState { client: Mutex::new(None) });
@@ -754,7 +1062,15 @@ pub fn run() {
             discord_disconnect,
             seleccionar_carpeta,
             listar_archivos_locales,
-            abrir_carpeta_descargas
+            abrir_carpeta_descargas,
+            get_cached_audio,
+            cache_audio,
+            clean_audio_cache,
+            get_cache_stats,
+            get_cache_stats,
+            set_cache_config,
+            list_cached_tracks,
+            remove_cached_track
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
