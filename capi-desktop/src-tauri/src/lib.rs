@@ -47,6 +47,49 @@ fn start_local_server(capi_dir: PathBuf) -> u16 {
                         let parts: Vec<&str> = first_line.split_whitespace().collect();
                         if parts.len() >= 2 && parts[0] == "GET" {
                             let path_and_query = parts[1];
+                            
+                            // ─── Image proxy: /image?url=... ───────────
+                            if path_and_query.starts_with("/image") {
+                                if let Some(pos) = path_and_query.find("url=") {
+                                    let encoded_url = &path_and_query[pos + 4..];
+                                    let img_url = match urlencoding::decode(encoded_url) {
+                                        Ok(d) => d.into_owned(),
+                                        Err(_) => encoded_url.to_string(),
+                                    };
+                                    if let Ok(mut resp) = client.get(&img_url).send() {
+                                        let status = resp.status();
+                                        let content_type = resp.headers().get("content-type")
+                                            .and_then(|h| h.to_str().ok())
+                                            .unwrap_or("image/jpeg");
+                                        let content_length = resp.headers().get("content-length")
+                                            .and_then(|h| h.to_str().ok())
+                                            .unwrap_or("0");
+                                        let cache_control = resp.headers().get("cache-control")
+                                            .and_then(|h| h.to_str().ok())
+                                            .unwrap_or("public, max-age=86400");
+                                        let status_line = format!("HTTP/1.1 {} {}\r\n", status.as_u16(), status.canonical_reason().unwrap_or("OK"));
+                                        let response_headers = format!(
+                                            "{}Content-Type: {}\r\nContent-Length: {}\r\nCache-Control: {}\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n",
+                                            status_line, content_type, content_length, cache_control
+                                        );
+                                        let _ = stream.write_all(response_headers.as_bytes());
+                                        let mut buf = [0; 65536];
+                                        while let Ok(n) = resp.read(&mut buf) {
+                                            if n == 0 { break; }
+                                            if stream.write_all(&buf[..n]).is_err() { break; }
+                                        }
+                                    } else {
+                                        let resp = "HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                                        let _ = stream.write_all(resp.as_bytes());
+                                    }
+                                } else {
+                                    let resp = "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";
+                                    let _ = stream.write_all(resp.as_bytes());
+                                }
+                                return;
+                            }
+                            
+                            // ─── Audio stream proxy: /play?url=... ─────
                             if let Some(pos) = path_and_query.find("url=") {
                                 let encoded_url = &path_and_query[pos + 4..];
                                 let decoded_url = match urlencoding::decode(encoded_url) {
