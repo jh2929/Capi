@@ -1,0 +1,9 @@
+[Desktop Entry]
+Categories=
+Comment=A Tauri App
+Exec=capi-desktop
+StartupWMClass=capi-desktop
+Icon=capi-desktop
+Name=Capi
+Terminal=false
+Type=Application

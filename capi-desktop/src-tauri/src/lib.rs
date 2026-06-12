@@ -21,8 +21,10 @@ pub struct DiscordState {
 }
 
 fn start_local_server(capi_dir: PathBuf) -> u16 {
-    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind local server");
-    let port = listener.local_addr().expect("Failed to get local address").port();
+    let port = (12761..12771).find(|&p| TcpListener::bind(format!("127.0.0.1:{}", p)).is_ok())
+        .expect("Failed to bind local server on any port 12761-12770");
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).unwrap();
+    println!("[PROXY] Server started on port {}", port);
     let capi_dir = capi_dir.clone();
     
     let client = reqwest::blocking::Client::builder()

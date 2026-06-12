@@ -18,7 +18,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' ipc: http://ipc.localhost http://127.0.0.1:*; img-src 'self' asset: http://asset.localhost https://i.ytimg.com https://images.unsplash.com https://yt3.ggpht.com; media-src 'self' asset: http://asset.localhost http://127.0.0.1:*; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:* https://i.ytimg.com https://images.unsplash.com https://api.mymemory.translated.net;",
+      "csp": "default-src 'self' ipc: http://ipc.localhost http://127.0.0.1:12761; img-src 'self' asset: http://asset.localhost https://i.ytimg.com https://images.unsplash.com https://yt3.ggpht.com; media-src 'self' asset: http://asset.localhost http://127.0.0.1:12761; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:12761 https://i.ytimg.com https://images.unsplash.com https://api.mymemory.translated.net;",
       "assetProtocol": {
         "enable": true,
         "scope": [
