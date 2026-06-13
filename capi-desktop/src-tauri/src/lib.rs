@@ -3,7 +3,9 @@ use std::process::Command;
 use std::io::Write;
 use tauri::{Manager, Emitter};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::menu::{Menu, MenuItem};
+use tauri::menu::{Menu, MenuItem, Submenu};
+use tauri::WebviewWindowBuilder;
+use tauri_plugin_single_instance;
 use futures_util::StreamExt;
 use std::net::TcpListener;
 use std::io::Read;
@@ -1199,10 +1201,75 @@ async fn remove_cached_track(app: tauri::AppHandle, track_id: String) -> Result<
     Ok(())
 }
 
+#[derive(Serialize)]
+struct StorageInfo {
+    app_size: u64,
+    downloads_size: u64,
+    cache_size: u64,
+    free_space: u64,
+}
+
+fn dir_size(path: &PathBuf) -> u64 {
+    let mut total = 0u64;
+    if let Ok(entries) = std::fs::read_dir(path) {
+        for entry in entries.flatten() {
+            let p = entry.path();
+            if p.is_dir() {
+                total += dir_size(&p);
+            } else if let Ok(meta) = p.metadata() {
+                total += meta.len();
+            }
+        }
+    }
+    total
+}
+
+#[tauri::command]
+fn obtener_espacio_almacenamiento(app: tauri::AppHandle) -> Result<StorageInfo, String> {
+    let app_data = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let capi_dir = app_data.join("Capi");
+    let cache_dir = capi_dir.join("cache");
+
+    let downloads_size = if capi_dir.exists() {
+        let mut total = dir_size(&capi_dir);
+        if cache_dir.exists() {
+            total -= dir_size(&cache_dir);
+        }
+        total
+    } else {
+        0
+    };
+
+    let cache_size = if cache_dir.exists() {
+        dir_size(&cache_dir)
+    } else {
+        0
+    };
+
+    let app_size = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.metadata().ok())
+        .map(|m| m.len())
+        .unwrap_or(0);
+
+    let free_space = capi_dir.parent()
+        .or_else(|| Some(PathBuf::from("/")).as_deref())
+        .and_then(|p| fs2::available_space(p).ok())
+        .unwrap_or(0);
+
+    Ok(StorageInfo { app_size, downloads_size, cache_size, free_space })
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--hidden"]),
@@ -1243,8 +1310,9 @@ pub fn run() {
             // ─── System Tray ────────────────────────────────────────
             if let Some(icon) = handle.default_window_icon() {
                 if let Ok(show) = MenuItem::with_id(handle, "show", "Mostrar ventana", true, None::<&str>) {
+                    if let Ok(new_window) = MenuItem::with_id(handle, "new-window", "Abrir otra ventana", true, None::<&str>) {
                     if let Ok(quit) = MenuItem::with_id(handle, "quit", "Salir", true, None::<&str>) {
-                        if let Ok(menu) = Menu::with_items(handle, &[&show, &quit]) {
+                        if let Ok(menu) = Menu::with_items(handle, &[&show, &new_window, &quit]) {
                             let _ = TrayIconBuilder::new()
                                 .icon(icon.clone())
                                 .tooltip("Capi")
@@ -1256,6 +1324,16 @@ pub fn run() {
                                                 let _ = window.show();
                                                 let _ = window.set_focus();
                                             }
+                                        }
+                                        "new-window" => {
+                                            let _ = WebviewWindowBuilder::new(
+                                                handle,
+                                                format!("main-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos()),
+                                                tauri::WebviewUrl::App("index.html".into()),
+                                            )
+                                            .title("Capi")
+                                            .inner_size(1000.0, 700.0)
+                                            .build();
                                         }
                                         "quit" => handle.exit(0),
                                         _ => {}
@@ -1280,6 +1358,7 @@ pub fn run() {
                                 })
                                 .build(handle);
                         }
+                    }
                     }
                 }
             }
@@ -1319,7 +1398,8 @@ pub fn run() {
             get_cache_stats,
             set_cache_config,
             list_cached_tracks,
-            remove_cached_track
+            remove_cached_track,
+            obtener_espacio_almacenamiento
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

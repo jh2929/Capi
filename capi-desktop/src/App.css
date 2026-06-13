@@ -255,4 +255,16 @@ body {
   background-size: 200% 100%;
 }
 
+/* Storage Bar Animation */
+@keyframes storageBarIn {
+  from {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  to {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}
+
 

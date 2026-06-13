@@ -8,7 +8,7 @@ import {
   Trash2, Home, Library, Download, Shuffle, ListPlus, Disc3, FolderOpen,
   MoreVertical, X, Sparkle, GripVertical, Copy, RefreshCw,
   User, Radio, Mic2, LayoutGrid, List, Plus, Bell,
-  Moon, Timer, BarChart3, Languages, Palette, RotateCcw, Trophy, Users, Repeat, Repeat1, Lock, Unlock, Upload, Pencil
+  Moon, Timer, BarChart3, Languages, Palette, RotateCcw, Trophy, Users, Repeat, Repeat1, Lock, Unlock, Upload, Pencil, HardDrive
 } from "lucide-react";
 import "./App.css";
 import { t, Locale, LOCALE_NAMES, TranslationKeys } from "./i18n";
@@ -164,6 +164,33 @@ const SkeletonRow = () => (
       <div className="h-3 w-1/4 rounded bg-white/5 skeleton-shimmer" />
     </div>
     <div className="w-12 h-3 rounded bg-white/5 skeleton-shimmer hidden sm:block" />
+  </div>
+);
+
+const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const val = bytes / Math.pow(1024, i);
+  return `${val.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+};
+
+const AnimatedStorageBar = ({ segments, total }: { segments: { value: number; color: string; label: string }[]; total: number }) => (
+  <div className="w-full h-3 bg-white/5 rounded-full overflow-hidden flex">
+    {segments.map((seg, i) => {
+      const pct = total > 0 ? (seg.value / total) * 100 : 0;
+      if (pct < 0.5) return null;
+      return (
+        <div
+          key={seg.label}
+          className={`${seg.color} h-full rounded-full first:rounded-l-full last:rounded-r-full`}
+          style={{
+            width: `${pct}%`,
+            animation: `storageBarIn 0.8s ease-out ${i * 0.15}s both`,
+          }}
+        />
+      );
+    })}
   </div>
 );
 
@@ -550,6 +577,10 @@ function App() {
     localStorage.getItem("capi_discord_rpc") === "true"
   );
   const [discordConnected, setDiscordConnected] = useState(false);
+
+  // Storage info
+  const [storageInfo, setStorageInfo] = useState<{ app_size: number; downloads_size: number; cache_size: number; free_space: number } | null>(null);
+  const [storageLoading, setStorageLoading] = useState(false);
 
   // Repeat mode and manual lyrics scroll states
   const [repeatMode, setRepeatMode] = useState<"none" | "one" | "all">("none");
@@ -1627,6 +1658,23 @@ function App() {
     }, 15000);
     return () => clearInterval(interval);
   }, [currentTrack?.id, isPlaying, discordEnabled, discordConnected]);
+
+  // ═══════════════════════════════════════════════════════════════
+  // STORAGE: Fetch storage info
+  // ═══════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (settingsCategory !== "almacenamiento") return;
+    setStorageLoading(true);
+    invoke<{ app_size: number; downloads_size: number; cache_size: number; free_space: number }>("obtener_espacio_almacenamiento")
+      .then((data) => {
+        setStorageInfo(data);
+        setStorageLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error fetching storage info:", err);
+        setStorageLoading(false);
+      });
+  }, [settingsCategory]);
 
   const getTopTracks = () => {
     return Object.values(listeningStats.trackPlays)
@@ -4730,6 +4778,7 @@ function App() {
                     { id: "reproduccion", label: "Reproducción" },
                     { id: "general", label: "General" },
                     { id: "datos", label: "Datos" },
+                    { id: "almacenamiento", label: "Almacenamiento" },
                     { id: "acerca-de", label: "Acerca de" },
                   ].map((cat) => (
                     <button
@@ -5041,7 +5090,7 @@ function App() {
                       <div className="flex items-center justify-between border-b border-white/5 pb-4">
                         <div>
                           <h3 className="font-semibold text-sm text-text-primary flex items-center gap-2">
-                            Discord Rich Presence
+                            Discord Rich Presence <span className="text-[10px] font-semibold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-full">En desarrollo</span>
                             {discordEnabled && (
                               <span className={`inline-block w-2 h-2 rounded-full ${discordConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} title={discordConnected ? "Conectado a Discord" : "Buscando/Cargando Discord"} />
                             )}
@@ -5245,6 +5294,67 @@ function App() {
                         </div>
                       </div>
                     </>
+                  )}
+
+                  {/* === ALMACENAMIENTO === */}
+                  {settingsCategory === "almacenamiento" && (
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="font-semibold text-sm text-text-primary mb-3 flex items-center gap-2">
+                          <HardDrive className="w-4 h-4" />
+                          Almacenamiento
+                        </h3>
+                        <p className="text-xs text-text-secondary mb-5">Gestión del espacio ocupado por Capi en el dispositivo.</p>
+                      </div>
+
+                      {storageLoading && (
+                        <div className="flex items-center justify-center py-12">
+                          <Loader2 className="w-6 h-6 animate-spin text-brand-primary" />
+                        </div>
+                      )}
+
+                      {!storageLoading && storageInfo && (
+                        <>
+                          {/* Barra de almacenamiento animada */}
+                          <div>
+                            <div className="flex justify-between text-xs text-text-secondary mb-2">
+                              <span>Usado</span>
+                              <span>{formatBytes(storageInfo.app_size + storageInfo.downloads_size + storageInfo.cache_size)} de {formatBytes(storageInfo.app_size + storageInfo.downloads_size + storageInfo.cache_size + storageInfo.free_space)}</span>
+                            </div>
+                            <AnimatedStorageBar
+                              total={storageInfo.app_size + storageInfo.downloads_size + storageInfo.cache_size + storageInfo.free_space}
+                              segments={[
+                                { value: storageInfo.app_size, color: "bg-brand-primary", label: "App" },
+                                { value: storageInfo.downloads_size, color: "bg-cyan-500", label: "Descargas" },
+                                { value: storageInfo.cache_size, color: "bg-amber-500", label: "Caché" },
+                              ]}
+                            />
+                          </div>
+
+                          {/* Detalle de almacenamiento */}
+                          <div className="grid grid-cols-2 gap-3">
+                            {[
+                              { label: "App", value: storageInfo.app_size, color: "bg-brand-primary" },
+                              { label: "Descargas", value: storageInfo.downloads_size, color: "bg-cyan-500" },
+                              { label: "Caché", value: storageInfo.cache_size, color: "bg-amber-500" },
+                              { label: "Libre", value: storageInfo.free_space, color: "bg-emerald-500" },
+                            ].map((item) => (
+                              <div key={item.label} className="bg-white/5 rounded-2xl p-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
+                                  <span className="text-xs text-text-secondary">{item.label}</span>
+                                </div>
+                                <p className="text-sm font-semibold text-text-primary">{formatBytes(item.value)}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+
+                      {!storageLoading && !storageInfo && (
+                        <p className="text-xs text-text-secondary/60 text-center py-8">No se pudo obtener la información de almacenamiento.</p>
+                      )}
+                    </div>
                   )}
 
                   {/* === ACERCA DE === */}
