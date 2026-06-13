@@ -178,8 +178,6 @@ fn start_local_server(capi_dir: PathBuf) -> u16 {
                                     .unwrap_or(false);
                                 let is_allowed = file_path.exists() && file_path.is_file() && (
                                     file_path.starts_with(&capi_dir) ||
-                                    file_path.to_string_lossy().contains("/Música/Capi/") ||
-                                    file_path.to_string_lossy().contains("/Music/Capi/") ||
                                     is_audio_ext
                                 );
                                 if is_allowed {
@@ -289,7 +287,15 @@ fn get_binary_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
 
     // 2. Check compiled bundle resources
     if let Ok(dir) = app.path().resource_dir() {
+        let path = dir.join("_up_").join("bin").join(binary_name);
+        if path.exists() {
+            return Ok(path);
+        }
         let path = dir.join("bin").join(binary_name);
+        if path.exists() {
+            return Ok(path);
+        }
+        let path = dir.join("_up_").join(binary_name);
         if path.exists() {
             return Ok(path);
         }
@@ -302,7 +308,15 @@ fn get_binary_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     // 3. Check adjacent to current running binary directory
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(parent) = exe_path.parent() {
+            let path = parent.join("_up_").join("bin").join(binary_name);
+            if path.exists() {
+                return Ok(path);
+            }
             let path = parent.join("bin").join(binary_name);
+            if path.exists() {
+                return Ok(path);
+            }
+            let path = parent.join("_up_").join(binary_name);
             if path.exists() {
                 return Ok(path);
             }
@@ -317,7 +331,7 @@ fn get_binary_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     app.path()
         .resource_dir()
         .map_err(|e| e.to_string())
-        .map(|dir| dir.join("bin").join(binary_name))
+        .map(|dir| dir.join("_up_").join("bin").join(binary_name))
 }
 
 use std::process::{ChildStdin, ChildStdout, Stdio};
@@ -1395,7 +1409,6 @@ pub fn run() {
             get_cached_audio,
             cache_audio,
             clean_audio_cache,
-            get_cache_stats,
             get_cache_stats,
             set_cache_config,
             list_cached_tracks,

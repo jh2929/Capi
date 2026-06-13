@@ -72,18 +72,24 @@ fn get_binary_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String>
 
     // Fallbacks dinámicos para producción
     if let Ok(dir) = app.path().resource_dir() {
+        let path = dir.join("_up_").join("bin").join(binary_name);
+        if path.exists() { return Ok(path); }
         let path = dir.join("bin").join(binary_name);
         if path.exists() { return Ok(path); }
-        
+        let path = dir.join("_up_").join(binary_name);
+        if path.exists() { return Ok(path); }
         let path_flat = dir.join(binary_name);
         if path_flat.exists() { return Ok(path_flat); }
     }
 
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(parent) = exe_path.parent() {
+            let path = parent.join("_up_").join("bin").join(binary_name);
+            if path.exists() { return Ok(path); }
             let path = parent.join("bin").join(binary_name);
             if path.exists() { return Ok(path); }
-            
+            let path = parent.join("_up_").join(binary_name);
+            if path.exists() { return Ok(path); }
             let path_flat = parent.join(binary_name);
             if path_flat.exists() { return Ok(path_flat); }
         }
@@ -92,7 +98,7 @@ fn get_binary_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String>
     app.path()
         .resource_dir()
         .map_err(|e| e.to_string())
-        .map(|dir| dir.join("bin").join("capi-core"))
+        .map(|dir| dir.join("_up_").join("bin").join(binary_name))
 }
 
 /// Genera el token de forma nativa llamando a `capi-core --generate-only`.
