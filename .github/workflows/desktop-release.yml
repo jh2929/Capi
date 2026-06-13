@@ -1,4 +1,4 @@
-name: Desktop Release
+name: Build & Release
 
 permissions:
   contents: write
@@ -9,11 +9,13 @@ on:
       target:
         description: "Build target"
         required: true
-        default: "windows"
+        default: "all"
         type: choice
         options:
-          - binaries
+          - all
           - windows
+          - macos
+          - linux
   push:
     tags:
       - "v*"
@@ -27,13 +29,13 @@ env:
 
 jobs:
   # ──────────────────────────────────────────────────────────────────────
-  # Build capi-core.exe for Windows (consumed by desktop-windows)
+  # Windows: capi-core.exe
   # ──────────────────────────────────────────────────────────────────────
   binaries-windows:
     name: capi-core.exe (Windows)
     if: >
       github.event_name == 'workflow_dispatch' &&
-      (inputs.target == 'binaries' || inputs.target == 'windows')
+      (inputs.target == 'all' || inputs.target == 'windows')
       || github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
     timeout-minutes: 60
@@ -63,13 +65,49 @@ jobs:
           retention-days: 30
 
   # ──────────────────────────────────────────────────────────────────────
-  # Windows desktop application (.msi / .exe)
+  # macOS: capi-core (Mach-O binary)
+  # ──────────────────────────────────────────────────────────────────────
+  binaries-macos:
+    name: capi-core (macOS)
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.target == 'all' || inputs.target == 'macos')
+      || github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up GraalVM JDK 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: "21"
+          distribution: "graalvm"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          cache: gradle
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Build capi-core native image
+        run: ./gradlew :capi-core:nativeCompile --no-daemon --no-configuration-cache
+
+      - name: Upload capi-core binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: capi-core-macos
+          path: capi-core/build/native/nativeCompile/capi-core
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Windows desktop (.msi / .exe)
   # ──────────────────────────────────────────────────────────────────────
   desktop-windows:
     name: Windows (.msi/.exe)
     if: >
       github.event_name == 'workflow_dispatch' &&
-      inputs.target == 'windows'
+      (inputs.target == 'all' || inputs.target == 'windows')
       || github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: [binaries-windows]
     runs-on: windows-latest
@@ -102,10 +140,113 @@ jobs:
           path: capi-desktop/src-tauri/target/release/bundle/
           retention-days: 30
 
+  # ──────────────────────────────────────────────────────────────────────
+  # macOS desktop (.dmg)
+  # ──────────────────────────────────────────────────────────────────────
+  desktop-macos:
+    name: macOS (.dmg)
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.target == 'all' || inputs.target == 'macos')
+      || github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [binaries-macos]
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download capi-core binary
+        uses: actions/download-artifact@v4
+        with:
+          name: capi-core-macos
+          path: capi-desktop/bin/
+
+      - name: Set up Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install npm dependencies
+        run: npm ci
+        working-directory: capi-desktop
+
+      - name: Build Capi Desktop for macOS
+        run: npm run tauri build
+        working-directory: capi-desktop
+
+      - name: Upload macOS bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Capi-macOS
+          path: capi-desktop/src-tauri/target/release/bundle/
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Linux desktop (.deb / .AppImage / .rpm)
+  # ──────────────────────────────────────────────────────────────────────
+  desktop-linux:
+    name: Linux (.deb/.AppImage/.rpm)
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.target == 'all' || inputs.target == 'linux')
+      || github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Set up Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install npm dependencies
+        run: npm ci
+        working-directory: capi-desktop
+
+      - name: Build Capi Desktop for Linux
+        run: npm run tauri build -- --bundles deb,appimage,rpm
+        working-directory: capi-desktop
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: Capi-Linux
+          path: capi-desktop/src-tauri/target/release/bundle/
+          retention-days: 30
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Unified release (only on tag pushes)
+  # ──────────────────────────────────────────────────────────────────────
+  release:
+    name: Create GitHub Release
+    if: >
+      !cancelled() && !contains(needs.*.result, 'failure')
+      && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [desktop-windows, desktop-macos, desktop-linux]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Download all platform artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/release-artifacts
+          merge-multiple: true
+
       - name: Create GitHub Release
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: capi-desktop/src-tauri/target/release/bundle/**/*
+          files: /tmp/release-artifacts/**/*
           generate_release_notes: true
           draft: true
