@@ -48,13 +48,12 @@ jobs:
           distribution: "graalvm"
           github-token: ${{ secrets.GITHUB_TOKEN }}
           cache: gradle
-          components: "native-image"
 
       - name: Grant execute permission to gradlew
         run: chmod +x gradlew
 
       - name: Build capi-core native image
-        run: ./gradlew :capi-core:nativeCompile --no-daemon
+        run: ./gradlew :capi-core:nativeCompile --no-daemon --no-configuration-cache
 
       - name: Upload capi-core.exe artifact
         uses: actions/upload-artifact@v4
