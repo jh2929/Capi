@@ -59,27 +59,32 @@ impl PoTokenPool {
 
 /// Helper para obtener el path al binario del daemon `capi-core`.
 fn get_binary_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let binary_name = if cfg!(target_os = "windows") { "capi-core.exe" } else { "capi-core" };
+
     // Intentar ruta de desarrollo local
-    let dev_path = std::path::Path::new("/home/emixdy/Documentos/Capi/capi-desktop/bin/capi-core");
-    if dev_path.exists() {
-        return Ok(dev_path.to_path_buf());
+    #[cfg(target_os = "linux")]
+    {
+        let dev_path = std::path::Path::new("/home/emixdy/Documentos/Capi/capi-desktop/bin/capi-core");
+        if dev_path.exists() {
+            return Ok(dev_path.to_path_buf());
+        }
     }
 
     // Fallbacks dinámicos para producción
     if let Ok(dir) = app.path().resource_dir() {
-        let path = dir.join("bin").join("capi-core");
+        let path = dir.join("bin").join(binary_name);
         if path.exists() { return Ok(path); }
         
-        let path_flat = dir.join("capi-core");
+        let path_flat = dir.join(binary_name);
         if path_flat.exists() { return Ok(path_flat); }
     }
 
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(parent) = exe_path.parent() {
-            let path = parent.join("bin").join("capi-core");
+            let path = parent.join("bin").join(binary_name);
             if path.exists() { return Ok(path); }
             
-            let path_flat = parent.join("capi-core");
+            let path_flat = parent.join(binary_name);
             if path_flat.exists() { return Ok(path_flat); }
         }
     }

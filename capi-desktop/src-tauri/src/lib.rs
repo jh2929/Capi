@@ -3,7 +3,7 @@ use std::process::Command;
 use std::io::Write;
 use tauri::{Manager, Emitter};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::menu::{Menu, MenuItem, Submenu};
+use tauri::menu::{Menu, MenuItem};
 use tauri::WebviewWindowBuilder;
 use tauri_plugin_single_instance;
 use futures_util::StreamExt;
@@ -1252,9 +1252,10 @@ fn obtener_espacio_almacenamiento(app: tauri::AppHandle) -> Result<StorageInfo, 
         .map(|m| m.len())
         .unwrap_or(0);
 
-    let free_space = capi_dir.parent()
-        .or_else(|| Some(PathBuf::from("/")).as_deref())
-        .and_then(|p| fs2::available_space(p).ok())
+    let free_space = Some(capi_dir.parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| PathBuf::from("/")))
+        .and_then(|p| fs2::available_space(&p).ok())
         .unwrap_or(0);
 
     Ok(StorageInfo { app_size, downloads_size, cache_size, free_space })
