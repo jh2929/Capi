@@ -22,10 +22,11 @@ pub struct DiscordState {
     pub client: Mutex<Option<DiscordIpcClient>>,
 }
 
-fn start_local_server(capi_dir: PathBuf) -> u16 {
+fn start_local_server(capi_dir: PathBuf) -> Result<u16, String> {
     let port = (12761..12771).find(|&p| TcpListener::bind(format!("127.0.0.1:{}", p)).is_ok())
-        .expect("Failed to bind local server on any port 12761-12770");
-    let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).unwrap();
+        .ok_or("No se pudo encontrar un puerto libre en el rango 12761-12770".to_string())?;
+    let listener = TcpListener::bind(format!("127.0.0.1:{}", port))
+        .map_err(|e| format!("No se pudo bindear al puerto {}: {}", port, e))?;
     println!("[PROXY] Server started on port {}", port);
     let capi_dir = capi_dir.clone();
     
@@ -34,7 +35,7 @@ fn start_local_server(capi_dir: PathBuf) -> u16 {
         .connect_timeout(std::time::Duration::from_secs(8))
         .pool_idle_timeout(std::time::Duration::from_secs(20))
         .build()
-        .expect("Failed to build proxy HTTP client");
+        .map_err(|e| format!("No se pudo crear el cliente HTTP del proxy: {}", e))?;
     
     std::thread::spawn(move || {
         for stream in listener.incoming() {
@@ -261,9 +262,10 @@ fn start_local_server(capi_dir: PathBuf) -> u16 {
                     }
                 });
             }
-        }
+    }
     });
-    port
+    
+    Ok(port)
 }
 
 
@@ -327,11 +329,18 @@ fn get_binary_path(app: &tauri::AppHandle) -> Result<PathBuf, String> {
         }
     }
 
-    // 4. Default build fallback
-    app.path()
-        .resource_dir()
-        .map_err(|e| e.to_string())
-        .map(|dir| dir.join("_up_").join("bin").join(binary_name))
+    // 4. Default build fallback (with existence check)
+    if let Ok(dir) = app.path().resource_dir() {
+        let path = dir.join("_up_").join("bin").join(binary_name);
+        if path.exists() {
+            return Ok(path);
+        }
+    }
+
+    Err(format!(
+        "No se encontró el binario del daemon ({binary_name}) en ninguna de las rutas de recursos. \
+         Verifique que esté incluido en el paquete de instalación."
+    ))
 }
 
 use std::process::{ChildStdin, ChildStdout, Stdio};
@@ -387,25 +396,71 @@ fn spawn_daemon_process(binary: &PathBuf) -> Result<(DaemonProcess, std::process
     let mut cmd = Command::new(binary);
     cmd.arg("--daemon")
        .stdin(Stdio::piped())
-       .stdout(Stdio::piped())
-       .stderr(Stdio::inherit());
+       .stdout(Stdio::piped());
+
+    let stderr_buf: Option<Arc<Mutex<String>>>;
+    if cfg!(not(target_os = "linux")) {
+        cmd.stderr(Stdio::piped());
+        stderr_buf = Some(Arc::new(Mutex::new(String::new())));
+    } else {
+        cmd.stderr(Stdio::inherit());
+        stderr_buf = None;
+    }
 
     let mut child = cmd.spawn()
         .map_err(|e| format!("Fallo al iniciar capi-core daemon: {}", e))?;
 
-    let stdin = child.stdin.take().unwrap();
-    let mut stdout = BufReader::new(child.stdout.take().unwrap());
+    let stdin = child.stdin.take()
+        .ok_or("No se pudo capturar stdin del daemon".to_string())?;
+    let stdout = child.stdout.take()
+        .ok_or("No se pudo capturar stdout del daemon".to_string())?;
 
-    // Wait for {"status":"ready"}
+    if let Some(buf) = &stderr_buf {
+        if let Some(stderr) = child.stderr.take() {
+            let buf_clone = buf.clone();
+            std::thread::spawn(move || {
+                let mut reader = BufReader::new(stderr);
+                let mut line = String::new();
+                loop {
+                    line.clear();
+                    match reader.read_line(&mut line) {
+                        Ok(0) => break,
+                        Ok(_) => {
+                            buf_clone.lock().unwrap_or_else(|e| e.into_inner()).push_str(&line);
+                        }
+                        Err(_) => break,
+                    }
+                }
+            });
+        }
+    }
+
+    let mut stdout_reader = BufReader::new(stdout);
     let mut ready_line = String::new();
-    stdout.read_line(&mut ready_line).map_err(|e| format!("Daemon startup read failed: {}", e))?;
+
+    let stderr_msg = |buf: &Option<Arc<Mutex<String>>>| -> String {
+        if cfg!(not(target_os = "linux")) {
+            if let Some(b) = buf {
+                let stderr = b.lock().unwrap_or_else(|e| e.into_inner());
+                if !stderr.is_empty() {
+                    return format!("\nStderr del daemon:\n{}", stderr);
+                }
+            }
+        }
+        String::new()
+    };
+
+    if let Err(e) = stdout_reader.read_line(&mut ready_line) {
+        return Err(format!("Error leyendo respuesta del daemon: {}{}", e, stderr_msg(&stderr_buf)));
+    }
+
     if !ready_line.contains("ready") {
-        return Err(format!("Daemon initialization failed: {}", ready_line));
+        return Err(format!("El daemon no se inicializó correctamente: {}{}", ready_line.trim(), stderr_msg(&stderr_buf)));
     }
 
     Ok((DaemonProcess {
         stdin: Mutex::new(stdin),
-        stdout: Mutex::new(stdout),
+        stdout: Mutex::new(stdout_reader),
     }, child))
 }
 
@@ -1298,29 +1353,55 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle();
 
-            let binary = get_binary_path(handle)?;
-            let (daemon_process, child) = spawn_daemon_process(&binary)?;
+            if let Err(e) = (|| -> Result<(), String> {
+                let binary = get_binary_path(handle)?;
+                let (daemon_process, child) = spawn_daemon_process(&binary)?;
 
-            app.manage(Arc::new(daemon_process));
-            app.manage(Arc::new(Mutex::new(child)));
+                app.manage(Arc::new(daemon_process));
+                app.manage(Arc::new(Mutex::new(child)));
 
-            // Start localhost HTTP server for local music playback
-            let app_data = handle.path().app_data_dir()
-                .map_err(|e| format!("No se pudo resolver el directorio de datos: {}", e))?;
-            let capi_dir = app_data.join("Capi");
-            if !capi_dir.exists() {
-                std::fs::create_dir_all(&capi_dir)
-                    .map_err(|e| format!("No se pudo crear el directorio de Capi: {}", e))?;
+                // Start localhost HTTP server for local music playback
+                let app_data = handle.path().app_data_dir()
+                    .map_err(|e| format!("No se pudo resolver el directorio de datos: {}", e))?;
+                let capi_dir = app_data.join("Capi");
+                if !capi_dir.exists() {
+                    std::fs::create_dir_all(&capi_dir)
+                        .map_err(|e| format!("No se pudo crear el directorio de Capi: {}", e))?;
+                }
+                // Create cache directory
+                let cache_dir = capi_dir.join("cache").join("audio");
+                if !cache_dir.exists() {
+                    std::fs::create_dir_all(&cache_dir)
+                        .map_err(|e| format!("No se pudo crear el directorio de caché: {}", e))?;
+                }
+                let local_port = start_local_server(capi_dir)?;
+                app.manage(LocalServerState { port: local_port });
+                app.manage(DiscordState { client: Mutex::new(None) });
+                Ok(())
+            })() {
+                #[cfg(not(target_os = "linux"))]
+                {
+                    let _ = std::fs::create_dir_all(
+                        handle.path().app_data_dir().map(|d| d.join("Capi").join("logs")).unwrap_or_default()
+                    );
+                    if let Ok(log_path) = handle.path().app_data_dir()
+                        .map(|d| d.join("Capi").join("logs").join("crash.log"))
+                    {
+                        let _ = std::fs::write(&log_path, &e);
+                    }
+                    let dialog_msg = format!(
+                        "No se pudo iniciar Capi:\n\n{}\n\nRevise el archivo de log en:\n{}",
+                        e,
+                        handle.path().app_data_dir().map(|d| d.join("Capi").join("logs").join("crash.log").display().to_string()).unwrap_or_default()
+                    );
+                    rfd::MessageDialog::new()
+                        .set_title("Capi - Error al iniciar")
+                        .set_description(&dialog_msg)
+                        .set_level(rfd::MessageLevel::Error)
+                        .show();
+                }
+                return Err(e.into());
             }
-            // Create cache directory
-            let cache_dir = capi_dir.join("cache").join("audio");
-            if !cache_dir.exists() {
-                std::fs::create_dir_all(&cache_dir)
-                    .map_err(|e| format!("No se pudo crear el directorio de caché: {}", e))?;
-            }
-            let local_port = start_local_server(capi_dir);
-            app.manage(LocalServerState { port: local_port });
-            app.manage(DiscordState { client: Mutex::new(None) });
 
             // ─── System Tray ────────────────────────────────────────
             if let Some(icon) = handle.default_window_icon() {
