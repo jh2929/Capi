@@ -243,10 +243,11 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Download all platform artifacts
+      - name: Download platform installer artifacts
         uses: actions/download-artifact@v4
         with:
           path: /tmp/release-artifacts
+          pattern: "Capi-*"
           merge-multiple: true
 
       - name: Create GitHub Release
