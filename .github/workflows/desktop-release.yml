@@ -137,7 +137,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Capi-Windows
-          path: capi-desktop/src-tauri/target/release/bundle/
+          path: |
+            capi-desktop/src-tauri/target/release/bundle/**/*.msi
+            capi-desktop/src-tauri/target/release/bundle/**/*.exe
           retention-days: 30
 
   # ──────────────────────────────────────────────────────────────────────
@@ -177,7 +179,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Capi-macOS
-          path: capi-desktop/src-tauri/target/release/bundle/
+          path: capi-desktop/src-tauri/target/release/bundle/**/*.dmg
           retention-days: 30
 
   # ──────────────────────────────────────────────────────────────────────
