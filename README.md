@@ -8,13 +8,7 @@
   <strong>@jhezdev</strong>
 </p>
 
-## 📖 About
 
-Capi es un reproductor de música moderno, rápido y elegante para escritorio. Diseñado para quienes buscan una experiencia fluida sin complicaciones, con reproducción en streaming, soporte para música local y estadísticas detalladas.
-
-`youtube` `music` `player` `streaming` `tauri` `rust` `kotlin` `capi` `playlists` `local-library` `lyrics` `cross-platform`
-
----
 
 Capi es un reproductor de música de escritorio premium, moderno y ultrarrápido desarrollado sobre **Tauri (Rust)** y **React (TypeScript)**, utilizando un daemon optimizado en **Kotlin** para comunicarse fluidamente con la API de YouTube Music sin anuncios ni bloqueos.
 

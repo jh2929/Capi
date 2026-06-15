@@ -8,13 +8,7 @@
   <strong>@jhezdev</strong>
 </p>
 
-## 📖 About
 
-Capi es un reproductor de música moderno, rápido y elegante para escritorio. Diseñado para quienes buscan una experiencia fluida sin complicaciones, con reproducción en streaming, soporte para música local y estadísticas detalladas.
-
-`youtube` `music` `player` `streaming` `tauri` `rust` `capi` `playlists` `local-library` `lyrics` `cross-platform`
-
----
 
 Capi es un reproductor de música premium para escritorio diseñado para ofrecer una experiencia estética, ultra-rápida y fluida. Integra reproducción en línea, soporte para archivos locales y gestión de datos con cero configuraciones complejas.
 
