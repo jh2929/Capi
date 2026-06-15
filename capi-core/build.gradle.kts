@@ -29,6 +29,7 @@ graalvmNative {
             mainClass.set("com.arturo254.capi.core.MainKt")
             buildArgs.addAll(
                 "--no-fallback",
+                "-march=x86-64",
                 "--initialize-at-build-time=kotlin.DeprecationLevel",
                 "--trace-class-initialization=kotlin.DeprecationLevel"
             )
