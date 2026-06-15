@@ -1,5 +1,21 @@
 # <img src="capi-desktop/src/assets/Logo.png" width="48" height="48" align="center" /> Capi Music Player
 
+<p align="center">
+  <img src="capi-desktop/Capi.jpeg" alt="Capi" width="600">
+</p>
+
+<p align="center">
+  <strong>@jhezdev</strong>
+</p>
+
+## 📖 About
+
+Capi es un reproductor de música moderno, rápido y elegante para escritorio. Diseñado para quienes buscan una experiencia fluida sin complicaciones, con reproducción en streaming, soporte para música local y estadísticas detalladas.
+
+`youtube` `music` `player` `streaming` `tauri` `rust` `kotlin` `capi` `playlists` `local-library` `lyrics` `cross-platform`
+
+---
+
 Capi es un reproductor de música de escritorio premium, moderno y ultrarrápido desarrollado sobre **Tauri (Rust)** y **React (TypeScript)**, utilizando un daemon optimizado en **Kotlin** para comunicarse fluidamente con la API de YouTube Music sin anuncios ni bloqueos.
 
 Este software se distribuye bajo los términos de la **Licencia Pública General de GNU v3.0 (GPL-3.0)**.
@@ -62,3 +78,9 @@ El desarrollo comenzó con una meta ambiciosa. Gracias a una arquitectura limpia
 ## ⚖️ Licencia
 
 Este proyecto está bajo la Licencia **GNU GPL v3.0**. Consulta el archivo [LICENSE](LICENSE) para obtener más detalles.
+
+---
+
+<p align="center">
+  <strong>@jhezdev</strong>
+</p>

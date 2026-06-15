@@ -1,5 +1,21 @@
 # 🎧 Capi Desktop
 
+<p align="center">
+  <img src="Capi.jpeg" alt="Capi" width="600">
+</p>
+
+<p align="center">
+  <strong>@jhezdev</strong>
+</p>
+
+## 📖 About
+
+Capi es un reproductor de música moderno, rápido y elegante para escritorio. Diseñado para quienes buscan una experiencia fluida sin complicaciones, con reproducción en streaming, soporte para música local y estadísticas detalladas.
+
+`youtube` `music` `player` `streaming` `tauri` `rust` `capi` `playlists` `local-library` `lyrics` `cross-platform`
+
+---
+
 Capi es un reproductor de música premium para escritorio diseñado para ofrecer una experiencia estética, ultra-rápida y fluida. Integra reproducción en línea, soporte para archivos locales y gestión de datos con cero configuraciones complejas.
 
 ## ✨ Características Principales
@@ -27,3 +43,9 @@ Capi es un reproductor de música premium para escritorio diseñado para ofrecer
 
 *   **Rendimiento Ligero**: Capi está optimizado con Tauri y Rust para consumir muy pocos recursos de hardware, manteniéndose típicamente en menos de **130 MB de memoria RAM** durante su uso continuo.
 *   **Compatibilidad**: Disponible para Linux, Windows y macOS.
+
+---
+
+<p align="center">
+  <strong>@jhezdev</strong>
+</p>
