@@ -54,6 +54,9 @@ jobs:
       - name: Grant execute permission to gradlew
         run: chmod +x gradlew
 
+      - name: Set up MSVC (required by GraalVM native-image on Windows)
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Build capi-core native image
         run: ./gradlew :capi-core:nativeCompile --no-daemon --no-configuration-cache
 
