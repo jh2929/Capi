@@ -3,7 +3,7 @@ name: Bug Report
 about: Report a bug found in OpenTune to help us improve the application
 title: "[BUG] Brief description of the issue"
 labels: bug
-assignees: Arturo254
+assignees: jh2929
 ---
 
 ## Bug Description

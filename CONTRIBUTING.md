@@ -33,7 +33,7 @@ Thank you for your interest in contributing to **OpenTune**! This document outli
 
 ### Reporting Bugs
 
-We track bugs using [GitHub Issues](https://github.com/Arturo254/OpenTune/issues). Before creating a new issue, please search existing issues to see if the problem has already been reported. If you find a similar issue, feel free to add relevant information or insights as a comment.
+We track bugs using [GitHub Issues](https://github.com/jh2929/Capi/issues). Before creating a new issue, please search existing issues to see if the problem has already been reported. If you find a similar issue, feel free to add relevant information or insights as a comment.
 
 When creating a new issue, include:
 
@@ -51,7 +51,7 @@ When creating a new issue, include:
 
 ### Suggesting Features
 
-We also handle feature suggestions through [GitHub Issues](https://github.com/Arturo254/OpenTune/issues). When suggesting a new feature:
+We also handle feature suggestions through [GitHub Issues](https://github.com/jh2929/Capi/issues). When suggesting a new feature:
 
 * **Describe the problem** the feature is intended to solve
 * **Explain the solution** and how it would work
@@ -193,7 +193,7 @@ To set up your local environment for contributing:
 4. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/Arturo254/OpenTune.git
+   git clone https://github.com/jh2929/Capi.git
    cd OpenTune
    ```
 5. **Build the project using Gradle**:
@@ -213,7 +213,7 @@ To help with translations:
 3. Translate missing strings or improve existing translations
 4. The maintainer team will review and approve submissions
 
-If your language is not listed, contact us at [cervantesarturo254@gmail.com](mailto:cervantesarturo254@gmail.com).
+If your language is not listed, contact us at [jemoldy.242@gmail.com](mailto:jemoldy.242@gmail.com).
 
 ---
 
