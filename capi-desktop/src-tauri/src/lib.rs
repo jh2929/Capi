@@ -394,6 +394,11 @@ async fn send_daemon_command(
 
 fn spawn_daemon_process(binary: &PathBuf) -> Result<(DaemonProcess, std::process::Child), String> {
     let mut cmd = Command::new(binary);
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
     cmd.arg("--daemon")
        .stdin(Stdio::piped())
        .stdout(Stdio::piped());
