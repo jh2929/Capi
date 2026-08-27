@@ -1,0 +1,26 @@
+# Gradle / build outputs
+.gradle/
+build/
+*/build/
+captures/
+
+# Local configuration (machine specific)
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# NOTE: app/persistent-debug.keystore is intentionally tracked:
+# it is a public debug keystore shipped with the upstream OpenTune
+# project (used for reproducible debug builds / CI). Release signing
+# uses environment variables (STORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD)
+# and app/keystore/release.keystore which is NOT present in this repo.
+app/keystore/

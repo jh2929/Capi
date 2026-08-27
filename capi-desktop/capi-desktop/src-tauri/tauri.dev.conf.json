@@ -1,0 +1,12 @@
+{
+  "identifier": "com.emixdy.capi-desktop.dev",
+  "app": {
+    "windows": [
+      {
+        "title": "Capi (Dev)",
+        "width": 1000,
+        "height": 700
+      }
+    ]
+  }
+}
