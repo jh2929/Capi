@@ -1,31 +1,24 @@
-# Gradle & Kotlin build files
-.gradle/
-build/
-.kotlin/
-*.class
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Node & Frontend build files
-node_modules/
-dist/
-dist-ssr/
+node_modules
+dist
+dist-ssr
 *.local
 
-# Tauri & Rust build files
-src-tauri/target/
-capi-desktop/src-tauri/target/
-capi-desktop/dist/
-capi-desktop/bin/capi-core
-capi-desktop/bin/capi-core.exe
-
-# OS / IDE files
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
-.vscode/
-.idea/
-*.log
-*.swp
-*.swo
-
-# Environment
-.env
-.env.*
-!.env.example
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
